@@ -92,7 +92,8 @@ Dependencies: `companygraph-meta-model` (git tag), `@modelcontextprotocol/server
 - `core.version` is read from the core's `manifest.json`, which sits in `meta/core/` in an
   instance and in `core/` in meta-model. `core.parser` is the tag `package.json` pins.
 - `commit` and `repo` come from the caller. The stdio entry point reads a local directory and
-  sets `commit` to what `git rev-parse HEAD` says there, or `null` outside a repository.
+  sets `commit` to what `git rev-parse HEAD` says there, or `null` outside a repository, or
+  `null` when the directory has uncommitted changes, since a commit must describe what is served.
 
 `bin/snapshot.mjs`:
 
