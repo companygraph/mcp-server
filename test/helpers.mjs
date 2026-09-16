@@ -26,3 +26,13 @@ export function instanceSnapshot() {
   return buildSnapshot({ files: readDir(path.join(instanceRoot, "model")), schemas: readDir(path.join(instanceRoot, "meta", "core")),
     sub: "model/", commit: INSTANCE_COMMIT, repo: "robertblust/mental-model", parserTag: "v0.25.2" });
 }
+
+// The company of one: an identity and a profile with the same name. The example has no such
+// pair, so one is added — a profile page carries only what the parser needs to read it.
+export function withSharedName() {
+  const { files, schemas } = exampleFiles();
+  const root = files.get("identity.md").match(/^# (.+)$/m)[1];
+  const slug = root.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+  files.set(`profiles/${slug}/${slug}.md`, `---\nsource: Local\nnature: human\n---\n\n# ${root}\n\n> The founder, profiled under the company's own name.\n\n## Summary\n\nOne person.\n`);
+  return buildSnapshot({ files, schemas, sub: "example/model/", commit: COMMIT, repo: "companygraph/meta-model", parserTag: "v0.25.2" });
+}
