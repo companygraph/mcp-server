@@ -65,3 +65,16 @@ test("a Host outside the allowed list is refused, an allowed one served", async 
   });
   assert.equal(good.statusCode, 200);
 });
+
+test("a handler error is a 500, not a dead server", async () => {
+  const bad = { ...s, entities: null };
+  const server = createHttpServer(bad);
+  await new Promise((r) => server.listen(0, "127.0.0.1", r));
+  const base = `http://127.0.0.1:${server.address().port}`;
+  after(() => server.close());
+  const first = await fetch(`${base}/mcp`, { method: "POST", headers, body: JSON.stringify(INIT) });
+  assert.equal(first.status, 500);
+  assert.equal(first.headers.get("cache-control"), "no-store");
+  const second = await fetch(`${base}/mcp`, { method: "POST", headers, body: JSON.stringify(INIT) });
+  assert.equal(second.status, 500);
+});
