@@ -175,8 +175,10 @@ The port is `PORT` or the flag, which is what Cloud Run sets.
 ## 8. Tests
 
 `npm test` runs `node --test test/`. `npm run fixtures` fetches `companygraph/meta-model` at
-the tag `package.json` pins into `test/fixtures/meta-model/` and is the pretest step; the
-folder is gitignored because the package does not ship its example. CI has the network.
+the tag `package.json` pins into `test/fixtures/meta-model/` and `robertblust/mental-model` at
+a named commit into `test/fixtures/mental-model/`, and is the pretest step; the folder is
+gitignored because the package does not ship its example and an instance is content, not a
+dependency. CI has the network.
 
 - **Snapshot:** built from `example/model` against `core/`, carries the core version from the
   manifest, every entity has `markdown`, and the entity and edge counts equal what the parser
@@ -188,8 +190,13 @@ folder is gitignored because the package does not ship its example. CI has the n
 - **Refusals, on an in-memory fixture:** an identity and a profile sharing a name make
   `fetch(name)` refuse and name both types; `get_entity("skill", <a value's name>)` is the R4
   error; an unknown type names the declared types.
-- **Portability:** a test greps `lib/` for the names of the example's entities and for the
-  reference instance's identity and fails on a hit.
+- **The reference instance, real values:** the fixtures also hold `robertblust/mental-model`
+  at one commit named in the test helper, and a suite runs the queries and the server against
+  it: the counts its site publishes, the identity and profile that share one name and the
+  refusal that pair earns, the Expert skills and one Evidence cell verbatim, an experience by
+  search and by name, the values. A change to those values is a change to the fixture commit.
+- **Portability:** a test greps `lib/` and `bin/` for the names of the example's and the
+  instance's entities and for the instance's domain and repository, and fails on a hit.
 - **Transports:** the HTTP handler answers `initialize` and `tools/list` with a JSON body, no
   session header, `Cache-Control: no-store`; a request with a Host outside
   `MCP_ALLOWED_HOSTS` is refused; `GET /mcp` is `405`. The stdio binary answers `tools/list`
