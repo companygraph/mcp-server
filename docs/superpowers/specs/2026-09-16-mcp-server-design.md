@@ -92,7 +92,8 @@ Dependencies: `companygraph-meta-model` (git tag), `@modelcontextprotocol/server
 - `core.version` is read from the core's `manifest.json`, which sits in `meta/core/` in an
   instance and in `core/` in meta-model. `core.parser` is the tag `package.json` pins.
 - `commit` and `repo` come from the caller. The stdio entry point reads a local directory and
-  sets `commit` to what `git rev-parse HEAD` says there, or `null` outside a repository.
+  sets `commit` to what `git rev-parse HEAD` says there, or `null` outside a repository, or
+  `null` when the directory has uncommitted changes, since a commit must describe what is served.
 
 `bin/snapshot.mjs`:
 
@@ -101,9 +102,9 @@ companygraph-mcp-snapshot <model-dir> <core-dir> [--commit <sha>] [--repo owner/
 companygraph-mcp-snapshot --github owner/name@<sha> [--sub model/ --core meta/core/] --out snapshot.json
 ```
 
-The GitHub form fetches the repository tarball at the commit with no token, or with
-`GITHUB_TOKEN` when set, and reads the two subtrees out of it. `lib/read.mjs` is the one place
-that touches a filesystem or the network; everything below it takes maps.
+The GitHub form fetches the tree listing at the commit and each file under the two subtrees,
+with `GITHUB_TOKEN` when set. `lib/read.mjs` is the one place that touches a filesystem or the
+network; everything below it takes maps.
 
 ## 5. The seven tools
 
@@ -157,26 +158,30 @@ fact.
 ## 7. Transports
 
 **stdio.** `companygraph-mcp <model-dir> <core-dir>` builds the snapshot in memory and serves
-it over `StdioServerTransport`. This is the local form: `npx github:companygraph/mcp-server
-./model ./meta/core` from an instance's root.
+it over `StdioServerTransport`. This is the local form: `npx --package
+github:companygraph/mcp-server companygraph-mcp ./model ./meta/core` from an instance's root.
 
 **HTTP.** `companygraph-mcp-http --snapshot snapshot.json [--port 8080]` serves:
 
 - `POST /mcp`: a fresh `NodeStreamableHTTPServerTransport` per request with
-  `sessionIdGenerator: undefined` and `enableJsonResponse: true`, connected to the one server.
-  `Cache-Control: no-store` on every response.
+  `sessionIdGenerator: undefined` and `enableJsonResponse: true`, connected to a fresh server
+  built for that request, since a server holds one transport. `Cache-Control: no-store` on
+  every response.
 - `GET /mcp` and `DELETE /mcp`: `405`, since there is no session and no stream.
 - `GET /healthz`: `200` with `model` as the tools report it.
-- Host validation: `MCP_ALLOWED_HOSTS`, a comma-separated list, turns on the SDK's DNS
-  rebinding protection with those hostnames. Unset, no validation, for local runs.
+- Host validation: `MCP_ALLOWED_HOSTS`, a comma-separated list, is checked with the SDK's
+  port-agnostic Host validation helper, since the transport's own option is deprecated in v2.
+  Unset, no validation, for local runs.
 
 The port is `PORT` or the flag, which is what Cloud Run sets.
 
 ## 8. Tests
 
 `npm test` runs `node --test test/`. `npm run fixtures` fetches `companygraph/meta-model` at
-the tag `package.json` pins into `test/fixtures/meta-model/` and is the pretest step; the
-folder is gitignored because the package does not ship its example. CI has the network.
+the tag `package.json` pins into `test/fixtures/meta-model/` and `robertblust/mental-model` at
+a named commit into `test/fixtures/mental-model/`, and is the pretest step; the folder is
+gitignored because the package does not ship its example and an instance is content, not a
+dependency. CI has the network.
 
 - **Snapshot:** built from `example/model` against `core/`, carries the core version from the
   manifest, every entity has `markdown`, and the entity and edge counts equal what the parser
@@ -188,8 +193,13 @@ folder is gitignored because the package does not ship its example. CI has the n
 - **Refusals, on an in-memory fixture:** an identity and a profile sharing a name make
   `fetch(name)` refuse and name both types; `get_entity("skill", <a value's name>)` is the R4
   error; an unknown type names the declared types.
-- **Portability:** a test greps `lib/` for the names of the example's entities and for the
-  reference instance's identity and fails on a hit.
+- **The reference instance, real values:** the fixtures also hold `robertblust/mental-model`
+  at one commit named in the test helper, and a suite runs the queries and the server against
+  it: the counts its site publishes, the identity and profile that share one name and the
+  refusal that pair earns, the Expert skills and one Evidence cell verbatim, an experience by
+  search and by name, the values. A change to those values is a change to the fixture commit.
+- **Portability:** a test greps `lib/` and `bin/` for the names of the example's and the
+  instance's entities and for the instance's domain and repository, and fails on a hit.
 - **Transports:** the HTTP handler answers `initialize` and `tools/list` with a JSON body, no
   session header, `Cache-Control: no-store`; a request with a Host outside
   `MCP_ALLOWED_HOSTS` is refused; `GET /mcp` is `405`. The stdio binary answers `tools/list`
