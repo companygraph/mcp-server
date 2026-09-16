@@ -31,7 +31,7 @@ the parser's tag.
 From an instance's root, over stdio:
 
 ```sh
-npx github:companygraph/mcp-server ./model ./meta/core
+npx --package github:companygraph/mcp-server companygraph-mcp ./model ./meta/core
 ```
 
 A snapshot for a deployment, then the HTTP server on it:

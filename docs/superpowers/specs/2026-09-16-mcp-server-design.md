@@ -157,8 +157,8 @@ fact.
 ## 7. Transports
 
 **stdio.** `companygraph-mcp <model-dir> <core-dir>` builds the snapshot in memory and serves
-it over `StdioServerTransport`. This is the local form: `npx github:companygraph/mcp-server
-./model ./meta/core` from an instance's root.
+it over `StdioServerTransport`. This is the local form: `npx --package
+github:companygraph/mcp-server companygraph-mcp ./model ./meta/core` from an instance's root.
 
 **HTTP.** `companygraph-mcp-http --snapshot snapshot.json [--port 8080]` serves:
 
