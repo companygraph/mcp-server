@@ -102,9 +102,9 @@ companygraph-mcp-snapshot <model-dir> <core-dir> [--commit <sha>] [--repo owner/
 companygraph-mcp-snapshot --github owner/name@<sha> [--sub model/ --core meta/core/] --out snapshot.json
 ```
 
-The GitHub form fetches the repository tarball at the commit with no token, or with
-`GITHUB_TOKEN` when set, and reads the two subtrees out of it. `lib/read.mjs` is the one place
-that touches a filesystem or the network; everything below it takes maps.
+The GitHub form fetches the tree listing at the commit and each file under the two subtrees,
+with `GITHUB_TOKEN` when set. `lib/read.mjs` is the one place that touches a filesystem or the
+network; everything below it takes maps.
 
 ## 5. The seven tools
 
