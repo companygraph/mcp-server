@@ -44,3 +44,23 @@ test("a dirty tree reports no commit; a clean one reports HEAD", async () => {
   fs.appendFileSync(path.join(modelDir, "identity.md"), "\n");
   assert.equal(await commitOf(modelDir), null);
 });
+
+test("an operator error is one stderr line and exit 2, never a stack", () => {
+  const run = (args) => {
+    try {
+      execFileSync("node", [bin, ...args], { encoding: "utf8", stdio: "pipe" });
+      assert.fail("expected the process to exit non-zero");
+    } catch (err) {
+      return err;
+    }
+  };
+  const oneLine = (err) => {
+    assert.equal(err.status, 2);
+    const lines = err.stderr.trim().split("\n");
+    assert.equal(lines.length, 1, err.stderr);
+    assert.ok(!/^\s*at\s/m.test(err.stderr), err.stderr);
+  };
+
+  oneLine(run(["--nope", path.join(fixtureRoot, "example/model"), path.join(fixtureRoot, "core")]));
+  oneLine(run([path.join(fixtureRoot, "example/model", "nope"), path.join(fixtureRoot, "core")]));
+});
