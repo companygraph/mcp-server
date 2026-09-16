@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import http from "node:http";
 import { Client } from "@modelcontextprotocol/client";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/client";
-import { createHttpServer } from "../lib/http.mjs";
+import { createHttpServer, MAX_BODY_BYTES } from "../lib/http.mjs";
 import { exampleSnapshot, COMMIT } from "./helpers.mjs";
 
 const s = exampleSnapshot();
@@ -64,6 +64,16 @@ test("a Host outside the allowed list is refused, an allowed one served", async 
     req.end(JSON.stringify(INIT));
   });
   assert.equal(good.statusCode, 200);
+});
+
+test("a body over the cap is 413, and the server still answers a normal request after", async () => {
+  const base = await listen();
+  const big = await fetch(`${base}/mcp`, { method: "POST", headers, body: "x".repeat(MAX_BODY_BYTES + 1) });
+  assert.equal(big.status, 413);
+  assert.equal(big.headers.get("cache-control"), "no-store");
+  const r = await fetch(`${base}/mcp`, { method: "POST", headers, body: JSON.stringify(INIT) });
+  assert.equal(r.status, 200);
+  assert.equal((await r.json()).result.serverInfo.title, "Beacon Systems");
 });
 
 test("a handler error is a 500, not a dead server", async () => {
