@@ -164,12 +164,14 @@ github:companygraph/mcp-server companygraph-mcp ./model ./meta/core` from an ins
 **HTTP.** `companygraph-mcp-http --snapshot snapshot.json [--port 8080]` serves:
 
 - `POST /mcp`: a fresh `NodeStreamableHTTPServerTransport` per request with
-  `sessionIdGenerator: undefined` and `enableJsonResponse: true`, connected to the one server.
-  `Cache-Control: no-store` on every response.
+  `sessionIdGenerator: undefined` and `enableJsonResponse: true`, connected to a fresh server
+  built for that request, since a server holds one transport. `Cache-Control: no-store` on
+  every response.
 - `GET /mcp` and `DELETE /mcp`: `405`, since there is no session and no stream.
 - `GET /healthz`: `200` with `model` as the tools report it.
-- Host validation: `MCP_ALLOWED_HOSTS`, a comma-separated list, turns on the SDK's DNS
-  rebinding protection with those hostnames. Unset, no validation, for local runs.
+- Host validation: `MCP_ALLOWED_HOSTS`, a comma-separated list, is checked with the SDK's
+  port-agnostic Host validation helper, since the transport's own option is deprecated in v2.
+  Unset, no validation, for local runs.
 
 The port is `PORT` or the flag, which is what Cloud Run sets.
 

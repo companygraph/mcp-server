@@ -50,14 +50,14 @@ test("other methods and paths", async () => {
   assert.deepEqual((await h.json()).model, { commit: COMMIT, repo: "companygraph/meta-model", core: "0.25.2", parser: "v0.25.2" });
 });
 
-test("a Host outside the allowed list is refused, an allowed one served", async () => {
+test("a Host outside the allowed list is refused, an allowed one served regardless of its port", async () => {
   const base = await listen({ allowedHosts: ["mcp.example"] });
   const bad = await fetch(`${base}/mcp`, { method: "POST", headers, body: JSON.stringify(INIT) });
   assert.equal(bad.status, 403);
   const port = Number(new URL(base).port);
   const good = await new Promise((resolve, reject) => {
     const req = http.request(
-      { host: "127.0.0.1", port, path: "/mcp", method: "POST", headers: { ...headers, host: "mcp.example" } },
+      { host: "127.0.0.1", port, path: "/mcp", method: "POST", headers: { ...headers, host: "mcp.example:8443" } },
       (res) => { res.resume(); res.on("end", () => resolve(res)); },
     );
     req.on("error", reject);
