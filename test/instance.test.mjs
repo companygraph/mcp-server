@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { Client, InMemoryTransport } from "@modelcontextprotocol/client";
-import { ModelError, listTypes, listEntities, getEntity, findEvidence, search, fetchEntity } from "../lib/model.mjs";
+import { ModelError, listTypes, describeSchema, listEntities, getEntity, findEvidence, search, fetchEntity } from "../lib/model.mjs";
 import { createServer } from "../lib/server.mjs";
 import { instanceSnapshot, INSTANCE_COMMIT } from "./helpers.mjs";
 
@@ -48,6 +48,21 @@ test("what was built at LIKE MAGIC", () => {
 test("what he holds to", () => {
   const values = listEntities(s, "value").entities.map((v) => v.name);
   assert.deepEqual(values, ["Build the alternative before making the point", "Decide well over build fast", "Grow the people with the platform", "Model it before you build it", "Production is the finish line"]);
+});
+
+test("every declared type describes, lists and, where it holds an entity, gets one without throwing", () => {
+  for (const { type, count } of listTypes(s).types) {
+    const schema = describeSchema(s, type);
+    assert.ok(Array.isArray(schema.sections));
+    const entities = listEntities(s, type).entities;
+    assert.ok(Array.isArray(entities));
+    if (count > 0) {
+      const r = getEntity(s, type, entities[0].name);
+      assert.equal(r.entity.type, type);
+      assert.ok(Array.isArray(r.entity.references));
+      assert.ok(Array.isArray(r.entity.referencedBy));
+    }
+  }
 });
 
 test("the server introduces the instance by its own words", async () => {

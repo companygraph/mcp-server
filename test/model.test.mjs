@@ -83,6 +83,21 @@ test("search matches name, tagline, fields, section text and cells, case-insensi
   assert.throws(() => search(s, "  "), ModelError);
 });
 
+test("every declared type describes, lists and, where it holds an entity, gets one without throwing", () => {
+  for (const { type, count } of listTypes(s).types) {
+    const schema = describeSchema(s, type);
+    assert.ok(Array.isArray(schema.sections));
+    const entities = listEntities(s, type).entities;
+    assert.ok(Array.isArray(entities));
+    if (count > 0) {
+      const r = getEntity(s, type, entities[0].name);
+      assert.equal(r.entity.type, type);
+      assert.ok(Array.isArray(r.entity.references));
+      assert.ok(Array.isArray(r.entity.referencedBy));
+    }
+  }
+});
+
 test("fetch takes an id, falls back to a name held by exactly one type, and refuses a shared name", () => {
   const byId = fetchEntity(s, "skills/domain-driven-design");
   assert.equal(byId.title, "Domain-Driven Design");
