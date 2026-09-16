@@ -39,6 +39,17 @@ test("readGitHub lists the tree at the commit and reads each blob under sub", as
   assert.ok(calls.slice(1).every((c) => c.headers.authorization === "Bearer T"));
 });
 
+test("readGitHub normalises a sub with no trailing slash", async () => {
+  const fetch = async (url) => {
+    if (url.includes("/git/trees/")) {
+      return { ok: true, json: async () => ({ truncated: false, tree: [{ type: "blob", path: "model/identity.md" }] }) };
+    }
+    return { ok: true, text: async () => `text of ${url.split("/").pop()}` };
+  };
+  const files = await readGitHub({ repo: "o/r", commit: "abc", sub: "model", fetch });
+  assert.deepEqual([...files.keys()], ["identity.md"]);
+});
+
 test("readGitHub bounds concurrency: no more than eight blob fetches in flight at once", async () => {
   const blobs = Array.from({ length: 20 }, (_, i) => ({ type: "blob", path: `model/${i}.md` }));
   let inFlight = 0;

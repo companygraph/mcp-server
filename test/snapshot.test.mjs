@@ -17,9 +17,21 @@ test("the snapshot is the parser's graph plus provenance, schemas and source tex
   assert.equal(s.entities.length, graph.entities.length);
   assert.equal(s.edges.length, graph.edges.length);
   assert.deepEqual(s.edges, graph.edges);
+  assert.deepEqual(s.types, graph.types);
   assert.equal(s.schemas.length, 15);
   assert.ok(s.schemas.every((x) => x.id.startsWith("core/")));
-  for (const e of s.entities) assert.equal(e.markdown, files.get(e.path.slice("example/model/".length)));
+  for (const e of s.entities) {
+    assert.equal(e.markdown, files.get(e.path.slice("example/model/".length)));
+    assert.match(e.markdown, /^(---|# )/);
+  }
+});
+
+test("a sub with no trailing slash reads the same snapshot as one with it", () => {
+  const { files, schemas } = exampleFiles();
+  const slash = buildSnapshot({ files, schemas, sub: "example/model/", commit: COMMIT, repo: "companygraph/meta-model", parserTag: "v0.25.2" });
+  const bare = buildSnapshot({ files, schemas, sub: "example/model", commit: COMMIT, repo: "companygraph/meta-model", parserTag: "v0.25.2" });
+  assert.deepEqual(bare.entities, slash.entities);
+  assert.deepEqual(bare.edges, slash.edges);
 });
 
 test("a core without a manifest is refused", () => {
