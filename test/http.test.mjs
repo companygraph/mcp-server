@@ -4,7 +4,7 @@ import http from "node:http";
 import { Client } from "@modelcontextprotocol/client";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/client";
 import { createHttpServer, MAX_BODY_BYTES } from "../lib/http.mjs";
-import { exampleSnapshot, COMMIT } from "./helpers.mjs";
+import { exampleSnapshot, COMMIT, EXAMPLE_CORE, PARSER } from "./helpers.mjs";
 
 const s = exampleSnapshot();
 const INIT = { jsonrpc: "2.0", id: 1, method: "initialize", params: { protocolVersion: "2025-06-18", capabilities: {}, clientInfo: { name: "t", version: "0" } } };
@@ -47,7 +47,7 @@ test("other methods and paths", async () => {
   const h = await fetch(`${base}/health`);
   assert.equal(h.status, 200);
   assert.equal(h.headers.get("cache-control"), "no-store");
-  assert.deepEqual((await h.json()).model, { commit: COMMIT, repo: "companygraph/meta-model", core: "0.25.2", parser: "v0.25.2" });
+  assert.deepEqual((await h.json()).model, { commit: COMMIT, repo: "companygraph/meta-model", core: EXAMPLE_CORE, parser: PARSER });
 });
 
 test("a Host outside the allowed list is refused, an allowed one served regardless of its port", async () => {

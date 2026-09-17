@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { Client, InMemoryTransport } from "@modelcontextprotocol/client";
 import { ModelError, listTypes, describeSchema, listEntities, getEntity, findEvidence, search, fetchEntity } from "../lib/model.mjs";
 import { createServer } from "../lib/server.mjs";
-import { instanceSnapshot, INSTANCE_COMMIT } from "./helpers.mjs";
+import { instanceSnapshot, INSTANCE_COMMIT, INSTANCE_CORE, PARSER } from "./helpers.mjs";
 
 const s = instanceSnapshot();
 
@@ -13,7 +13,7 @@ test("the instance parses to what its site publishes", () => {
   assert.equal(s.entities.length, 143);
   assert.equal(s.edges.length, 608);
   assert.equal(listTypes(s).types.length, 15);
-  assert.deepEqual(listTypes(s).model, { commit: INSTANCE_COMMIT, repo: "robertblust/mental-model", core: "0.25.2", parser: "v0.25.2" });
+  assert.deepEqual(listTypes(s).model, { commit: INSTANCE_COMMIT, repo: "robertblust/mental-model", core: INSTANCE_CORE, parser: PARSER });
 });
 
 test("the company of one: the identity and the profile share a name, and a bare name is refused", () => {

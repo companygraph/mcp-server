@@ -1,15 +1,15 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { ModelError, listTypes, describeSchema, listEntities, getEntity, findEvidence, search, fetchEntity } from "../lib/model.mjs";
-import { exampleSnapshot, COMMIT, withSharedName } from "./helpers.mjs";
+import { exampleSnapshot, COMMIT, withSharedName, EXAMPLE_CORE, PARSER, EXAMPLE_TYPES } from "./helpers.mjs";
 
 const s = exampleSnapshot();
-const MODEL = { commit: COMMIT, repo: "companygraph/meta-model", core: "0.25.2", parser: "v0.25.2" };
+const MODEL = { commit: COMMIT, repo: "companygraph/meta-model", core: EXAMPLE_CORE, parser: PARSER };
 
 test("list_types names every declared type with its tagline and count", () => {
   const r = listTypes(s);
   assert.deepEqual(r.model, MODEL);
-  assert.equal(r.types.length, 15);
+  assert.equal(r.types.length, EXAMPLE_TYPES);
   const skill = r.types.find((t) => t.type === "skill");
   assert.equal(skill.name, "Skill Schema");
   assert.equal(skill.count, s.entities.filter((e) => e.type === "skill").length);
@@ -108,4 +108,14 @@ test("fetch takes an id, falls back to a name held by exactly one type, and refu
   const shared = withSharedName();
   assert.throws(() => fetchEntity(shared, "Beacon Systems"), (e) => e instanceof ModelError && /R2/.test(e.message) && /identity/.test(e.message) && /profile/.test(e.message));
   assert.throws(() => fetchEntity(s, "nothing/here"), (e) => e instanceof ModelError && /nothing\/here/.test(e.message));
+});
+
+// A tagline wrapped across `>` lines is one paragraph, and an agent reads the whole of it. The
+// example's partner directory wraps its tagline, and before core 0.27.0 the parser served its
+// first line only, so every tool that lists an entity ended the sentence mid-clause.
+test("a wrapped tagline reaches every tool whole", () => {
+  const s = exampleSnapshot();
+  const listed = listEntities(s, "surface").entities.find((e) => e.name === "Partner directory");
+  assert.match(listed.tagline, /takes no feed\.$/);
+  assert.equal(getEntity(s, "surface", "Partner directory").entity.tagline, listed.tagline);
 });
