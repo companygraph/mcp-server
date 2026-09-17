@@ -1,6 +1,6 @@
 {
   "name": "companygraph-mcp-server",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "A read-only MCP server for any CompanyGraph instance",
   "license": "Apache-2.0",
   "type": "module",
@@ -26,7 +26,7 @@
   "dependencies": {
     "@modelcontextprotocol/node": "^2.0.0",
     "@modelcontextprotocol/server": "^2.0.0",
-    "companygraph-meta-model": "github:companygraph/meta-model#v0.25.2",
+    "companygraph-meta-model": "github:companygraph/meta-model#v0.27.0",
     "zod": "^4.2.0"
   },
   "devDependencies": {
