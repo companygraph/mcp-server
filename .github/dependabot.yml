@@ -1,0 +1,41 @@
+# Two kinds of dependency here. The MCP SDK packages and zod are what the server runs on, and
+# the MCP client is what the tests speak through; a bump to any of them is gated by the real
+# check, test.yml running `npm test` on pull_request, so a release that changes the protocol
+# fails before it can be merged. The meta-model parser is different: it is pinned by tag, and
+# the pin is editorial, moved when the owner decides and read against the instance it parses.
+#
+# The shape is copied from blust.ch, deliberately. Grouping minor and patch means a quiet week
+# is one pull request; a major arrives on its own, which is when it deserves reading.
+version: 2
+updates:
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    # Zero, stated, because Dependabot applies three days when the key is absent and then offers
+    # the highest release older than that — for a package pinned by tag and released more than
+    # once a week, a DOWNGRADE. blust.ch saw it on 2026-09-09. With zero, Dependabot sees the
+    # pinned release and proposes nothing.
+    cooldown:
+      default-days: 0
+    groups:
+      # Declared first on purpose: Dependabot puts a dependency in the FIRST group it matches.
+      # A parser release is the one pull request that has to be read rather than merged on
+      # sight, because the fixtures and the reference-instance values move with it. A pull
+      # request from this group proposing a LOWER version is closed, never merged.
+      meta-model:
+        patterns:
+          - "companygraph-meta-model"
+      minor-and-patch:
+        update-types:
+          - "minor"
+          - "patch"
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    groups:
+      actions:
+        patterns:
+          - "*"

@@ -44,7 +44,7 @@ test("other methods and paths", async () => {
   assert.equal((await fetch(`${base}/mcp`)).status, 405);
   assert.equal((await fetch(`${base}/mcp`, { method: "DELETE" })).status, 405);
   assert.equal((await fetch(`${base}/nothing`)).status, 404);
-  const h = await fetch(`${base}/healthz`);
+  const h = await fetch(`${base}/health`);
   assert.equal(h.status, 200);
   assert.equal(h.headers.get("cache-control"), "no-store");
   assert.deepEqual((await h.json()).model, { commit: COMMIT, repo: "companygraph/meta-model", core: "0.25.2", parser: "v0.25.2" });

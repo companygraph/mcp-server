@@ -42,7 +42,7 @@ npx --package github:companygraph/mcp-server companygraph-mcp-http --snapshot sn
 ```
 
 The HTTP server is stateless Streamable HTTP with JSON responses on `POST /mcp`, `no-store`,
-and a `/healthz`. `PORT` and `MCP_ALLOWED_HOSTS` come from the environment.
+and a `/health`. `PORT` and `MCP_ALLOWED_HOSTS` come from the environment.
 
 ## Tests
 
