@@ -21,7 +21,9 @@ test("describe_schema returns the schema's sections and refuses an undeclared ty
   const r = describeSchema(s, "profile");
   assert.equal(r.name, "Profile Schema");
   assert.deepEqual(r.sections.map((x) => x.heading), ["File Location", "Frontmatter", "Sections", "Purpose", "Writing rules"]);
-  assert.ok(r.sections.find((x) => x.heading === "Frontmatter").table.columns.includes("Field"));
+  const frontmatter = r.sections.find((x) => x.heading === "Frontmatter");
+  assert.ok(frontmatter.tables[0].columns.includes("Field"));
+  assert.equal(frontmatter.table, undefined);
   assert.throws(() => describeSchema(s, "person"), (e) => e instanceof ModelError && /no schema declares "person"/.test(e.message) && /skill/.test(e.message));
 });
 
@@ -46,6 +48,26 @@ test("get_entity resolves within the type and returns references both ways", () 
   const source = r.entity.references.find((x) => x.via === "source");
   assert.equal(source.type, "source");
   assert.equal(source.name, "Local");
+});
+
+test("get_entity serves each table once, under tables", () => {
+  const r = getEntity(s, "profile", "Mira Halvorsen");
+  const skills = r.entity.sections.find((x) => x.heading === "Skills");
+  assert.ok(skills.tables[0].rows.length >= 1);
+  for (const section of r.entity.sections) assert.equal(section.table, undefined, section.heading);
+  assert.ok(s.entities.find((e) => e.id === "profiles/mira-halvorsen").sections.find((x) => x.heading === "Skills").table, "the snapshot keeps the parser's graph untouched");
+});
+
+test("get_entity serves ownership both ways, as owner", () => {
+  const owned = s.entities.filter((e) => e.owner === "profiles/mira-halvorsen");
+  assert.ok(owned.length >= 1);
+  const profile = getEntity(s, "profile", "Mira Halvorsen").entity;
+  const owns = profile.referencedBy.filter((x) => x.via === "owner");
+  assert.deepEqual(owns.map((x) => x.id).sort(), owned.map((e) => e.id).sort());
+  assert.deepEqual(owns[0], { via: "owner", id: owned[0].id, type: owned[0].type, name: owned[0].name, attrs: {} });
+  assert.equal(profile.references.filter((x) => x.via === "owner").length, 0);
+  const exp = getEntity(s, owned[0].type, owned[0].name).entity;
+  assert.deepEqual(exp.references.filter((x) => x.via === "owner"), [{ via: "owner", id: "profiles/mira-halvorsen", type: "profile", name: "Mira Halvorsen", attrs: {} }]);
 });
 
 test("get_entity is an R4 error for a name the type does not hold, even if another type does", () => {
