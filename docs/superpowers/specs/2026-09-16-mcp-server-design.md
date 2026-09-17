@@ -168,7 +168,7 @@ github:companygraph/mcp-server companygraph-mcp ./model ./meta/core` from an ins
   built for that request, since a server holds one transport. `Cache-Control: no-store` on
   every response.
 - `GET /mcp` and `DELETE /mcp`: `405`, since there is no session and no stream.
-- `GET /healthz`: `200` with `model` as the tools report it.
+- `GET /health`: `200` with `model` as the tools report it.
 - Host validation: `MCP_ALLOWED_HOSTS`, a comma-separated list, is checked with the SDK's
   port-agnostic Host validation helper, since the transport's own option is deprecated in v2.
   Unset, no validation, for local runs.
