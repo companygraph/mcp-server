@@ -6,7 +6,7 @@ import path from "node:path";
 import { execFileSync } from "node:child_process";
 import { Client } from "@modelcontextprotocol/client";
 import { StdioClientTransport } from "@modelcontextprotocol/client/stdio";
-import { fixtureRoot } from "./helpers.mjs";
+import { fixtureRoot, EXAMPLE_CORE, EXAMPLE_TYPES } from "./helpers.mjs";
 
 const bin = new URL("../bin/stdio.mjs", import.meta.url).pathname;
 
@@ -17,8 +17,8 @@ test("the stdio server lists seven tools and answers with the model", async () =
   const { tools } = await client.listTools();
   assert.equal(tools.length, 7);
   const r = await client.callTool({ name: "list_types", arguments: {} });
-  assert.equal(r.structuredContent.model.core, "0.25.2");
-  assert.equal(r.structuredContent.types.length, 15);
+  assert.equal(r.structuredContent.model.core, EXAMPLE_CORE);
+  assert.equal(r.structuredContent.types.length, EXAMPLE_TYPES);
   await client.close();
 });
 

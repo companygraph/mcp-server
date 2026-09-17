@@ -4,7 +4,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { execFileSync } from "node:child_process";
-import { fixtureRoot } from "./helpers.mjs";
+import { fixtureRoot, EXAMPLE_CORE, exampleSnapshot } from "./helpers.mjs";
 
 const bin = new URL("../bin/snapshot.mjs", import.meta.url).pathname;
 
@@ -14,9 +14,10 @@ test("writes a snapshot from two local directories", () => {
     "--commit", "abc123", "--repo", "companygraph/meta-model", "--sub", "example/model/", "--out", out], { encoding: "utf8" });
   const s = JSON.parse(fs.readFileSync(out, "utf8"));
   assert.equal(s.commit, "abc123");
-  assert.equal(s.core.version, "0.25.2");
-  assert.equal(s.entities.length, 34);
-  assert.match(stdout, /34 entities/);
+  assert.equal(s.core.version, EXAMPLE_CORE);
+  const count = exampleSnapshot().entities.length;
+  assert.equal(s.entities.length, count);
+  assert.match(stdout, new RegExp(`${count} entities`));
 });
 
 test("refuses to run without --out", () => {

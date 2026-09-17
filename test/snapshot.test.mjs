@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import { parseInstance } from "companygraph-meta-model/instance";
 import { buildSnapshot, parserTag } from "../lib/snapshot.mjs";
-import { exampleFiles, exampleSnapshot, COMMIT } from "./helpers.mjs";
+import { exampleFiles, exampleSnapshot, COMMIT, EXAMPLE_CORE, PARSER, EXAMPLE_TYPES } from "./helpers.mjs";
 
 test("the snapshot is the parser's graph plus provenance, schemas and source text", () => {
   const s = exampleSnapshot();
@@ -11,14 +11,14 @@ test("the snapshot is the parser's graph plus provenance, schemas and source tex
   const graph = parseInstance(files, { sub: "example/model/", schemas });
   assert.equal(s.commit, COMMIT);
   assert.equal(s.repo, "companygraph/meta-model");
-  assert.deepEqual(s.core, { version: "0.25.2", parser: "v0.25.2" });
+  assert.deepEqual(s.core, { version: EXAMPLE_CORE, parser: PARSER });
   assert.equal(s.root, graph.root);
   assert.equal(s.rootId, graph.rootId);
   assert.equal(s.entities.length, graph.entities.length);
   assert.equal(s.edges.length, graph.edges.length);
   assert.deepEqual(s.edges, graph.edges);
   assert.deepEqual(s.types, graph.types);
-  assert.equal(s.schemas.length, 15);
+  assert.equal(s.schemas.length, EXAMPLE_TYPES);
   assert.ok(s.schemas.every((x) => x.id.startsWith("core/")));
   for (const e of s.entities) {
     assert.equal(e.markdown, files.get(e.path.slice("example/model/".length)));
@@ -28,8 +28,8 @@ test("the snapshot is the parser's graph plus provenance, schemas and source tex
 
 test("a sub with no trailing slash reads the same snapshot as one with it", () => {
   const { files, schemas } = exampleFiles();
-  const slash = buildSnapshot({ files, schemas, sub: "example/model/", commit: COMMIT, repo: "companygraph/meta-model", parserTag: "v0.25.2" });
-  const bare = buildSnapshot({ files, schemas, sub: "example/model", commit: COMMIT, repo: "companygraph/meta-model", parserTag: "v0.25.2" });
+  const slash = buildSnapshot({ files, schemas, sub: "example/model/", commit: COMMIT, repo: "companygraph/meta-model", parserTag: PARSER });
+  const bare = buildSnapshot({ files, schemas, sub: "example/model", commit: COMMIT, repo: "companygraph/meta-model", parserTag: PARSER });
   assert.deepEqual(bare.entities, slash.entities);
   assert.deepEqual(bare.edges, slash.edges);
 });

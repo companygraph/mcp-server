@@ -1,15 +1,15 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { ModelError, listTypes, describeSchema, listEntities, getEntity, findEvidence, search, fetchEntity } from "../lib/model.mjs";
-import { exampleSnapshot, COMMIT, withSharedName } from "./helpers.mjs";
+import { exampleSnapshot, COMMIT, withSharedName, EXAMPLE_CORE, PARSER, EXAMPLE_TYPES } from "./helpers.mjs";
 
 const s = exampleSnapshot();
-const MODEL = { commit: COMMIT, repo: "companygraph/meta-model", core: "0.25.2", parser: "v0.25.2" };
+const MODEL = { commit: COMMIT, repo: "companygraph/meta-model", core: EXAMPLE_CORE, parser: PARSER };
 
 test("list_types names every declared type with its tagline and count", () => {
   const r = listTypes(s);
   assert.deepEqual(r.model, MODEL);
-  assert.equal(r.types.length, 15);
+  assert.equal(r.types.length, EXAMPLE_TYPES);
   const skill = r.types.find((t) => t.type === "skill");
   assert.equal(skill.name, "Skill Schema");
   assert.equal(skill.count, s.entities.filter((e) => e.type === "skill").length);
