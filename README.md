@@ -42,7 +42,14 @@ npx --package github:companygraph/mcp-server companygraph-mcp-http --snapshot sn
 ```
 
 The HTTP server is stateless Streamable HTTP with JSON responses on `POST /mcp`, `no-store`,
-and a `/health`. `PORT` and `MCP_ALLOWED_HOSTS` come from the environment.
+and a `/health`. `GET /` is a page for whoever types the host into a browser: the model's own
+taglines, the endpoint at the address the request arrived under, every tool with what it returns,
+and the commit the snapshot was built from. It is rendered from the snapshot, so it says nothing
+this package knows about any particular instance and cannot fall out of step with what the tools
+answer. `PORT` and `MCP_ALLOWED_HOSTS` come from the environment.
+
+A host in front of the service should send every path here rather than only `/mcp`, so that
+`/` and `/health` are reachable and an unknown path gets this server's own 404.
 
 ## Tests
 
