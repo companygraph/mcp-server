@@ -74,6 +74,15 @@ test("GET / is a page naming the model, the endpoint it was reached by and every
   assert.equal(await head.text(), "");
 });
 
+test("a supplied icon is linked, and none is linked when none is supplied", async () => {
+  const icon = "data:image/svg+xml;base64,PHN2Zy8+";
+  const withIcon = await listen({ pageIcon: icon });
+  const html = await (await fetch(`${withIcon}/`)).text();
+  assert.ok(html.includes(`<link rel="icon" href="${icon}" type="image/svg+xml">`), "the icon is linked with its type");
+  const without = await listen();
+  assert.ok(!(await (await fetch(`${without}/`)).text()).includes('rel="icon"'), "no icon, no link");
+});
+
 test("a supplied stylesheet replaces the built-in one and the markup is unchanged", async () => {
   const base = await listen({ pageCss: "/* supplied */ body { color: rebeccapurple }" });
   const html = await (await fetch(`${base}/`)).text();
