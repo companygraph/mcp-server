@@ -48,8 +48,9 @@ and the commit the snapshot was built from. It is rendered from the snapshot, so
 this package knows about any particular instance and cannot fall out of step with what the tools
 answer. `--page-css file` hands the whole stylesheet to a deployment that has a design of its
 own; unset, the page carries the plain one this package ships. What the page guarantees in
-exchange is its markup — `.title` with `.r70` and `.rcl`, `.tagline`, `table.tools` and
-`code.addr` — and changing one of those names breaks whoever styled it. `PORT` and `MCP_ALLOWED_HOSTS` come from the environment.
+exchange is its markup — `.title` with `.r70` and `.rcl`, `.tagline`, `.note` around what the
+model says about itself, `.lede` on the prose, `table.tools` and `code.addr` — and changing one
+of those names breaks whoever styled it. `PORT` and `MCP_ALLOWED_HOSTS` come from the environment.
 
 A host in front of the service should send every path here rather than only `/mcp`, so that
 `/` and `/health` are reachable and an unknown path gets this server's own 404.

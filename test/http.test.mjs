@@ -66,8 +66,9 @@ test("GET / is a page naming the model, the endpoint it was reached by and every
   // A page is HTML a browser renders, so an entity name carrying a bracket cannot escape it.
   assert.ok(!/<[a-z]+[^>]*>/i.test(s.root) || !html.includes(s.root), "root is escaped where it is unsafe");
   // The markup is the contract a supplied stylesheet is written against.
-  for (const cls of ["title", "r70", "rcl", "tagline", "tools", "addr"])
-    assert.ok(html.includes(`class="${cls}"`) || html.includes(`class="tools"`), `the page carries .${cls}`);
+  for (const cls of ["title", "r70", "rcl", "tagline", "note", "lede"])
+    assert.ok(html.includes(`class="${cls}"`), `the page carries .${cls}`);
+  assert.ok(html.includes('class="tools"') && html.includes('class="addr"'), "the table and the address carry theirs");
   const head = await fetch(`${base}/`, { method: "HEAD" });
   assert.equal(head.status, 200);
   assert.equal(await head.text(), "");
