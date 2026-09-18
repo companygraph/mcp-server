@@ -1,11 +1,16 @@
 {
   "name": "companygraph-mcp-server",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "A read-only MCP server for any CompanyGraph instance",
   "license": "Apache-2.0",
   "type": "module",
-  "engines": { "node": ">=22" },
-  "files": ["lib", "bin"],
+  "engines": {
+    "node": ">=22"
+  },
+  "files": [
+    "lib",
+    "bin"
+  ],
   "bin": {
     "companygraph-mcp": "bin/stdio.mjs",
     "companygraph-mcp-snapshot": "bin/snapshot.mjs",
@@ -26,7 +31,7 @@
   "dependencies": {
     "@modelcontextprotocol/node": "^2.0.0",
     "@modelcontextprotocol/server": "^2.0.0",
-    "companygraph-meta-model": "github:companygraph/meta-model#v0.27.0",
+    "companygraph-meta-model": "github:companygraph/meta-model#v0.28.0",
     "zod": "^4.2.0"
   },
   "devDependencies": {
