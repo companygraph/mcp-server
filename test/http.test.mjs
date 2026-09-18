@@ -5,6 +5,7 @@ import { Client } from "@modelcontextprotocol/client";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/client";
 import { createHttpServer, MAX_BODY_BYTES } from "../lib/http.mjs";
 import { exampleSnapshot, COMMIT, EXAMPLE_CORE, PARSER } from "./helpers.mjs";
+import { TOOLS } from "../lib/tools.mjs";
 
 const s = exampleSnapshot();
 const INIT = { jsonrpc: "2.0", id: 1, method: "initialize", params: { protocolVersion: "2025-06-18", capabilities: {}, clientInfo: { name: "t", version: "0" } } };
@@ -48,6 +49,36 @@ test("other methods and paths", async () => {
   assert.equal(h.status, 200);
   assert.equal(h.headers.get("cache-control"), "no-store");
   assert.deepEqual((await h.json()).model, { commit: COMMIT, repo: "companygraph/meta-model", core: EXAMPLE_CORE, parser: PARSER });
+});
+
+test("GET / is a page naming the model, the endpoint it was reached by and every tool", async () => {
+  const base = await listen();
+  const r = await fetch(`${base}/`);
+  assert.equal(r.status, 200);
+  assert.match(r.headers.get("content-type"), /^text\/html/);
+  const html = await r.text();
+  // The model speaking for itself, not a description this package wrote.
+  assert.ok(html.includes(s.root), "the page names the model's root");
+  assert.ok(html.includes(COMMIT), "the page names the commit it reads");
+  // The address is the one the request arrived under, never a configured guess.
+  assert.ok(html.includes(`${base}/mcp`), "the page names the endpoint it was reached by");
+  for (const tool of TOOLS) assert.ok(html.includes(tool.name), `the page lists ${tool.name}`);
+  // A page is HTML a browser renders, so an entity name carrying a bracket cannot escape it.
+  assert.ok(!/<[a-z]+[^>]*>/i.test(s.root) || !html.includes(s.root), "root is escaped where it is unsafe");
+  // The markup is the contract a supplied stylesheet is written against.
+  for (const cls of ["title", "r70", "rcl", "tagline", "tools", "addr"])
+    assert.ok(html.includes(`class="${cls}"`) || html.includes(`class="tools"`), `the page carries .${cls}`);
+  const head = await fetch(`${base}/`, { method: "HEAD" });
+  assert.equal(head.status, 200);
+  assert.equal(await head.text(), "");
+});
+
+test("a supplied stylesheet replaces the built-in one and the markup is unchanged", async () => {
+  const base = await listen({ pageCss: "/* supplied */ body { color: rebeccapurple }" });
+  const html = await (await fetch(`${base}/`)).text();
+  assert.ok(html.includes("/* supplied */"), "the supplied sheet is used");
+  assert.ok(!html.includes("ui-monospace"), "the built-in sheet is gone rather than appended");
+  assert.ok(html.includes('class="tools"'), "the markup a stylesheet targets is unchanged");
 });
 
 test("a Host outside the allowed list is refused, an allowed one served regardless of its port", async () => {
