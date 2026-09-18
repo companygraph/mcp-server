@@ -65,9 +65,20 @@ test("GET / is a page naming the model, the endpoint it was reached by and every
   for (const tool of TOOLS) assert.ok(html.includes(tool.name), `the page lists ${tool.name}`);
   // A page is HTML a browser renders, so an entity name carrying a bracket cannot escape it.
   assert.ok(!/<[a-z]+[^>]*>/i.test(s.root) || !html.includes(s.root), "root is escaped where it is unsafe");
+  // The markup is the contract a supplied stylesheet is written against.
+  for (const cls of ["title", "r70", "rcl", "tagline", "tools", "addr"])
+    assert.ok(html.includes(`class="${cls}"`) || html.includes(`class="tools"`), `the page carries .${cls}`);
   const head = await fetch(`${base}/`, { method: "HEAD" });
   assert.equal(head.status, 200);
   assert.equal(await head.text(), "");
+});
+
+test("a supplied stylesheet replaces the built-in one and the markup is unchanged", async () => {
+  const base = await listen({ pageCss: "/* supplied */ body { color: rebeccapurple }" });
+  const html = await (await fetch(`${base}/`)).text();
+  assert.ok(html.includes("/* supplied */"), "the supplied sheet is used");
+  assert.ok(!html.includes("ui-monospace"), "the built-in sheet is gone rather than appended");
+  assert.ok(html.includes('class="tools"'), "the markup a stylesheet targets is unchanged");
 });
 
 test("a Host outside the allowed list is refused, an allowed one served regardless of its port", async () => {

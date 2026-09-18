@@ -46,7 +46,10 @@ and a `/health`. `GET /` is a page for whoever types the host into a browser: th
 taglines, the endpoint at the address the request arrived under, every tool with what it returns,
 and the commit the snapshot was built from. It is rendered from the snapshot, so it says nothing
 this package knows about any particular instance and cannot fall out of step with what the tools
-answer. `PORT` and `MCP_ALLOWED_HOSTS` come from the environment.
+answer. `--page-css file` hands the whole stylesheet to a deployment that has a design of its
+own; unset, the page carries the plain one this package ships. What the page guarantees in
+exchange is its markup — `.title` with `.r70` and `.rcl`, `.tagline`, `table.tools` and
+`code.addr` — and changing one of those names breaks whoever styled it. `PORT` and `MCP_ALLOWED_HOSTS` come from the environment.
 
 A host in front of the service should send every path here rather than only `/mcp`, so that
 `/` and `/health` are reachable and an unknown path gets this server's own 404.
