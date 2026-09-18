@@ -47,9 +47,14 @@ taglines, the endpoint at the address the request arrived under, every tool with
 and the commit the snapshot was built from. It is rendered from the snapshot, so it says nothing
 this package knows about any particular instance and cannot fall out of step with what the tools
 answer. `--page-css file` hands the whole stylesheet to a deployment that has a design of its
-own, and `--page-icon file` its mark, an `.svg`, `.png` or `.ico` inlined as a data URI so the
+own, `--page-jsonld file` a structured-data block for the head, `--robots file` the rule served
+at `/robots.txt`, and `--page-icon file` its mark, an `.svg`, `.png` or `.ico` inlined as a data URI so the
 page stays one response; unset, the page carries the plain stylesheet this package ships and no
-icon at all, because a mark belongs to whoever deploys. What the page guarantees in
+icon at all, because a mark belongs to whoever deploys. Unset likewise, the page describes itself
+to a crawler with its ordinary tags and nothing more, and `/robots.txt` is a 404: what a crawler
+may read and what a subject claims to be are publishing decisions, and schema.org's vocabulary is
+not this package's to choose on anyone's behalf. A supplied block is parsed before it is served,
+so a file that is not JSON fails at startup rather than reaching a crawler. What the page guarantees in
 exchange is its markup — `main.shell` around the whole page, `.title` with `.r70` and `.rcl`,
 `.tagline`, `header > .bar > a.brand` linking the identity's own
 `url`, `.note` around what the model says about itself, `.lede` on the prose, and `ul.ops` of

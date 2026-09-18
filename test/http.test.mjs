@@ -104,6 +104,27 @@ test("a supplied icon is linked, and none is linked when none is supplied", asyn
   assert.ok(!(await (await fetch(`${without}/`)).text()).includes('rel="icon"'), "no icon, no link");
 });
 
+test("a supplied json-ld block reaches the head, escaped, and none means none", async () => {
+  const node = { "@context": "https://schema.org", "@type": "Person", "name": "A <b>test</b>" };
+  const base = await listen({ pageJsonld: JSON.stringify(node).replace(/</g, "\\u003c") });
+  const html = await (await fetch(`${base}/`)).text();
+  assert.match(html, /<script type="application\/ld\+json">/, "the block is in the head");
+  assert.ok(!html.includes("<b>test</b>"), "a < inside the block cannot close the script");
+  const bare = await listen();
+  assert.ok(!(await (await fetch(`${bare}/`)).text()).includes("ld+json"), "no block, no script");
+});
+
+test("robots.txt is served where one is supplied, and 404s where none is", async () => {
+  const body = "User-agent: *\nAllow: /\n";
+  const base = await listen({ robots: body });
+  const r = await fetch(`${base}/robots.txt`);
+  assert.equal(r.status, 200);
+  assert.match(r.headers.get("content-type"), /^text\/plain/);
+  assert.equal(await r.text(), body);
+  const bare = await listen();
+  assert.equal((await fetch(`${bare}/robots.txt`)).status, 404, "no rule supplied, no rule invented");
+});
+
 test("a supplied stylesheet replaces the built-in one and the markup is unchanged", async () => {
   const base = await listen({ pageCss: "/* supplied */ body { color: rebeccapurple }" });
   const html = await (await fetch(`${base}/`)).text();
