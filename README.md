@@ -50,7 +50,8 @@ answer. `--page-css file` hands the whole stylesheet to a deployment that has a 
 own, and `--page-icon file` its mark, an `.svg`, `.png` or `.ico` inlined as a data URI so the
 page stays one response; unset, the page carries the plain stylesheet this package ships and no
 icon at all, because a mark belongs to whoever deploys. What the page guarantees in
-exchange is its markup — `.title` with `.r70` and `.rcl`, `.tagline`, `header > .bar > a.brand` linking the identity's own
+exchange is its markup — `main.shell` around the whole page, `.title` with `.r70` and `.rcl`,
+`.tagline`, `header > .bar > a.brand` linking the identity's own
 `url`, `.note` around what the model says about itself, `.lede` on the prose, and `ul.ops` of
 `li > .head` rows carrying `.m`, `.p` and `.s` for the paths and again, as `ul.ops.tools`, for
 the tools, and `.mono` on anything set in the monospace face — and changing one
