@@ -1,6 +1,6 @@
 {
   "name": "companygraph-mcp-server",
-  "version": "0.6.0",
+  "version": "0.8.0",
   "description": "A read-only MCP server for any CompanyGraph instance",
   "license": "Apache-2.0",
   "type": "module",
@@ -35,6 +35,7 @@
     "zod": "^4.2.0"
   },
   "devDependencies": {
-    "@modelcontextprotocol/client": "^2.0.0"
+    "@modelcontextprotocol/client": "^2.0.0",
+    "playwright": "^1.63.0"
   }
 }

@@ -12,4 +12,8 @@ jobs:
         with:
           node-version: 22
       - run: npm ci
+      # The page checks open a browser: a rule that is present and wrong is invisible to
+      # anything that reads the stylesheet, and the page this package ships is what an instance
+      # supplying no design of its own renders with.
+      - run: npx playwright install --with-deps chromium
       - run: npm test
