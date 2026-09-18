@@ -11,8 +11,9 @@ const s = exampleSnapshot();
 const INIT = { jsonrpc: "2.0", id: 1, method: "initialize", params: { protocolVersion: "2025-06-18", capabilities: {}, clientInfo: { name: "t", version: "0" } } };
 const headers = { "content-type": "application/json", accept: "application/json, text/event-stream" };
 
-async function listen(opts) {
-  const server = createHttpServer(s, opts);
+async function listen(opts = {}) {
+  const { snapshot = s, ...rest } = opts;
+  const server = createHttpServer(snapshot, rest);
   await new Promise((r) => server.listen(0, "127.0.0.1", r));
   const base = `http://127.0.0.1:${server.address().port}`;
   after(() => server.close());
@@ -73,6 +74,25 @@ test("GET / is a page naming the model, the endpoint it was reached by and every
   const head = await fetch(`${base}/`, { method: "HEAD" });
   assert.equal(head.status, 200);
   assert.equal(await head.text(), "");
+});
+
+test("the header links the identity's own url, and is absent when it has none", async () => {
+  const base = await listen();
+  const html = await (await fetch(`${base}/`)).text();
+  const home = s.entities.find((e) => e.id === s.rootId).fields.url;
+  assert.ok(home, "the fixture identity has a url to link");
+  assert.ok(html.includes(`<a class="brand" href="${home}"`), "the brand links the identity's url");
+  assert.ok(html.includes(">Robert Blust</a>") || html.includes(`>${s.root}</a>`), "with no brand supplied the name stands in, escaped");
+
+  const lockup = '<svg viewBox="0 0 32 32"><rect class="plate"/></svg><b>A <span>B</span></b>';
+  const branded = await listen({ pageBrand: lockup });
+  const bhtml = await (await fetch(`${branded}/`)).text();
+  assert.ok(bhtml.includes(lockup), "a supplied brand is inserted as written, markup and all");
+
+  const noUrl = structuredClone(s);
+  noUrl.entities.find((e) => e.id === noUrl.rootId).fields.url = undefined;
+  const bare = await listen({ snapshot: noUrl });
+  assert.ok(!(await (await fetch(`${bare}/`)).text()).includes("class=\"brand\""), "no url, no header");
 });
 
 test("a supplied icon is linked, and none is linked when none is supplied", async () => {

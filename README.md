@@ -50,9 +50,10 @@ answer. `--page-css file` hands the whole stylesheet to a deployment that has a 
 own, and `--page-icon file` its mark, an `.svg`, `.png` or `.ico` inlined as a data URI so the
 page stays one response; unset, the page carries the plain stylesheet this package ships and no
 icon at all, because a mark belongs to whoever deploys. What the page guarantees in
-exchange is its markup — `.title` with `.r70` and `.rcl`, `.tagline`, `.note` around what the
-model says about itself, `.lede` on the prose, and `ul.ops` of `li > .head` rows carrying
-`.m`, `.p` and `.s` for the paths and again, as `ul.ops.tools`, for the tools — and changing one
+exchange is its markup — `.title` with `.r70` and `.rcl`, `.tagline`, `header > .bar > a.brand` linking the identity's own
+`url`, `.note` around what the model says about itself, `.lede` on the prose, and `ul.ops` of
+`li > .head` rows carrying `.m`, `.p` and `.s` for the paths and again, as `ul.ops.tools`, for
+the tools — and changing one
 of those names breaks whoever styled it. `PORT` and `MCP_ALLOWED_HOSTS` come from the environment.
 
 A host in front of the service should send every path here rather than only `/mcp`, so that
