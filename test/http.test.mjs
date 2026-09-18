@@ -11,8 +11,9 @@ const s = exampleSnapshot();
 const INIT = { jsonrpc: "2.0", id: 1, method: "initialize", params: { protocolVersion: "2025-06-18", capabilities: {}, clientInfo: { name: "t", version: "0" } } };
 const headers = { "content-type": "application/json", accept: "application/json, text/event-stream" };
 
-async function listen(opts) {
-  const server = createHttpServer(s, opts);
+async function listen(opts = {}) {
+  const { snapshot = s, ...rest } = opts;
+  const server = createHttpServer(snapshot, rest);
   await new Promise((r) => server.listen(0, "127.0.0.1", r));
   const base = `http://127.0.0.1:${server.address().port}`;
   after(() => server.close());
@@ -66,11 +67,41 @@ test("GET / is a page naming the model, the endpoint it was reached by and every
   // A page is HTML a browser renders, so an entity name carrying a bracket cannot escape it.
   assert.ok(!/<[a-z]+[^>]*>/i.test(s.root) || !html.includes(s.root), "root is escaped where it is unsafe");
   // The markup is the contract a supplied stylesheet is written against.
-  for (const cls of ["title", "r70", "rcl", "tagline", "tools", "addr"])
-    assert.ok(html.includes(`class="${cls}"`) || html.includes(`class="tools"`), `the page carries .${cls}`);
+  for (const cls of ["title", "r70", "rcl", "tagline", "note", "lede"])
+    assert.ok(html.includes(`class="${cls}"`), `the page carries .${cls}`);
+  assert.ok(html.includes('class="ops"') && html.includes('class="ops tools"'), "the route list and the tool list carry theirs");
+  for (const part of ["mono m", "mono p", '"s"']) assert.ok(html.includes(part), `a row carries ${part}`);
   const head = await fetch(`${base}/`, { method: "HEAD" });
   assert.equal(head.status, 200);
   assert.equal(await head.text(), "");
+});
+
+test("the header links the identity's own url, and is absent when it has none", async () => {
+  const base = await listen();
+  const html = await (await fetch(`${base}/`)).text();
+  const home = s.entities.find((e) => e.id === s.rootId).fields.url;
+  assert.ok(home, "the fixture identity has a url to link");
+  assert.ok(html.includes(`<a class="brand" href="${home}"`), "the brand links the identity's url");
+  assert.ok(html.includes(">Robert Blust</a>") || html.includes(`>${s.root}</a>`), "with no brand supplied the name stands in, escaped");
+
+  const lockup = '<svg viewBox="0 0 32 32"><rect class="plate"/></svg><b>A <span>B</span></b>';
+  const branded = await listen({ pageBrand: lockup });
+  const bhtml = await (await fetch(`${branded}/`)).text();
+  assert.ok(bhtml.includes(lockup), "a supplied brand is inserted as written, markup and all");
+
+  const noUrl = structuredClone(s);
+  noUrl.entities.find((e) => e.id === noUrl.rootId).fields.url = undefined;
+  const bare = await listen({ snapshot: noUrl });
+  assert.ok(!(await (await fetch(`${bare}/`)).text()).includes("class=\"brand\""), "no url, no header");
+});
+
+test("a supplied icon is linked, and none is linked when none is supplied", async () => {
+  const icon = "data:image/svg+xml;base64,PHN2Zy8+";
+  const withIcon = await listen({ pageIcon: icon });
+  const html = await (await fetch(`${withIcon}/`)).text();
+  assert.ok(html.includes(`<link rel="icon" href="${icon}" type="image/svg+xml">`), "the icon is linked with its type");
+  const without = await listen();
+  assert.ok(!(await (await fetch(`${without}/`)).text()).includes('rel="icon"'), "no icon, no link");
 });
 
 test("a supplied stylesheet replaces the built-in one and the markup is unchanged", async () => {
@@ -78,7 +109,7 @@ test("a supplied stylesheet replaces the built-in one and the markup is unchange
   const html = await (await fetch(`${base}/`)).text();
   assert.ok(html.includes("/* supplied */"), "the supplied sheet is used");
   assert.ok(!html.includes("ui-monospace"), "the built-in sheet is gone rather than appended");
-  assert.ok(html.includes('class="tools"'), "the markup a stylesheet targets is unchanged");
+  assert.ok(html.includes('class="ops tools"'), "the markup a stylesheet targets is unchanged");
 });
 
 test("a Host outside the allowed list is refused, an allowed one served regardless of its port", async () => {

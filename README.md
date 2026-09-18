@@ -47,9 +47,14 @@ taglines, the endpoint at the address the request arrived under, every tool with
 and the commit the snapshot was built from. It is rendered from the snapshot, so it says nothing
 this package knows about any particular instance and cannot fall out of step with what the tools
 answer. `--page-css file` hands the whole stylesheet to a deployment that has a design of its
-own; unset, the page carries the plain one this package ships. What the page guarantees in
-exchange is its markup — `.title` with `.r70` and `.rcl`, `.tagline`, `table.tools` and
-`code.addr` — and changing one of those names breaks whoever styled it. `PORT` and `MCP_ALLOWED_HOSTS` come from the environment.
+own, and `--page-icon file` its mark, an `.svg`, `.png` or `.ico` inlined as a data URI so the
+page stays one response; unset, the page carries the plain stylesheet this package ships and no
+icon at all, because a mark belongs to whoever deploys. What the page guarantees in
+exchange is its markup — `.title` with `.r70` and `.rcl`, `.tagline`, `header > .bar > a.brand` linking the identity's own
+`url`, `.note` around what the model says about itself, `.lede` on the prose, and `ul.ops` of
+`li > .head` rows carrying `.m`, `.p` and `.s` for the paths and again, as `ul.ops.tools`, for
+the tools — and changing one
+of those names breaks whoever styled it. `PORT` and `MCP_ALLOWED_HOSTS` come from the environment.
 
 A host in front of the service should send every path here rather than only `/mcp`, so that
 `/` and `/health` are reachable and an unknown path gets this server's own 404.
