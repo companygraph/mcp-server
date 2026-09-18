@@ -53,11 +53,18 @@ icon at all, because a mark belongs to whoever deploys. What the page guarantees
 exchange is its markup — `.title` with `.r70` and `.rcl`, `.tagline`, `header > .bar > a.brand` linking the identity's own
 `url`, `.note` around what the model says about itself, `.lede` on the prose, and `ul.ops` of
 `li > .head` rows carrying `.m`, `.p` and `.s` for the paths and again, as `ul.ops.tools`, for
-the tools — and changing one
+the tools, and `.mono` on anything set in the monospace face — and changing one
 of those names breaks whoever styled it. `PORT` and `MCP_ALLOWED_HOSTS` come from the environment.
 
 A host in front of the service should send every path here rather than only `/mcp`, so that
 `/` and `/health` are reachable and an unknown path gets this server's own 404.
+
+The page and the sheet it ships with are held to each other by `test/page-contract.test.mjs` —
+every class the markup emits has a rule, every rule names a class the markup emits, and the
+list above says both. `test/page-render.test.mjs` opens the page in a browser and measures it,
+because a rule that is present and wrong is invisible to the other one: the sheet parses, the
+class is styled, and the page still scrolls sideways. Those two are why `playwright` is a
+development dependency, and the workflow installs chromium for them.
 
 ## Tests
 
