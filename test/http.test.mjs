@@ -68,7 +68,8 @@ test("GET / is a page naming the model, the endpoint it was reached by and every
   // The markup is the contract a supplied stylesheet is written against.
   for (const cls of ["title", "r70", "rcl", "tagline", "note", "lede"])
     assert.ok(html.includes(`class="${cls}"`), `the page carries .${cls}`);
-  assert.ok(html.includes('class="tools"') && html.includes('class="addr"'), "the table and the address carry theirs");
+  assert.ok(html.includes('class="ops"') && html.includes('class="ops tools"'), "the route list and the tool list carry theirs");
+  for (const part of ["mono m", "mono p", '"s"']) assert.ok(html.includes(part), `a row carries ${part}`);
   const head = await fetch(`${base}/`, { method: "HEAD" });
   assert.equal(head.status, 200);
   assert.equal(await head.text(), "");
@@ -88,7 +89,7 @@ test("a supplied stylesheet replaces the built-in one and the markup is unchange
   const html = await (await fetch(`${base}/`)).text();
   assert.ok(html.includes("/* supplied */"), "the supplied sheet is used");
   assert.ok(!html.includes("ui-monospace"), "the built-in sheet is gone rather than appended");
-  assert.ok(html.includes('class="tools"'), "the markup a stylesheet targets is unchanged");
+  assert.ok(html.includes('class="ops tools"'), "the markup a stylesheet targets is unchanged");
 });
 
 test("a Host outside the allowed list is refused, an allowed one served regardless of its port", async () => {
