@@ -44,3 +44,17 @@ export function withSharedName() {
   files.set(`profiles/${slug}/${slug}.md`, `---\nsource: Local\nnature: human\n---\n\n# ${root}\n\n> The founder, profiled under the company's own name.\n\n## Summary\n\nOne person.\n`);
   return buildSnapshot({ files, schemas, sub: "example/model/", commit: COMMIT, repo: "companygraph/meta-model", parserTag: PARSER });
 }
+
+// Core 0.31.0: a name of an owned type is unique within its owner, so two profiles may each own a
+// period of one title. The example's first profile's first experience is copied, title and all,
+// under the second profile, which is valid and parses.
+export function withOwnedNameTwice() {
+  const { files, schemas } = exampleFiles();
+  const periods = [...files.keys()].filter((k) => /^profiles\/[^/]+\/experiences\/[^/]+\.md$/.test(k) && !k.endsWith("/README.md"));
+  const [first, second] = [...new Set(periods.map((k) => k.split("/")[1]))].sort();
+  const source = periods.filter((k) => k.startsWith(`profiles/${first}/experiences/`)).sort()[0];
+  files.set(source.replace(`profiles/${first}/`, `profiles/${second}/`), files.get(source));
+  const title = files.get(source).match(/^# (.+)$/m)[1];
+  const snapshot = buildSnapshot({ files, schemas, sub: "example/model/", commit: COMMIT, repo: "companygraph/meta-model", parserTag: PARSER });
+  return { snapshot, title, owners: [`profiles/${first}`, `profiles/${second}`] };
+}

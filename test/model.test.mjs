@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { ModelError, listTypes, describeSchema, listEntities, getEntity, findEvidence, search, fetchEntity } from "../lib/model.mjs";
-import { exampleSnapshot, COMMIT, withSharedName, EXAMPLE_CORE, PARSER, EXAMPLE_TYPES } from "./helpers.mjs";
+import { exampleSnapshot, COMMIT, withSharedName, withOwnedNameTwice, EXAMPLE_CORE, PARSER, EXAMPLE_TYPES } from "./helpers.mjs";
 
 const s = exampleSnapshot();
 const MODEL = { commit: COMMIT, repo: "companygraph/meta-model", core: EXAMPLE_CORE, parser: PARSER };
@@ -143,4 +143,17 @@ test("a wrapped tagline reaches every tool whole", () => {
   const listed = listEntities(s, "surface").entities.find((e) => e.name === "Partner directory");
   assert.match(listed.tagline, /takes no feed\.$/);
   assert.equal(getEntity(s, "surface", "Partner directory").entity.tagline, listed.tagline);
+});
+
+// Core 0.31.0 lets two owners each own an entity of one name, and a lookup by type and name alone
+// then meets two. Handing back the first would answer for the wrong person without saying so, so
+// both lookups refuse and name every id, and an id reaches each.
+test("a name two owners each hold is refused by type and name, with every id named, and each is reached by id", () => {
+  const { snapshot, title, owners } = withOwnedNameTwice();
+  const ids = snapshot.entities.filter((e) => e.type === "experience" && e.name === title).map((e) => e.id);
+  assert.equal(ids.length, 2);
+  for (const call of [() => getEntity(snapshot, "experience", title), () => fetchEntity(snapshot, title)])
+    assert.throws(call, (e) => e instanceof ModelError && /R2/.test(e.message) && ids.every((id) => e.message.includes(id)) && /fetch/.test(e.message) && !/different types/.test(e.message));
+  for (const id of ids) assert.equal(fetchEntity(snapshot, id).entity.id, id);
+  assert.ok(owners.every((o) => ids.some((id) => id.startsWith(`${o}/`))));
 });
