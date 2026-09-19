@@ -10,9 +10,9 @@ const s = instanceSnapshot();
 test("the instance parses to what its site publishes", () => {
   assert.equal(s.root, "Robert Blust");
   assert.equal(s.rootId, "identity");
-  assert.equal(s.entities.length, 143);
-  assert.equal(s.edges.length, 608);
-  assert.equal(listTypes(s).types.length, 15);
+  assert.equal(s.entities.length, 155);
+  assert.equal(s.edges.length, 964);
+  assert.equal(listTypes(s).types.length, 16);
   assert.deepEqual(listTypes(s).model, { commit: INSTANCE_COMMIT, repo: "robertblust/mental-model", core: INSTANCE_CORE, parser: PARSER });
 });
 
@@ -26,12 +26,16 @@ test("the company of one: the identity and the profile share a name, and a bare 
 test("which skills are Expert, and on what evidence", () => {
   const profile = getEntity(s, "profile", "Robert Blust").entity;
   const expert = profile.references.filter((r) => r.via === "Skills.Skill" && r.attrs.Level.name === "Expert");
-  assert.equal(expert.length, 27);
+  assert.equal(expert.length, 24);
   assert.ok(expert.some((r) => r.name === "Agentic AI development"));
   const ev = findEvidence(s, "Agentic AI development");
-  const claim = ev.evidence.profile.find((x) => x.id === "profiles/robert-blust");
+  // The claim and the facts under it are separate edges from the one profile, told apart by via:
+  // the Skills row carries the level, and each Evidence row what it shows and the experience it
+  // came from, resolved to that entry.
+  const claim = ev.evidence.profile.find((x) => x.id === "profiles/robert-blust" && x.via === "Skills.Skill");
   assert.equal(claim.attrs.Level.name, "Expert");
-  assert.ok(claim.attrs.Evidence.startsWith("Built LIKE MAGIC's internal AI marketplace on Claude"));
+  const row = ev.evidence.profile.find((x) => x.via === "Evidence.Skill" && x.attrs["What it shows"].startsWith("Built LIKE MAGIC's internal AI marketplace on Claude"));
+  assert.equal(row.attrs.Experience.name, "Co-Founder & Head of Technology");
   assert.ok(ev.evidence.experience.length >= 1);
 });
 
