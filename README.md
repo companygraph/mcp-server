@@ -22,8 +22,9 @@ or fact. The reference instance runs it at `mcp.blust.ch`; the deployment is
 | `search(query)` | matching entities across types |
 | `fetch(id)` | one entity by the id `search` returned, with its page as written |
 
-A name resolves within a type. A lookup without a type that finds a name under more than one
-type refuses and names the types. Every answer carries the model commit, the core version and
+A name resolves within a type, and a name of an owned type, an experience or a phase, within its
+owner, so two owners may each hold one name. A lookup that finds a name more than once, under two
+types or in two owners, refuses and names every id, which `fetch` then takes. Every answer carries the model commit, the core version and
 the parser's tag.
 
 ## Running it
