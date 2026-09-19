@@ -44,7 +44,9 @@ test("get_entity resolves within the type and returns references both ways", () 
   assert.equal(claim.type, "profile");
   assert.equal(claim.name, "Mira Halvorsen");
   assert.deepEqual(claim.attrs.Level, { id: "proficiency-levels/competent", type: "proficiency-level", name: "Competent" });
-  assert.match(claim.attrs.Evidence, /bounded contexts/);
+  const row = r.entity.referencedBy.find((x) => x.via === "Evidence.Skill" && x.id === "profiles/mira-halvorsen");
+  assert.match(row.attrs["What it shows"], /bounded contexts/);
+  assert.equal(row.attrs.Experience.name, "Splitting the billing domain");
   const source = r.entity.references.find((x) => x.via === "source");
   assert.equal(source.type, "source");
   assert.equal(source.name, "Local");
@@ -79,10 +81,11 @@ test("find_evidence groups every edge into the skill by the referencing type, at
   const r = findEvidence(s, "Domain-Driven Design");
   assert.deepEqual(r.skill, { id: "skills/domain-driven-design", type: "skill", name: "Domain-Driven Design", tagline: s.entities.find((e) => e.id === "skills/domain-driven-design").tagline });
   assert.deepEqual(Object.keys(r.evidence).sort(), ["experience", "profile", "role"]);
-  const mira = r.evidence.profile.find((x) => x.id === "profiles/mira-halvorsen");
-  assert.equal(mira.via, "Skills.Skill");
+  const mira = r.evidence.profile.find((x) => x.id === "profiles/mira-halvorsen" && x.via === "Skills.Skill");
   assert.equal(mira.attrs.Level.name, "Competent");
-  assert.equal(mira.attrs.Evidence, "Split the billing domain into two bounded contexts; the seams have held under two years of change.");
+  const row = r.evidence.profile.find((x) => x.id === "profiles/mira-halvorsen" && x.via === "Evidence.Skill");
+  assert.equal(row.attrs["What it shows"], "Split the billing domain into two bounded contexts; the seams have held under two years of change.");
+  assert.equal(row.attrs.Experience.name, "Splitting the billing domain");
   const exp = r.evidence.experience.find((x) => x.id === "profiles/mira-halvorsen/experiences/2022-beacon-systems");
   assert.equal(exp.via, "skills");
   assert.equal(exp.owner, "profiles/mira-halvorsen");
@@ -94,7 +97,7 @@ test("search matches name, tagline, fields, section text and cells, case-insensi
   const r = search(s, "BOUNDED CONTEXT");
   assert.ok(r.total >= 1);
   const mira = r.results.find((x) => x.id === "profiles/mira-halvorsen");
-  assert.ok(mira.matched.includes("table:Skills"));
+  assert.ok(mira.matched.includes("table:Evidence"));
   assert.equal(mira.title, "Mira Halvorsen");
   assert.equal(mira.url, `https://github.com/companygraph/meta-model/blob/${COMMIT}/example/model/profiles/mira-halvorsen/mira-halvorsen.md`);
   const byName = search(s, "domain-driven").results.find((x) => x.id === "skills/domain-driven-design");

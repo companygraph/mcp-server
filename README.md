@@ -18,7 +18,7 @@ or fact. The reference instance runs it at `mcp.blust.ch`; the deployment is
 | `describe_schema(type)` | the schema's frontmatter, sections, purpose and writing rules |
 | `list_entities(type)` | the canonical names and taglines of one type |
 | `get_entity(type, name)` | one entity with every reference it makes and receives |
-| `find_evidence(skill)` | each profile's claimed level and Evidence for the skill, and every experience that lists it |
+| `find_evidence(skill)` | each profile's claim on the skill with its level, each evidence row under it with the experience it came from, and every experience that lists it; entries are told apart by `via` |
 | `search(query)` | matching entities across types |
 | `fetch(id)` | one entity by the id `search` returned, with its page as written |
 

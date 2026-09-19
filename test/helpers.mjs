@@ -9,7 +9,7 @@ export const fixtureRoot = path.join(fixtures, "meta-model");
 export const instanceRoot = path.join(fixtures, "mental-model");
 // The reference instance the suite runs against, pinned here as test data: a real instance with
 // an identity and a profile that share one name.
-export const INSTANCE_COMMIT = "2fd146fe669ef80f7d7b8090ad1cf533b9020ebc";
+export const INSTANCE_COMMIT = "f4e8fd22aebcdb4fd92cce386043a3d8ddf7bde7";
 
 export const COMMIT = "0123456789abcdef0123456789abcdef01234567";
 
