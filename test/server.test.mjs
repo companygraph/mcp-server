@@ -22,7 +22,18 @@ test("the server names itself from the package and the model", async () => {
   assert.deepEqual(client.getServerVersion(), { name: pkg.name, version: pkg.version, title: "Beacon Systems" });
   const identity = s.entities.find((e) => e.id === "identity");
   const vision = s.entities.find((e) => e.type === "vision");
-  assert.equal(client.getInstructions(), `${vision.tagline}\n\n${identity.tagline}\n\nThis server reports what the model says at commit ${COMMIT} (core ${EXAMPLE_CORE}) and adds nothing.`);
+  assert.equal(client.getInstructions(), `${vision.tagline}\n\n${identity.tagline}\n\nThis server reports what the model says at one commit, which every answer names under \`model\`, and adds nothing.`);
+});
+
+// A client reads the instructions once, when the connection is set up, and may keep that copy
+// for as long as the connector exists. A commit or a core version written there is then read
+// beside answers that name a later one, and the two disagree with nothing to say which is old.
+test("the instructions name no commit and no version, which a client would keep past their time", async () => {
+  const client = await connect();
+  const text = client.getInstructions();
+  assert.ok(!text.includes(COMMIT), "the commit");
+  assert.ok(!text.includes(EXAMPLE_CORE), "the core version");
+  assert.ok(!text.includes(pkg.version), "the package version");
 });
 
 test("the tools, by their exact names", async () => {
