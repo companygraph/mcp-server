@@ -16,7 +16,7 @@ or fact. The reference instance runs it at `mcp.blust.ch`; the deployment is
 | --- | --- |
 | `list_types` | every type the instance's schemas declare, with its tagline |
 | `describe_schema(type)` | the schema's frontmatter, sections, purpose and writing rules, and the type's relations both ways as data |
-| `describe_relations` | every reference the schemas declare between types, with its form, and which type owns which |
+| `describe_relations` | every reference the schemas declare between types, with its form and how many a page may hold; which type owns which; the joins between a schema's tables and the kind of list each section holds |
 | `list_rules` | the rules the instance is held to, from the `CONVENTIONS.md` its core vendors |
 | `describe_rule(rule)` | one rule as written, by its number |
 | `list_checks` | every check the pinned checker runs over an instance, with the rule it cites; a list, not a verdict |

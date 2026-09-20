@@ -15,15 +15,15 @@ test("describe_relations serves every declared reference with its form, as data"
   const r = describeRelations(s);
   assert.deepEqual(r.model, MODEL);
   assert.deepEqual(find(r.relations, "experience", "organization"),
-    { from: "experience", via: "organization", to: "identity", form: "ref?", array: false, required: false });
+    { from: "experience", via: "organization", to: "identity", form: "ref?", array: false, required: false, min: 0, max: 1 });
   assert.deepEqual(find(r.relations, "phase", "gate-approvers"),
-    { from: "phase", via: "gate-approvers", to: "role", form: "ref", array: true, required: true });
+    { from: "phase", via: "gate-approvers", to: "role", form: "ref", array: true, required: true, min: 1, max: null });
   assert.deepEqual(find(r.relations, "profile", "Skills.Level"),
-    { from: "profile", via: "Skills.Level", to: "proficiency-level", form: "qualifier", array: false, required: true });
+    { from: "profile", via: "Skills.Level", to: "proficiency-level", form: "qualifier", array: false, required: true, min: 0, max: null });
   assert.deepEqual(find(r.relations, "profile", "Evidence.Experience"),
-    { from: "profile", via: "Evidence.Experience", to: "experience", form: "qualifier", array: false, required: false });
+    { from: "profile", via: "Evidence.Experience", to: "experience", form: "qualifier", array: false, required: false, min: 0, max: null });
   assert.deepEqual(find(r.relations, "experience", "Achievements.Kind"),
-    { from: "experience", via: "Achievements.Kind", to: "achievement-kind", form: "ref", array: false, required: false });
+    { from: "experience", via: "Achievements.Kind", to: "achievement-kind", form: "ref", array: false, required: false, min: 0, max: null });
 });
 
 test("ownership is served apart from references, because it is nesting and not a field", () => {
@@ -46,7 +46,7 @@ test("describe_schema carries the type's relations both ways, read from the decl
   assert.equal(role.owner, null);
   // `source` is on every type, and the declarations say so where a schema's prose may not.
   assert.deepEqual(role.references.map((x) => x.via).sort(), ["requires", "source"]);
-  assert.deepEqual(role.references.find((x) => x.via === "requires"), { via: "requires", to: "skill", form: "ref", array: true, required: false });
+  assert.deepEqual(role.references.find((x) => x.via === "requires"), { via: "requires", to: "skill", form: "ref", array: true, required: false, min: 0, max: null });
   const into = role.referencedBy.map((x) => `${x.from}.${x.via}`);
   for (const edge of ["profile.roles", "process.owner", "process.supported-by", "phase.owner", "phase.executed-by", "phase.gate-approvers", "phase.escalation-authority"])
     assert.ok(into.includes(edge), edge);

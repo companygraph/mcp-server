@@ -15,7 +15,9 @@ const [, metaRepo, tag] = pkg.dependencies["companygraph-meta-model"].match(/^gi
 const INSTANCE_COMMIT = "f4e8fd22aebcdb4fd92cce386043a3d8ddf7bde7";
 
 const FIXTURES = [
-  { repo: metaRepo, ref: tag, url: `https://codeload.github.com/${metaRepo}/tar.gz/refs/tags/${tag}`, dir: "meta-model" },
+  // The pin is a tag on every release. Between two releases a branch may pin a commit to be
+  // built against work that has no tag yet, and a commit is fetched by its own address.
+  { repo: metaRepo, ref: tag, url: `https://codeload.github.com/${metaRepo}/tar.gz/${/^[0-9a-f]{40}$/.test(tag) ? tag : `refs/tags/${tag}`}`, dir: "meta-model" },
   { repo: "robertblust/mental-model", ref: INSTANCE_COMMIT, url: `https://codeload.github.com/robertblust/mental-model/tar.gz/${INSTANCE_COMMIT}`, dir: "mental-model" },
 ];
 
