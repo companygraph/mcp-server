@@ -15,7 +15,10 @@ or fact. The reference instance runs it at `mcp.blust.ch`; the deployment is
 | Tool | Returns |
 | --- | --- |
 | `list_types` | every type the instance's schemas declare, with its tagline |
-| `describe_schema(type)` | the schema's frontmatter, sections, purpose and writing rules |
+| `describe_schema(type)` | the schema's frontmatter, sections, purpose and writing rules, and the type's relations both ways as data |
+| `describe_relations` | every reference the schemas declare between types, with its form, and which type owns which |
+| `list_rules` | the rules the instance is held to, from the `CONVENTIONS.md` its core vendors |
+| `describe_rule(rule)` | one rule as written, by its number |
 | `list_entities(type)` | the canonical names and taglines of one type |
 | `get_entity(type, name)` | one entity with every reference it makes and receives |
 | `find_evidence(skill)` | each profile's claim on the skill with its level, each evidence row under it with the experience it came from, and every experience that lists it; entries are told apart by `via` |

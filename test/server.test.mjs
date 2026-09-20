@@ -25,10 +25,10 @@ test("the server names itself from the package and the model", async () => {
   assert.equal(client.getInstructions(), `${vision.tagline}\n\n${identity.tagline}\n\nThis server reports what the model says at commit ${COMMIT} (core ${EXAMPLE_CORE}) and adds nothing.`);
 });
 
-test("seven tools, exact names", async () => {
+test("the tools, by their exact names", async () => {
   const client = await connect();
   const { tools } = await client.listTools();
-  assert.deepEqual(tools.map((t) => t.name).sort(), ["describe_schema", "fetch", "find_evidence", "get_entity", "list_entities", "list_types", "search"]);
+  assert.deepEqual(tools.map((t) => t.name).sort(), ["describe_relations", "describe_rule", "describe_schema", "fetch", "find_evidence", "get_entity", "list_entities", "list_rules", "list_types", "search"]);
   for (const t of tools) assert.ok(t.description.length > 20, t.name);
 });
 
