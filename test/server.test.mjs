@@ -36,10 +36,10 @@ test("the instructions name no commit and no version, which a client would keep 
   assert.ok(!text.includes(pkg.version), "the package version");
 });
 
-test("seven tools, exact names", async () => {
+test("the tools, by their exact names", async () => {
   const client = await connect();
   const { tools } = await client.listTools();
-  assert.deepEqual(tools.map((t) => t.name).sort(), ["describe_schema", "fetch", "find_evidence", "get_entity", "list_entities", "list_types", "search"]);
+  assert.deepEqual(tools.map((t) => t.name).sort(), ["describe_relations", "describe_rule", "describe_schema", "fetch", "find_evidence", "get_entity", "list_entities", "list_rules", "list_types", "search"]);
   for (const t of tools) assert.ok(t.description.length > 20, t.name);
 });
 

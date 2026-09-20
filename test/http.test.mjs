@@ -33,11 +33,11 @@ test("POST /mcp answers JSON, statelessly, uncached", async () => {
   assert.equal((await call.json()).result.structuredContent.model.commit, COMMIT);
 });
 
-test("the SDK client lists seven tools over HTTP", async () => {
+test("the SDK client lists every tool over HTTP", async () => {
   const base = await listen();
   const client = new Client({ name: "t", version: "0" });
   await client.connect(new StreamableHTTPClientTransport(new URL(`${base}/mcp`)));
-  assert.equal((await client.listTools()).tools.length, 7);
+  assert.equal((await client.listTools()).tools.length, TOOLS.length);
   await client.close();
 });
 
