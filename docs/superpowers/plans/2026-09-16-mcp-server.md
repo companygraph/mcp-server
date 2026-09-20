@@ -50,10 +50,12 @@ Parser facts the tests rely on (from running the parser on the example at v0.25.
 ### Task 1: Package and fixtures
 
 **Files:**
+
 - Create: `package.json`, `scripts/fixtures.mjs`, `test/fixtures.test.mjs`
 - Modify: `.gitignore` (already lists `test/fixtures/`)
 
 **Interfaces:**
+
 - Produces: `test/fixtures/meta-model/` holding `example/model/` and `core/` at the pinned tag, and `test/fixtures/mental-model/` holding the reference instance (`model/`, `meta/core/`) at the commit the script names; `npm test` runs `node --test test/` after `npm run fixtures`.
 
 - [ ] **Step 1: Create the branch and the package**
@@ -218,9 +220,11 @@ EOF
 ### Task 2: Reading files — `lib/read.mjs`
 
 **Files:**
+
 - Create: `lib/read.mjs`, `test/read.test.mjs`
 
 **Interfaces:**
+
 - Produces: `readDir(root: string): Map<string, string>` with keys relative to `root`, forward slashes, sorted; `readGitHub({ repo, commit, sub, token?, fetch? }): Promise<Map<string, string>>` with keys relative to `sub`.
 
 - [ ] **Step 1: Write the failing tests**
@@ -351,10 +355,12 @@ EOF
 ### Task 3: The snapshot — `lib/snapshot.mjs`
 
 **Files:**
+
 - Create: `lib/snapshot.mjs`, `test/snapshot.test.mjs`
 - Modify: `test/helpers.mjs`
 
 **Interfaces:**
+
 - Consumes: `readDir` from Task 2; `parseInstance(files, { sub, schemas })` and `parseSchemas(files)` from `companygraph-meta-model/instance`.
 - Produces: `buildSnapshot({ files, schemas, sub, commit, repo, parserTag }) → snapshot`; `parserTag() → string`; `exampleSnapshot()` in helpers.
 
@@ -501,9 +507,11 @@ EOF
 ### Task 4: Types, schemas, entities — `lib/model.mjs` part one
 
 **Files:**
+
 - Create: `lib/model.mjs`, `test/model.test.mjs`
 
 **Interfaces:**
+
 - Consumes: the snapshot shape from Task 3.
 - Produces: `class ModelError extends Error`; `provenance(s)`; `listTypes(s)`, `describeSchema(s, type)`, `listEntities(s, type)`, `getEntity(s, type, name)`. Every return carries `model: { commit, repo, core, parser }`.
 
@@ -674,9 +682,11 @@ EOF
 ### Task 5: Evidence, search, fetch — `lib/model.mjs` part two
 
 **Files:**
+
 - Modify: `lib/model.mjs`, `test/model.test.mjs`, `test/helpers.mjs`
 
 **Interfaces:**
+
 - Produces: `findEvidence(s, skill)`, `search(s, query)`, `fetchEntity(s, id)`; `withSharedName()` in helpers, a snapshot in which a profile shares the identity's name.
 
 - [ ] **Step 1: Add the helper for the shared-name fixture**
@@ -837,9 +847,11 @@ EOF
 ### Task 6: Tools and server — `lib/tools.mjs`, `lib/server.mjs`
 
 **Files:**
+
 - Create: `lib/tools.mjs`, `lib/server.mjs`, `test/server.test.mjs`
 
 **Interfaces:**
+
 - Consumes: the seven queries and `ModelError` from Tasks 4 and 5.
 - Produces: `registerTools(server, snapshot)`; `createServer(snapshot, { name?, version? }) → McpServer` with `title` the identity's H1 and `instructions` from the vision and identity taglines.
 
@@ -1031,9 +1043,11 @@ EOF
 ### Task 7: The snapshot CLI — `bin/snapshot.mjs`
 
 **Files:**
+
 - Create: `bin/snapshot.mjs`, `test/bin-snapshot.test.mjs`
 
 **Interfaces:**
+
 - Consumes: `readDir`, `readGitHub`, `buildSnapshot`.
 - Produces: `companygraph-mcp-snapshot <model-dir> <core-dir> [--commit sha] [--repo owner/name] --out file` and `companygraph-mcp-snapshot --github owner/name@sha [--sub model/] [--core meta/core/] --out file`.
 
@@ -1146,9 +1160,11 @@ EOF
 ### Task 8: The stdio entry point — `bin/stdio.mjs`
 
 **Files:**
+
 - Create: `bin/stdio.mjs`, `test/bin-stdio.test.mjs`
 
 **Interfaces:**
+
 - Consumes: `readDir`, `buildSnapshot`, `createServer`; `StdioServerTransport` from `@modelcontextprotocol/server/stdio`.
 - Produces: `companygraph-mcp <model-dir> <core-dir> [--sub model/] [--repo owner/name]`, commit from `git rev-parse HEAD` in the model directory when it is inside a repository.
 
@@ -1245,9 +1261,11 @@ EOF
 ### Task 9: The HTTP server — `lib/http.mjs`, `bin/http.mjs`
 
 **Files:**
+
 - Create: `lib/http.mjs`, `bin/http.mjs`, `test/http.test.mjs`
 
 **Interfaces:**
+
 - Consumes: `createServer`, `provenance`; `NodeStreamableHTTPServerTransport` from `@modelcontextprotocol/node`.
 - Produces: `createHttpServer(snapshot, { allowedHosts?: string[] }) → http.Server`; `companygraph-mcp-http --snapshot file [--port n]` with `PORT` and `MCP_ALLOWED_HOSTS` read from the environment.
 
@@ -1407,9 +1425,11 @@ EOF
 ### Task 10: The reference instance, real values
 
 **Files:**
+
 - Create: `test/instance.test.mjs`
 
 **Interfaces:**
+
 - Consumes: `instanceSnapshot()` and `INSTANCE_COMMIT` from helpers; the queries from Tasks 4 and 5; `createServer` from Task 6.
 
 The values below are what `robertblust/mental-model` holds at `2fd146f`. They are test data pinned with the fixture; a change to them is a change to the fixture commit, made on purpose.
@@ -1510,6 +1530,7 @@ EOF
 ### Task 11: Portability guard, README, pull request
 
 **Files:**
+
 - Create: `test/portability.test.mjs`
 - Modify: `README.md`
 
@@ -1605,6 +1626,7 @@ the worked example and the reference instance.
 ## License
 
 Apache 2.0. See `LICENSE`.
+
 ```
 
 - [ ] **Step 4: Check and commit**
