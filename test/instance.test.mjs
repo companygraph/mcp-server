@@ -77,6 +77,9 @@ test("the server introduces the instance by its own words", async () => {
   assert.equal(client.getServerVersion().title, "Robert Blust");
   const vision = s.entities.find((e) => e.type === "vision");
   assert.ok(client.getInstructions().startsWith(vision.tagline));
-  assert.match(client.getInstructions(), new RegExp(INSTANCE_COMMIT));
+  // The commit is an answer's to name. A client keeps the instructions past the snapshot's time.
+  assert.doesNotMatch(client.getInstructions(), new RegExp(INSTANCE_COMMIT));
+  const { structuredContent } = await client.callTool({ name: "list_types", arguments: {} });
+  assert.equal(structuredContent.model.commit, INSTANCE_COMMIT);
   await client.close();
 });

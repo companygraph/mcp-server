@@ -61,6 +61,7 @@ test("GET / is a page naming the model, the endpoint it was reached by and every
   // The model speaking for itself, not a description this package wrote.
   assert.ok(html.includes(s.root), "the page names the model's root");
   assert.ok(html.includes(COMMIT), "the page names the commit it reads");
+  assert.ok(html.includes(`at commit ${COMMIT} (core ${EXAMPLE_CORE}) and adds nothing.`), "the note says which commit, as the instructions no longer do");
   // The address is the one the request arrived under, never a configured guess.
   assert.ok(html.includes(`${base}/mcp`), "the page names the endpoint it was reached by");
   for (const tool of TOOLS) assert.ok(html.includes(tool.name), `the page lists ${tool.name}`);
