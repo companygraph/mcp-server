@@ -19,6 +19,7 @@ or fact. The reference instance runs it at `mcp.blust.ch`; the deployment is
 | `describe_relations` | every reference the schemas declare between types, with its form, and which type owns which |
 | `list_rules` | the rules the instance is held to, from the `CONVENTIONS.md` its core vendors |
 | `describe_rule(rule)` | one rule as written, by its number |
+| `list_checks` | every check the pinned checker runs over an instance, with the rule it cites; a list, not a verdict |
 | `list_entities(type)` | the canonical names and taglines of one type |
 | `get_entity(type, name)` | one entity with every reference it makes and receives |
 | `find_evidence(skill)` | each profile's claim on the skill with its level, each evidence row under it with the experience it came from, and every experience that lists it; entries are told apart by `via` |
