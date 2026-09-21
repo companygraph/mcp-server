@@ -47,6 +47,14 @@ The page and the sheet it ships with are held to each other by `test/page-contra
 
 `npm test` fetches `companygraph/meta-model` at the tag `package.json` pins and `robertblust/mental-model` at a named commit into `test/fixtures/`, and runs every tool against the worked example and the reference instance.
 
+## Deployment
+
+Every deployment needs the same infrastructure and the same build steps, so `deploy/` ships them once, in this package's own release, rather than let each deployment carry a copy that drifts from the others. Two Terraform modules do the infrastructure: `deploy/terraform` for the running service — its Cloud Run instance, Firebase site, custom domain, budget and enabled APIs — and `deploy/bootstrap` for what a deployment's own CI needs before it can authenticate, applied once, locally, by the deployment's owner. One command, `companygraph-mcp-deploy`, does the build, with a subcommand for the snapshot, the page's CSS, its JSON-LD, the image tag and serving the page locally, so a deployment's own values reach it from its `deployment.json` rather than from a constant copied into a script. `registerDeploymentTests()` holds the shared tests, run by each deployment over its own snapshot and its own page, and two reusable workflows, `deployment.yml` and `registry.yml`, are called by tag with `secrets: inherit` rather than copied in.
+
+What a deployment keeps of its own is small, because everything shared moved into the package it pins: `source.json` for its model pin, `package.json` for its server pin, `deployment.json` for the values that are only this deployment's — project, region, domain, budget and the rest — `brand.html` for the page's own wordmark, `own.css` for the page's own layout, a Terraform root of one file holding its state bucket and the one call into the module, two workflow files that only call the shared ones, and its own tests. `mcp.blust.ch` is the deployment that runs on it.
+
+A deployment names the release in three places: `package.json`, the `@v…` each of its workflows calls by, and the `?ref=v…` its module source names. A shared test holds the three to one, so a deployment that moved one place alone fails it rather than building with one release's code and applying with another's infrastructure. See the [design spec](docs/superpowers/specs/2026-09-21-shared-deployment-design.md) for why the shared half lives here rather than in a second repository, and [`deploy/bootstrap/README.md`](deploy/bootstrap/README.md) for what a new deployment's owner applies once.
+
 ## License
 
 Apache 2.0. See `LICENSE`.
