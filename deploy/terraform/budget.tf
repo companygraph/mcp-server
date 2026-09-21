@@ -1,4 +1,4 @@
-# Ten francs a month, three warnings, to whoever administers the billing account.
+# A monthly budget of budget_chf francs, three warnings, to whoever administers the billing account.
 resource "google_billing_budget" "monthly" {
   billing_account = var.billing_account
   display_name    = "${var.domain} monthly"
