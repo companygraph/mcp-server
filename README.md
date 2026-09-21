@@ -17,7 +17,7 @@ It serves a snapshot parsed at build time with the meta-model's own parser, so a
 | `list_entities` | the entities of one type, paged |
 | `get_entity` | one entity as structured data, by id or by type and name |
 | `list_references` | the model's edges, filtered and paged |
-| `find_evidence` | everything the model says about one skill |
+| `find_evidence` | everything the model says about one skill, paged |
 | `search` | entities by words, or by exact name |
 | `fetch` | one entity's page as written, by id |
 
