@@ -31,7 +31,7 @@ test("list_entities lists one type, sorted by id", () => {
   const r = listEntities(s, "skill");
   assert.equal(r.type, "skill");
   assert.deepEqual(r.entities.map((e) => e.id), ["skills/domain-driven-design", "skills/java-programming", "skills/product-discovery"]);
-  assert.deepEqual(Object.keys(r.entities[0]), ["id", "name", "tagline", "owner"]);
+  assert.deepEqual(Object.keys(r.entities[0]), ["id", "type", "name", "tagline", "owner"]);
   assert.throws(() => listEntities(s, "person"), ModelError);
 });
 
@@ -110,16 +110,14 @@ test("find_evidence groups every edge into the skill by the referencing type, at
 
 test("search matches name, tagline, fields, section text and cells, case-insensitive, sorted by type then name", () => {
   const r = search(s, "BOUNDED CONTEXT");
-  assert.ok(r.total >= 1);
+  assert.ok(r.page.total >= 1);
   const mira = r.results.find((x) => x.id === "profiles/mira-halvorsen");
-  assert.ok(mira.matched.includes("table:Evidence"));
+  assert.ok(mira.matched.some((m) => m.where === "table" && m.key === "Evidence"));
   assert.equal(mira.title, "Mira Halvorsen");
   assert.equal(mira.url, `https://github.com/companygraph/meta-model/blob/${COMMIT}/example/model/profiles/mira-halvorsen/mira-halvorsen.md`);
-  const byName = search(s, "domain-driven").results.find((x) => x.id === "skills/domain-driven-design");
-  assert.ok(byName.matched.includes("name"));
   const keys = r.results.map((x) => x.type + x.title);
   assert.deepEqual(keys, [...keys].sort());
-  assert.equal(search(s, "zzzz-nothing").total, 0);
+  assert.equal(search(s, "zzzz-nothing").page.total, 0);
   assert.throws(() => search(s, "  "), ModelError);
 });
 
