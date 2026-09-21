@@ -14,9 +14,7 @@ variable "repository" { type = string }
 # GitHub's numeric id for the repository, which a name reused after a delete or a rename
 # cannot take over: `gh api repos/<owner>/<name> --jq .id`.
 variable "repository_id" { type = string }
-variable "project_number" { type = string }
 variable "billing_account" { type = string }
-variable "organization" { type = string }
 
 # Enabling an API already on is a no-op; disabling one on destroy never happens.
 resource "google_project_service" "bootstrap" {
@@ -95,29 +93,6 @@ resource "google_org_policy_policy" "allow_public_members" {
   spec {
     rules {
       allow_all = "TRUE"
-    }
-  }
-  depends_on = [google_project_service.bootstrap]
-}
-
-# The override above lifts the domain restriction entirely, so on its own it lets any member
-# from anywhere into the project's policies. The managed constraint narrows it back to what
-# the server needs: allUsers for the invoker, the organization's own principals, and this
-# project's identity pool. It runs as a dry run first, logging what it would refuse without
-# refusing it, and is enforced only once those logs have been read.
-resource "google_org_policy_policy" "allowed_members" {
-  name   = "projects/${var.project}/policies/iam.managed.allowedPolicyMembers"
-  parent = "projects/${var.project}"
-  dry_run_spec {
-    rules {
-      enforce = "TRUE"
-      parameters = jsonencode({
-        allowedMemberSubjects = ["allUsers"]
-        allowedPrincipalSets = [
-          "//cloudresourcemanager.googleapis.com/organizations/${var.organization}",
-          "//iam.googleapis.com/projects/${var.project_number}/locations/global/workloadIdentityPools/${google_iam_workload_identity_pool.github.workload_identity_pool_id}",
-        ]
-      })
     }
   }
   depends_on = [google_project_service.bootstrap]
