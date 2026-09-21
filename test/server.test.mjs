@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import { Client, InMemoryTransport } from "@modelcontextprotocol/client";
-import { createServer } from "../lib/server.mjs";
+import { createServer, GLOSSARY } from "../lib/server.mjs";
 import { exampleSnapshot, COMMIT, EXAMPLE_CORE, PARSER } from "./helpers.mjs";
 
 const pkg = JSON.parse(fs.readFileSync(new URL("../package.json", import.meta.url), "utf8"));
@@ -22,7 +22,7 @@ test("the server names itself from the package and the model", async () => {
   assert.deepEqual(client.getServerVersion(), { name: pkg.name, version: pkg.version, title: "Beacon Systems" });
   const identity = s.entities.find((e) => e.id === "identity");
   const vision = s.entities.find((e) => e.type === "vision");
-  assert.equal(client.getInstructions(), `${vision.tagline}\n\n${identity.tagline}\n\nThis server reports what the model says at one commit, which every answer names under \`model\`, and adds nothing.`);
+  assert.equal(client.getInstructions(), `${vision.tagline}\n\n${identity.tagline}\n\n${GLOSSARY}\n\nThis server reports what the model says at one commit, which every answer names under \`model\`, and adds nothing.`);
 });
 
 // A client reads the instructions once, when the connection is set up, and may keep that copy
