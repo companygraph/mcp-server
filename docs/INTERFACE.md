@@ -25,7 +25,7 @@ A shape this package builds is closed, and a field it does not declare fails the
 
 ## The tools
 
-In the examples an array is cut to its first two entries and a string to 200 characters, and `model.core` and `model.parser` show placeholder versions. Nothing else differs from what the server answered over the meta-model's worked example.
+In the examples an array is cut to its first two entries and a string to 200 characters, and `model` shows placeholders: `core` and `parser` are not real versions and `commit` is not a real commit, so an example's `url` names a file that is not there. Nothing else differs from what the server answered over the meta-model's worked example.
 
 ### `list_types`
 
@@ -659,7 +659,7 @@ Optional `entity`, an id; `direction` (`out`, `in` or `both`, relative to the en
 
 ### `search`
 
-`query`; optional `match`, `type`, `owner`, `limit` and `cursor`. `match: "text"`, the default, is a case-insensitive substring over name, tagline, fields, section text and table cells. `match: "name"` is the exact canonical name, case-insensitive, across types. `matched` says where each result hit: `where` is one of `name`, `tagline`, `field`, `section` or `table`, and `key` the field or section heading, null for the first two. Results are ordered by type, then name, then id: a listing, not a ranking. A result's name is under `title`, as it is for `fetch`, because some clients call only these two tools and require that field.
+`query`; optional `match`; `type` and `owner`, an id, which keep one type's entities and one owner's; `limit` and `cursor`. `match: "text"`, the default, is a case-insensitive substring over name, tagline, fields, section text and table cells. `match: "name"` is the exact canonical name, case-insensitive, across types. `matched` says where each result hit: `where` is one of `name`, `tagline`, `field`, `section` or `table`, and `key` the field or section heading, null for the first two. Results are ordered by type, then name, then id: a listing, not a ranking. A result's name is under `title`, as it is for `fetch`, because some clients call only these two tools and require that field.
 
 ```json
 {
@@ -766,6 +766,8 @@ A refused call is a tool error. Its text is a sentence for a reader, and its str
 One kind of refusal carries no code. Arguments that fail a tool's input schema, a number where a string belongs or a value outside an enumeration, are refused by the MCP SDK before this package runs, as a sentence alone.
 
 ### A refusal
+
+The worked example holds no ambiguous name, so this refusal is answered over a copy of it in which a second profile is given an experience under the first one's title. The second candidate's id exists only in that copy.
 
 ```json
 {
