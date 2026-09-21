@@ -733,7 +733,7 @@ Optional `entity`, an id; `direction` (`out`, `in` or `both`, relative to the en
 
 ## Paging
 
-`list_entities`, `list_references` and `search` take `limit`, 50 by default, at least 1 and 200 at most, and `cursor`. A limit outside the range is served at the nearest bound and not refused. Follow `page.nextCursor` while `page.hasMore`. The order of each list is fixed and a served model never changes, so a walk neither repeats nor skips.
+`list_entities`, `list_references` and `search` take `limit`, 50 by default, at least 1 and 200 at most, and `cursor`. A limit outside the range is served at the nearest bound and not refused, so `limit: 0` returns one entry and `limit: 1000` returns 200; `page.returned` says how many came back. Both arguments say so themselves in every paged tool's input schema. Follow `page.nextCursor` while `page.hasMore`. The order of each list is fixed and a served model never changes, so a walk neither repeats nor skips.
 
 A cursor is opaque. It belongs to one commit of the model: sent after the deployment moved to another, it is refused as `invalid_cursor` with the reason `other_commit`, and the walk starts again. What is not detected is a cursor sent with other arguments than the call that produced it, or to another tool; the answer is then a page of the wrong list, so a client keeps its tool and its arguments unchanged for the length of a walk.
 

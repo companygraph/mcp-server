@@ -3,7 +3,9 @@
 // The terms it leans on are defined once, in the instructions, and used without ceremony.
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { z } from "zod";
 import { TOOLS } from "../lib/tools.mjs";
+import { listEntities } from "../lib/model.mjs";
 import { GLOSSARY, instructionsFor } from "../lib/server.mjs";
 import { exampleSnapshot } from "./helpers.mjs";
 
@@ -43,3 +45,24 @@ test("the terms are defined once, in the instructions, before the sentence on pr
   assert.ok(text.indexOf(GLOSSARY) > 0);
   assert.ok(text.indexOf(GLOSSARY) < text.indexOf("This server reports"));
 });
+
+// A client that reads only the tool listing meets `limit` and `cursor` as bare arguments, and a
+// limit outside the range is served at the nearest bound and never refused, so `limit: 0` comes
+// back as one entry with nothing to say why. The arguments say it themselves, in the schema
+// every client is handed, in one wording on all three paged tools; and what they say is held to
+// what the server does.
+test("limit and cursor describe themselves, identically on every paged tool, and truly", () => {
+  const paged = TOOLS.filter((t) => "limit" in t.input.shape);
+  assert.deepEqual(paged.map((t) => t.name).sort(), ["list_entities", "list_references", "search"]);
+  const said = paged.map((t) => z.toJSONSchema(t.input).properties).map((p) => [p.limit.description, p.cursor.description]);
+  for (const [limit, cursor] of said) {
+    assert.deepEqual([limit, cursor], said[0]);
+    assert.match(limit, /50 by default, clamped to 1–200, so 0 returns one entry and 1000 returns 200/);
+    assert.match(cursor, /page\.nextCursor.*same arguments.*first page/);
+  }
+  const s = exampleSnapshot();
+  const type = s.entities[0].type;
+  assert.equal(listEntities(s, type, { limit: 0 }).entities.length, 1);
+  assert.equal(listEntities(s, type, { limit: 1000 }).page.returned, Math.min(200, listEntities(s, type).page.total));
+});
+
