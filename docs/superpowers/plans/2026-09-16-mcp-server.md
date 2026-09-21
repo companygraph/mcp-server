@@ -148,8 +148,7 @@ export const INSTANCE_COMMIT = "2fd146fe669ef80f7d7b8090ad1cf533b9020ebc";
 
 - [ ] **Step 3: Run it to see it fail**
 
-Run: `node --test test/fixtures.test.mjs`
-Expected: FAIL, `ENOENT` on `.tag`.
+Run: `node --test test/fixtures.test.mjs` Expected: FAIL, `ENOENT` on `.tag`.
 
 - [ ] **Step 4: Write the fixtures script**
 
@@ -196,8 +195,7 @@ for (const f of FIXTURES) {
 
 - [ ] **Step 5: Run the script and the test**
 
-Run: `npm run fixtures && node --test test/fixtures.test.mjs`
-Expected: two `fetched` lines, then 2 pass. Run `npm run fixtures` again: two `already present` lines.
+Run: `npm run fixtures && node --test test/fixtures.test.mjs` Expected: two `fetched` lines, then 2 pass. Run `npm run fixtures` again: two `already present` lines.
 
 - [ ] **Step 6: Commit**
 
@@ -280,8 +278,7 @@ test("readGitHub fails on a truncated listing and on a failed blob", async () =>
 
 - [ ] **Step 2: Run to see them fail**
 
-Run: `node --test test/read.test.mjs`
-Expected: FAIL, cannot find module `../lib/read.mjs`.
+Run: `node --test test/read.test.mjs` Expected: FAIL, cannot find module `../lib/read.mjs`.
 
 - [ ] **Step 3: Implement**
 
@@ -331,8 +328,7 @@ export async function readGitHub({ repo, commit, sub, token = process.env.GITHUB
 
 - [ ] **Step 4: Run to see them pass**
 
-Run: `node --test test/read.test.mjs`
-Expected: 3 pass.
+Run: `node --test test/read.test.mjs` Expected: 3 pass.
 
 - [ ] **Step 5: Commit**
 
@@ -441,8 +437,7 @@ test("parserTag is the tag package.json pins", () => {
 
 - [ ] **Step 2: Run to see them fail**
 
-Run: `node --test test/snapshot.test.mjs`
-Expected: FAIL, cannot find module `../lib/snapshot.mjs`.
+Run: `node --test test/snapshot.test.mjs` Expected: FAIL, cannot find module `../lib/snapshot.mjs`.
 
 - [ ] **Step 3: Implement**
 
@@ -483,8 +478,7 @@ export function buildSnapshot({ files, schemas, sub = "", commit = null, repo = 
 
 - [ ] **Step 4: Run to see them pass**
 
-Run: `node --test test/snapshot.test.mjs`
-Expected: 3 pass.
+Run: `node --test test/snapshot.test.mjs` Expected: 3 pass.
 
 - [ ] **Step 5: Commit**
 
@@ -580,8 +574,7 @@ The last assertion is a guard that `getEntity(s, "identity", "Beacon Systems")` 
 
 - [ ] **Step 2: Run to see them fail**
 
-Run: `node --test test/model.test.mjs`
-Expected: FAIL, cannot find module `../lib/model.mjs`.
+Run: `node --test test/model.test.mjs` Expected: FAIL, cannot find module `../lib/model.mjs`.
 
 - [ ] **Step 3: Implement part one**
 
@@ -658,8 +651,7 @@ export function getEntity(s, type, name) {
 
 - [ ] **Step 4: Run to see them pass**
 
-Run: `node --test test/model.test.mjs`
-Expected: 5 pass.
+Run: `node --test test/model.test.mjs` Expected: 5 pass.
 
 - [ ] **Step 5: Commit**
 
@@ -755,8 +747,7 @@ test("fetch takes an id, falls back to a name held by exactly one type, and refu
 
 - [ ] **Step 3: Run to see them fail**
 
-Run: `node --test test/model.test.mjs`
-Expected: 5 pass, 3 fail (`findEvidence is not a function` and the like).
+Run: `node --test test/model.test.mjs` Expected: 5 pass, 3 fail (`findEvidence is not a function` and the like).
 
 - [ ] **Step 4: Implement part two**
 
@@ -823,8 +814,7 @@ Note on `search`'s sort: `results` carry `title`, not `name`; sort on `a.title`.
 
 - [ ] **Step 5: Run to see them pass**
 
-Run: `node --test test/model.test.mjs`
-Expected: 8 pass.
+Run: `node --test test/model.test.mjs` Expected: 8 pass.
 
 - [ ] **Step 6: Commit**
 
@@ -925,8 +915,7 @@ test("a model without a vision still has instructions", async () => {
 
 - [ ] **Step 2: Run to see them fail**
 
-Run: `node --test test/server.test.mjs`
-Expected: FAIL, cannot find module `../lib/server.mjs`.
+Run: `node --test test/server.test.mjs` Expected: FAIL, cannot find module `../lib/server.mjs`.
 
 - [ ] **Step 3: Implement the tools**
 
@@ -1019,8 +1008,7 @@ export function createServer(s, { name = pkg.name, version = pkg.version } = {})
 
 - [ ] **Step 4: Run to see them pass**
 
-Run: `node --test test/server.test.mjs`
-Expected: 5 pass. If `getServerVersion()` returns more keys than the three, compare with `assert.equal` on each of `name`, `version`, `title` instead.
+Run: `node --test test/server.test.mjs` Expected: 5 pass. If `getServerVersion()` returns more keys than the three, compare with `assert.equal` on each of `name`, `version`, `title` instead.
 
 - [ ] **Step 5: Commit**
 
@@ -1084,8 +1072,7 @@ test("refuses to run without --out", () => {
 
 - [ ] **Step 2: Run to see it fail**
 
-Run: `node --test test/bin-snapshot.test.mjs`
-Expected: FAIL, `Cannot find module`.
+Run: `node --test test/bin-snapshot.test.mjs` Expected: FAIL, `Cannot find module`.
 
 - [ ] **Step 3: Implement**
 
@@ -1136,8 +1123,7 @@ Run `chmod +x bin/snapshot.mjs`.
 
 - [ ] **Step 4: Run to see it pass**
 
-Run: `node --test test/bin-snapshot.test.mjs`
-Expected: 2 pass.
+Run: `node --test test/bin-snapshot.test.mjs` Expected: 2 pass.
 
 - [ ] **Step 5: Commit**
 
@@ -1197,8 +1183,7 @@ test("the stdio server lists seven tools and answers with the model", async () =
 
 - [ ] **Step 2: Run to see it fail**
 
-Run: `node --test test/bin-stdio.test.mjs`
-Expected: FAIL (the process exits or the module is missing).
+Run: `node --test test/bin-stdio.test.mjs` Expected: FAIL (the process exits or the module is missing).
 
 - [ ] **Step 3: Implement**
 
@@ -1237,8 +1222,7 @@ Run `chmod +x bin/stdio.mjs`.
 
 - [ ] **Step 4: Run to see it pass**
 
-Run: `node --test test/bin-stdio.test.mjs`
-Expected: 1 pass.
+Run: `node --test test/bin-stdio.test.mjs` Expected: 1 pass.
 
 - [ ] **Step 5: Commit**
 
@@ -1338,8 +1322,7 @@ If Node's `fetch` refuses to send a custom `host` header in the last test, send 
 
 - [ ] **Step 2: Run to see them fail**
 
-Run: `node --test test/http.test.mjs`
-Expected: FAIL, cannot find module `../lib/http.mjs`.
+Run: `node --test test/http.test.mjs` Expected: FAIL, cannot find module `../lib/http.mjs`.
 
 - [ ] **Step 3: Implement**
 
@@ -1401,8 +1384,7 @@ Run `chmod +x bin/http.mjs`.
 
 - [ ] **Step 4: Run to see them pass**
 
-Run: `node --test test/http.test.mjs`
-Expected: 4 pass.
+Run: `node --test test/http.test.mjs` Expected: 4 pass.
 
 - [ ] **Step 5: Commit**
 
@@ -1506,8 +1488,7 @@ test("the server introduces the instance by its own words", async () => {
 
 - [ ] **Step 2: Run them**
 
-Run: `node --test test/instance.test.mjs`
-Expected: 6 pass. A failing count or value is a finding about the parser or the queries, not a number to edit: `s.entities.length` must equal what `parseInstance` returns, and the site pinned at this commit publishes 143 entities and 608 edges. If `e.fields.organization` arrives resolved rather than as the string, the experience schema declares it a reference: assert on `e.references.find((r) => r.via === "organization").name` instead and say so in the commit.
+Run: `node --test test/instance.test.mjs` Expected: 6 pass. A failing count or value is a finding about the parser or the queries, not a number to edit: `s.entities.length` must equal what `parseInstance` returns, and the site pinned at this commit publishes 143 entities and 608 edges. If `e.fields.organization` arrives resolved rather than as the string, the experience schema declares it a reference: assert on `e.references.find((r) => r.via === "organization").name` instead and say so in the commit.
 
 - [ ] **Step 3: Commit**
 
@@ -1563,8 +1544,7 @@ Run: `node --test test/portability.test.mjs`. Expected: PASS. If it fails, the h
 
 - [ ] **Step 2: Run the whole suite**
 
-Run: `npm test`
-Expected: every file passes; the fixtures step reports `already present`.
+Run: `npm test` Expected: every file passes; the fixtures step reports `already present`.
 
 - [ ] **Step 3: Write the README**
 
@@ -1614,14 +1594,11 @@ npx --package github:companygraph/mcp-server companygraph-mcp-snapshot --github 
 npx --package github:companygraph/mcp-server companygraph-mcp-http --snapshot snapshot.json
 ```
 
-The HTTP server is stateless Streamable HTTP with JSON responses on `POST /mcp`, `no-store`,
-and a `/healthz`. `PORT` and `MCP_ALLOWED_HOSTS` come from the environment.
+The HTTP server is stateless Streamable HTTP with JSON responses on `POST /mcp`, `no-store`, and a `/healthz`. `PORT` and `MCP_ALLOWED_HOSTS` come from the environment.
 
 ## Tests
 
-`npm test` fetches `companygraph/meta-model` at the tag `package.json` pins and
-`robertblust/mental-model` at a named commit into `test/fixtures/`, and runs every tool against
-the worked example and the reference instance.
+`npm test` fetches `companygraph/meta-model` at the tag `package.json` pins and `robertblust/mental-model` at a named commit into `test/fixtures/`, and runs every tool against the worked example and the reference instance.
 
 ## License
 

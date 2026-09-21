@@ -1,20 +1,12 @@
 # CompanyGraph MCP server — design
 
-A read-only MCP server for any CompanyGraph instance. It answers an agent's questions with the
-model's own facts, from one pinned commit, through seven tools derived from the schemas the
-instance declares. It knows no instance-specific type, name or fact.
+A read-only MCP server for any CompanyGraph instance. It answers an agent's questions with the model's own facts, from one pinned commit, through seven tools derived from the schemas the instance declares. It knows no instance-specific type, name or fact.
 
-Brief: `brief-mcp-server.md` of 2026-09-16, decided with the owner. Deployment of the reference
-instance is a separate repository, `robertblust/mcp-blust-ch`, with its own design.
+Brief: `brief-mcp-server.md` of 2026-09-16, decided with the owner. Deployment of the reference instance is a separate repository, `robertblust/mcp-blust-ch`, with its own design.
 
 ## 1. What it is for
 
-The vision of the reference instance is "one model, true everywhere": whoever asks about the
-company — a person, a search engine, an agent — reaches the same answer, because every surface
-derives from one model. The surfaces that exist (a site, a CV, a LinkedIn projection, a skill
-bundle) are read by people or loaded whole. None is queryable by an agent. This server is that
-surface: an agent asks about a skill, an experience, a value, and gets what the model says,
-verbatim, with the commit it came from.
+The vision of the reference instance is "one model, true everywhere": whoever asks about the company — a person, a search engine, an agent — reaches the same answer, because every surface derives from one model. The surfaces that exist (a site, a CV, a LinkedIn projection, a skill bundle) are read by people or loaded whole. None is queryable by an agent. This server is that surface: an agent asks about a skill, an experience, a value, and gets what the model says, verbatim, with the commit it came from.
 
 ## 2. Decisions the design rests on
 
@@ -64,8 +56,7 @@ companygraph-mcp-server
 └── README.md
 ```
 
-Dependencies: `companygraph-meta-model` (git tag), `@modelcontextprotocol/server`,
-`@modelcontextprotocol/node`, `zod`. Nothing else at runtime.
+Dependencies: `companygraph-meta-model` (git tag), `@modelcontextprotocol/server`, `@modelcontextprotocol/node`, `zod`. Nothing else at runtime.
 
 ## 4. The snapshot
 
@@ -102,14 +93,11 @@ companygraph-mcp-snapshot <model-dir> <core-dir> [--commit <sha>] [--repo owner/
 companygraph-mcp-snapshot --github owner/name@<sha> [--sub model/ --core meta/core/] --out snapshot.json
 ```
 
-The GitHub form fetches the tree listing at the commit and each file under the two subtrees,
-with `GITHUB_TOKEN` when set. `lib/read.mjs` is the one place that touches a filesystem or the
-network; everything below it takes maps.
+The GitHub form fetches the tree listing at the commit and each file under the two subtrees, with `GITHUB_TOKEN` when set. `lib/read.mjs` is the one place that touches a filesystem or the network; everything below it takes maps.
 
 ## 5. The seven tools
 
-Every response is one JSON object, returned as `structuredContent` and as the same text in
-`content`, and every one carries `model: { commit, repo, core, parser }`. Names are exact.
+Every response is one JSON object, returned as `structuredContent` and as the same text in `content`, and every one carries `model: { commit, repo, core, parser }`. Names are exact.
 
 | Tool | Input | Returns |
 | --- | --- | --- |
@@ -121,14 +109,9 @@ Every response is one JSON object, returned as `structuredContent` and as the sa
 | `search` | `query` | `results`: `id`, `title`, `url`, `type`, `matched` for every entity whose name, tagline, frontmatter, section text or table cell contains the query, case-insensitive; sorted by type then name; `total` |
 | `fetch` | `id` | the entity as `get_entity` returns it, plus `title`, `text` (the source Markdown) and `url` |
 
-`search` and `fetch` carry the field names some clients require (`id`, `title`, `text`,
-`url`), so the server also works with a client that calls only those two. `url` is the file on
-GitHub at the commit when `repo` is known, else absent.
+`search` and `fetch` carry the field names some clients require (`id`, `title`, `text`, `url`), so the server also works with a client that calls only those two. `url` is the file on GitHub at the commit when `repo` is known, else absent.
 
-**Derivation, not enumeration.** `list_types` and `describe_schema` read `snapshot.schemas`.
-`find_evidence` resolves `skill` within the type `skill` and reads `edges` whose `to` is that
-id; the attributes are whatever columns the profile schema declares beside the reference,
-returned under their declared names. Nothing in `lib/` names a column, a kind or a person.
+**Derivation, not enumeration.** `list_types` and `describe_schema` read `snapshot.schemas`. `find_evidence` resolves `skill` within the type `skill` and reads `edges` whose `to` is that id; the attributes are whatever columns the profile schema declares beside the reference, returned under their declared names. Nothing in `lib/` names a column, a kind or a person.
 
 **Resolution and refusal.**
 
@@ -139,8 +122,7 @@ returned under their declared names. Nothing in `lib/` names a column, a kind or
 - `describe_schema(type)` and `list_entities(type)` with an undeclared type are errors that
   name the declared types.
 
-An error is returned as a tool result with `isError: true` and one sentence that names the
-rule where one applies (R2, R4).
+An error is returned as a tool result with `isError: true` and one sentence that names the rule where one applies (R2, R4).
 
 ## 6. The server
 
@@ -152,14 +134,11 @@ rule where one applies (R2, R4).
   "This server reports what the model says at commit … (core …) and adds nothing." A model
   without a vision entity gets the identity's tagline alone.
 
-Tool descriptions are fixed strings about what a tool does; nothing in them is an instance
-fact.
+Tool descriptions are fixed strings about what a tool does; nothing in them is an instance fact.
 
 ## 7. Transports
 
-**stdio.** `companygraph-mcp <model-dir> <core-dir>` builds the snapshot in memory and serves
-it over `StdioServerTransport`. This is the local form: `npx --package
-github:companygraph/mcp-server companygraph-mcp ./model ./meta/core` from an instance's root.
+**stdio.** `companygraph-mcp <model-dir> <core-dir>` builds the snapshot in memory and serves it over `StdioServerTransport`. This is the local form: `npx --package github:companygraph/mcp-server companygraph-mcp ./model ./meta/core` from an instance's root.
 
 **HTTP.** `companygraph-mcp-http --snapshot snapshot.json [--port 8080]` serves:
 
@@ -177,11 +156,7 @@ The port is `PORT` or the flag, which is what Cloud Run sets.
 
 ## 8. Tests
 
-`npm test` runs `node --test test/`. `npm run fixtures` fetches `companygraph/meta-model` at
-the tag `package.json` pins into `test/fixtures/meta-model/` and `robertblust/mental-model` at
-a named commit into `test/fixtures/mental-model/`, and is the pretest step; the folder is
-gitignored because the package does not ship its example and an instance is content, not a
-dependency. CI has the network.
+`npm test` runs `node --test test/`. `npm run fixtures` fetches `companygraph/meta-model` at the tag `package.json` pins into `test/fixtures/meta-model/` and `robertblust/mental-model` at a named commit into `test/fixtures/mental-model/`, and is the pretest step; the folder is gitignored because the package does not ship its example and an instance is content, not a dependency. CI has the network.
 
 - **Snapshot:** built from `example/model` against `core/`, carries the core version from the
   manifest, every entity has `markdown`, and the entity and edge counts equal what the parser
@@ -207,16 +182,8 @@ dependency. CI has the network.
 
 ## 9. Family membership
 
-The repository takes the conventions recipe from its first commit: `AGENTS.md`, the
-`CLAUDE.md` adapter, `conventions.json` at the current tag, the `conventions / conventions`
-workflow, a `protect-main` ruleset requiring it beside the test job, README title
-"CompanyGraph — MCP Server". Its row in `REPOSITORIES.md` is a pull request to
-`robertblust/conventions`. Commits and pull request bodies are prose ending `Verified: …`.
-Releases are tags `v<version>` on `main`, the version in `package.json` moving with them.
+The repository takes the conventions recipe from its first commit: `AGENTS.md`, the `CLAUDE.md` adapter, `conventions.json` at the current tag, the `conventions / conventions` workflow, a `protect-main` ruleset requiring it beside the test job, README title "CompanyGraph — MCP Server". Its row in `REPOSITORIES.md` is a pull request to `robertblust/conventions`. Commits and pull request bodies are prose ending `Verified: …`. Releases are tags `v<version>` on `main`, the version in `package.json` moving with them.
 
 ## 10. Out of scope
 
-Write tools, authentication, sessions, SSE, resources and prompts, any commit to
-`companygraph/meta-model` or `robertblust/mental-model`, and the deployment, which is
-`robertblust/mcp-blust-ch`. One proposal for meta-model, recorded rather than made: shipping
-`example/` in the package's `files` would let this suite run without a fetch.
+Write tools, authentication, sessions, SSE, resources and prompts, any commit to `companygraph/meta-model` or `robertblust/mental-model`, and the deployment, which is `robertblust/mcp-blust-ch`. One proposal for meta-model, recorded rather than made: shipping `example/` in the package's `files` would let this suite run without a fetch.
