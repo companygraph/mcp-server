@@ -108,6 +108,30 @@ test("find_evidence groups every edge into the skill by the referencing type, at
   assert.throws(() => findEvidence(s, "Knitting"), (e) => e instanceof ModelError && /R4/.test(e.message));
 });
 
+// Nothing in the package bounds how many pages of an instance name one skill, so the edges come
+// a page at a time like every other list of them, in one fixed order: the type of the page
+// that drew each and then the order every list of edges has, so a group is whole before the
+// next begins and a walk puts together exactly what one large page holds.
+test("find_evidence answers a page at a time, in one order, and a walk holds what one page does", () => {
+  const whole = findEvidence(s, "skills/domain-driven-design");
+  const flat = (r) => Object.values(r.evidence).flat();
+  assert.deepEqual(whole.page, { total: flat(whole).length, returned: flat(whole).length, hasMore: false, nextCursor: null });
+  assert.ok(whole.page.total >= 3, "the fixture draws enough edges to walk");
+  assert.deepEqual(Object.keys(whole.evidence), Object.keys(whole.evidence).toSorted(), "groups come in the order of their type");
+  const walked = [];
+  let cursor;
+  do {
+    const r = findEvidence(s, "Domain-Driven Design", { limit: 2, cursor });
+    assert.ok(r.page.returned <= 2);
+    assert.equal(r.page.total, whole.page.total);
+    assert.deepEqual(r.skill, whole.skill, "every page names the skill");
+    walked.push(...flat(r));
+    cursor = r.page.nextCursor;
+  } while (cursor);
+  assert.deepEqual(walked, flat(whole));
+  assert.throws(() => findEvidence(s, "skills/domain-driven-design", { cursor: "nonsense" }), (e) => e instanceof ModelError && e.code === "invalid_cursor");
+});
+
 test("search matches name, tagline, fields, section text and cells, case-insensitive, sorted by type then name", () => {
   const r = search(s, "BOUNDED CONTEXT");
   assert.ok(r.page.total >= 1);

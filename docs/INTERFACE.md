@@ -517,7 +517,7 @@ Optional `entity`, an id; `direction` (`out`, `in` or `both`, relative to the en
 
 ### `find_evidence`
 
-`skill`, an id or a canonical name. Every edge into the skill, under `evidence`, keyed by the type of the page that drew it; each entry is an edge with that page's `owner` and, where it has one, its `stamp`.
+`skill`, an id or a canonical name, and optionally `limit` and `cursor`. Every edge into the skill, under `evidence`, keyed by the type of the page that drew it; each entry is an edge with that page's `owner` and, where it has one, its `stamp`. The edges are paged in one order, the drawing page's type and then the order `list_references` gives, so `page` counts edges and not groups, and a group the end of a page cuts goes on at the top of the next under the same key.
 
 ```json
 {
@@ -533,6 +533,48 @@ Optional `entity`, an id; `direction` (`out`, `in` or `both`, relative to the en
       "tagline": "Modeling software around the language the business already speaks."
     },
     "evidence": {
+      "experience": [
+        {
+          "from": {
+            "id": "profiles/mira-halvorsen/experiences/2022-beacon-systems",
+            "type": "experience",
+            "name": "Splitting the billing domain"
+          },
+          "via": "skills",
+          "to": {
+            "id": "skills/domain-driven-design",
+            "type": "skill",
+            "name": "Domain-Driven Design"
+          },
+          "attrs": {},
+          "owner": "profiles/mira-halvorsen",
+          "stamp": {
+            "kind": "Role",
+            "start": "2022-02",
+            "end": null
+          }
+        },
+        {
+          "from": {
+            "id": "profiles/tomas-reyes/experiences/2022-beacon-systems",
+            "type": "experience",
+            "name": "Deciding which billing goes first"
+          },
+          "via": "skills",
+          "to": {
+            "id": "skills/domain-driven-design",
+            "type": "skill",
+            "name": "Domain-Driven Design"
+          },
+          "attrs": {},
+          "owner": "profiles/tomas-reyes",
+          "stamp": {
+            "kind": "Role",
+            "start": "2022-02",
+            "end": null
+          }
+        }
+      ],
       "profile": [
         {
           "from": {
@@ -578,48 +620,6 @@ Optional `entity`, an id; `direction` (`out`, `in` or `both`, relative to the en
           "owner": null
         }
       ],
-      "experience": [
-        {
-          "from": {
-            "id": "profiles/mira-halvorsen/experiences/2022-beacon-systems",
-            "type": "experience",
-            "name": "Splitting the billing domain"
-          },
-          "via": "skills",
-          "to": {
-            "id": "skills/domain-driven-design",
-            "type": "skill",
-            "name": "Domain-Driven Design"
-          },
-          "attrs": {},
-          "owner": "profiles/mira-halvorsen",
-          "stamp": {
-            "kind": "Role",
-            "start": "2022-02",
-            "end": null
-          }
-        },
-        {
-          "from": {
-            "id": "profiles/tomas-reyes/experiences/2022-beacon-systems",
-            "type": "experience",
-            "name": "Deciding which billing goes first"
-          },
-          "via": "skills",
-          "to": {
-            "id": "skills/domain-driven-design",
-            "type": "skill",
-            "name": "Domain-Driven Design"
-          },
-          "attrs": {},
-          "owner": "profiles/tomas-reyes",
-          "stamp": {
-            "kind": "Role",
-            "start": "2022-02",
-            "end": null
-          }
-        }
-      ],
       "role": [
         {
           "from": {
@@ -637,6 +637,12 @@ Optional `entity`, an id; `direction` (`out`, `in` or `both`, relative to the en
           "owner": null
         }
       ]
+    },
+    "page": {
+      "total": 7,
+      "returned": 7,
+      "hasMore": false,
+      "nextCursor": null
     },
     "model": {
       "commit": "0123456789abcdef0123456789abcdef01234567",
@@ -736,7 +742,7 @@ Optional `entity`, an id; `direction` (`out`, `in` or `both`, relative to the en
 
 ## Paging
 
-`list_entities`, `list_references` and `search` take `limit`, 50 by default, at least 1 and 200 at most, and `cursor`. A limit outside the range is served at the nearest bound and not refused, so `limit: 0` returns one entry and `limit: 1000` returns 200; `page.returned` says how many came back. Both arguments say so themselves in every paged tool's input schema. Follow `page.nextCursor` while `page.hasMore`. The order of each list is fixed and a served model never changes, so a walk neither repeats nor skips.
+`list_entities`, `list_references`, `find_evidence` and `search` take `limit`, 50 by default, at least 1 and 200 at most, and `cursor`. A limit outside the range is served at the nearest bound and not refused, so `limit: 0` returns one entry and `limit: 1000` returns 200; `page.returned` says how many came back. Both arguments say so themselves in every paged tool's input schema. Follow `page.nextCursor` while `page.hasMore`. The order of each list is fixed and a served model never changes, so a walk neither repeats nor skips.
 
 A cursor is opaque. It belongs to one commit of the model: sent after the deployment moved to another, it is refused as `invalid_cursor` with the reason `other_commit`, and the walk starts again. What is not detected is a cursor sent with other arguments than the call that produced it, or to another tool; the answer is then a page of the wrong list, so a client keeps its tool and its arguments unchanged for the length of a walk.
 
