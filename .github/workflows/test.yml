@@ -17,3 +17,14 @@ jobs:
       # supplying no design of its own renders with.
       - run: npx playwright install --with-deps chromium
       - run: npm test
+  terraform:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_version: 1.9.8
+          terraform_wrapper: false
+      - run: terraform -chdir=deploy/terraform init -backend=false -input=false
+      - run: terraform -chdir=deploy/terraform validate
+      - run: terraform fmt -check -recursive deploy
