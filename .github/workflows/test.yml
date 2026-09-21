@@ -27,4 +27,6 @@ jobs:
           terraform_wrapper: false
       - run: terraform -chdir=deploy/terraform init -backend=false -input=false
       - run: terraform -chdir=deploy/terraform validate
+      - run: terraform -chdir=deploy/bootstrap init -backend=false -input=false
+      - run: terraform -chdir=deploy/bootstrap validate
       - run: terraform fmt -check -recursive deploy
