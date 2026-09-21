@@ -1,0 +1,33 @@
+name: registry
+on:
+  workflow_call:
+permissions:
+  contents: read
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment: registry
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - run: npm ci
+      - run: npx companygraph-mcp-deploy snapshot
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - run: npx companygraph-mcp-deploy page-css
+      - run: npx companygraph-mcp-deploy jsonld
+      # The page checks open a browser: they measure the rendered page rather than read the
+      # stylesheet, which is the only way to see a gutter that did not apply or a wordmark that
+      # broke. Chromium alone, and only here, because nothing the image runs needs one.
+      - run: npx playwright install --with-deps chromium
+      - run: npm test
+      - run: npx companygraph-mcp-deploy server-json "${GITHUB_REF_NAME#v}"
+      - run: cat dist/server.json
+      - run: curl -fsSL "https://github.com/modelcontextprotocol/registry/releases/download/v1.8.1/mcp-publisher_$(uname -s | tr '[:upper:]' '[:lower:]')_$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/').tar.gz" | tar xz mcp-publisher
+      - env:
+          MCP_PRIVATE_KEY: ${{ secrets.MCP_PRIVATE_KEY }}
+        run: ./mcp-publisher login dns --domain "$(jq -r .registry_domain deployment.json)" --private-key "$MCP_PRIVATE_KEY"
+      - working-directory: dist
+        run: ../mcp-publisher publish
