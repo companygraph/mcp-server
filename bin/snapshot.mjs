@@ -13,12 +13,12 @@ try {
   const { values, positionals } = parseArgs({
     allowPositionals: true,
     options: {
-      github: { type: "string" }, sub: { type: "string", default: "model/" }, core: { type: "string", default: "meta/core/" },
+      github: { type: "string" }, sub: { type: "string", default: "model/" }, core: { type: "string" },
       commit: { type: "string" }, repo: { type: "string" }, out: { type: "string" },
     },
   });
   if (!values.out) {
-    console.error("usage: companygraph-mcp-snapshot <model-dir> <core-dir> [--commit sha] [--repo owner/name] [--sub model/] --out file\n" +
+    console.error("usage: companygraph-mcp-snapshot <model-dir> <core-dir> [--commit sha] [--repo owner/name] [--sub model/] [--core meta/core/] --out file\n" +
                   "       companygraph-mcp-snapshot --github owner/name@sha [--sub model/] [--core meta/core/] --out file");
     process.exit(2);
   }
@@ -28,15 +28,18 @@ try {
     const parts = values.github.split("@");
     if (parts.length !== 2 || !parts[0] || !parts[1]) { console.error("--github wants owner/name@sha, exactly one @"); process.exit(2); }
     const [repo, commit] = parts;
+    // The core is read from this place, so the place is known; from two directories it is known
+    // only when --core says it, and a snapshot that was not told keeps none.
+    const core = values.core ?? "meta/core/";
     const [files, schemas] = await Promise.all([
       readGitHub({ repo, commit, sub: values.sub }),
-      readGitHub({ repo, commit, sub: values.core }),
+      readGitHub({ repo, commit, sub: core }),
     ]);
-    snapshot = buildSnapshot({ files, schemas, sub: values.sub, commit, repo });
+    snapshot = buildSnapshot({ files, schemas, sub: values.sub, core, commit, repo });
   } else {
     const [modelDir, coreDir] = positionals;
     if (!modelDir || !coreDir) { console.error("two directories: <model-dir> <core-dir>"); process.exit(2); }
-    snapshot = buildSnapshot({ files: readDir(modelDir), schemas: readDir(coreDir), sub: values.sub, commit: values.commit ?? null, repo: values.repo ?? null });
+    snapshot = buildSnapshot({ files: readDir(modelDir), schemas: readDir(coreDir), sub: values.sub, core: values.core ?? null, commit: values.commit ?? null, repo: values.repo ?? null });
   }
   fs.writeFileSync(values.out, JSON.stringify(snapshot) + "\n");
   console.log(`wrote ${values.out}: ${snapshot.entities.length} entities, ${snapshot.edges.length} edges, core ${snapshot.core.version}, commit ${snapshot.commit ?? "(none)"}`);

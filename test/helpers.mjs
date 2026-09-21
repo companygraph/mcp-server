@@ -26,13 +26,13 @@ export function exampleFiles() {
 
 export function exampleSnapshot() {
   const { files, schemas } = exampleFiles();
-  return buildSnapshot({ files, schemas, sub: "example/model/", commit: COMMIT, repo: "companygraph/meta-model", parserTag: PARSER });
+  return buildSnapshot({ files, schemas, sub: "example/model/", core: "core/", commit: COMMIT, repo: "companygraph/meta-model", parserTag: PARSER });
 }
 
 // The reference instance, read the way its own site reads it: model/ against the core it vendors.
 export function instanceSnapshot() {
   return buildSnapshot({ files: readDir(path.join(instanceRoot, "model")), schemas: readDir(path.join(instanceRoot, "meta", "core")),
-    sub: "model/", commit: INSTANCE_COMMIT, repo: "robertblust/mental-model", parserTag: PARSER });
+    sub: "model/", core: "meta/core/", commit: INSTANCE_COMMIT, repo: "robertblust/mental-model", parserTag: PARSER });
 }
 
 // The company of one: an identity and a profile with the same name. The example has no such

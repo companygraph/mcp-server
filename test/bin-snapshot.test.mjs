@@ -20,6 +20,20 @@ test("writes a snapshot from two local directories", () => {
   assert.match(stdout, new RegExp(`${count} entities`));
 });
 
+// From two directories the command cannot know where the core sits in the repository, so it
+// keeps a place only when told one; from GitHub it reads the core by that very place.
+test("two local directories keep the core's place only when --core names it", () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "snap-"));
+  const build = (extra, name) => {
+    const out = path.join(dir, name);
+    execFileSync("node", [bin, path.join(fixtureRoot, "example/model"), path.join(fixtureRoot, "core"),
+      "--commit", "abc123", "--repo", "companygraph/meta-model", "--sub", "example/model/", ...extra, "--out", out], { encoding: "utf8" });
+    return JSON.parse(fs.readFileSync(out, "utf8"));
+  };
+  assert.equal(build([], "untold.json").core.path, null);
+  assert.equal(build(["--core", "core"], "told.json").core.path, "core/");
+});
+
 test("refuses to run without --out", () => {
   assert.throws(() => execFileSync("node", [bin, "a", "b"], { encoding: "utf8", stdio: "pipe" }), /--out/);
 });

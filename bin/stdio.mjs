@@ -15,11 +15,11 @@ import { createServer } from "../lib/server.mjs";
 try {
   const { values, positionals } = parseArgs({
     allowPositionals: true,
-    options: { sub: { type: "string", default: "model/" }, repo: { type: "string" } },
+    options: { sub: { type: "string", default: "model/" }, core: { type: "string" }, repo: { type: "string" } },
   });
   const [modelDir, coreDir] = positionals;
   if (!modelDir || !coreDir) {
-    console.error("usage: companygraph-mcp <model-dir> <core-dir> [--sub model/] [--repo owner/name]");
+    console.error("usage: companygraph-mcp <model-dir> <core-dir> [--sub model/] [--core meta/core/] [--repo owner/name]");
     process.exit(2);
   }
   const commit = (() => {
@@ -29,7 +29,7 @@ try {
       return execFileSync("git", ["-C", modelDir, "rev-parse", "HEAD"], { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }).trim();
     } catch { return null; }
   })();
-  const snapshot = buildSnapshot({ files: readDir(modelDir), schemas: readDir(coreDir), sub: values.sub, commit, repo: values.repo ?? null });
+  const snapshot = buildSnapshot({ files: readDir(modelDir), schemas: readDir(coreDir), sub: values.sub, core: values.core ?? null, commit, repo: values.repo ?? null });
   await createServer(snapshot).connect(new StdioServerTransport());
 } catch (err) {
   console.error(err.message);
