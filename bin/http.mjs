@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 // Serves a baked snapshot. PORT is what Cloud Run sets; MCP_ALLOWED_HOSTS is the comma-separated
-// list of hostnames a deployment answers to, and unset means any, for a local run. An operator
-// error — an unknown flag, a snapshot file that is not there or not JSON — is one line on
-// stderr and exit 2, never a stack.
+// list of hostnames a deployment answers to, which a request's Origin is held to as well where
+// it sends one, and unset means any, for a local run. An operator error — an unknown flag, a
+// snapshot file that is not there or not JSON — is one line on stderr and exit 2, never a stack.
 import fs from "node:fs";
 import { parseArgs } from "node:util";
 import { createHttpServer } from "../lib/http.mjs";
