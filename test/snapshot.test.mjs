@@ -11,7 +11,7 @@ test("the snapshot is the parser's graph plus provenance, schemas and source tex
   const graph = parseInstance(files, { sub: "example/model/", schemas });
   assert.equal(s.commit, COMMIT);
   assert.equal(s.repo, "companygraph/meta-model");
-  assert.deepEqual(s.core, { version: EXAMPLE_CORE, parser: PARSER });
+  assert.deepEqual(s.core, { version: EXAMPLE_CORE, parser: PARSER, path: "core/" });
   assert.equal(s.root, graph.root);
   assert.equal(s.rootId, graph.rootId);
   assert.equal(s.entities.length, graph.entities.length);

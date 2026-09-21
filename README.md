@@ -30,6 +30,8 @@ From an instance's root, over stdio:
 npx --package github:companygraph/mcp-server companygraph-mcp ./model ./meta/core
 ```
 
+An entity cites its file on GitHub when `--repo owner/name` says which repository the directories belong to, and a schema and a rule cite theirs when `--core meta/core/` also says where the core sits in it; the snapshot command takes the same two, and from `--github` it knows both already.
+
 A snapshot for a deployment, then the HTTP server on it:
 
 ```sh

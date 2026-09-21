@@ -64,7 +64,7 @@ No arguments. `types` holds every type the schemas declare, with its `owner` typ
 
 ### `describe_schema`
 
-`type`. The schema's `sections` as written and its `relations` as data: `owner`, `owns`, `references`, `referencedBy`, `enums`, `joins`, `lists`.
+`type`. The schema's `sections` as written and its `relations` as data: `owner`, `owns`, `references`, `referencedBy`, `enums`, `joins`, `lists`. `url` is the schema's own file at the served commit, in the core the instance vendors and not in the meta-model's, since the server answers from the first; it is null where the repository, the commit or the core's place is not known. The file location a schema's first section gives is where an entity of the type is written, which is another file.
 
 ```json
 {
@@ -76,6 +76,7 @@ No arguments. `types` holds every type the schemas declare, with its `owner` typ
     "type": "skill",
     "name": "Skill Schema",
     "tagline": "Required structure for skill files.",
+    "url": "https://github.com/companygraph/meta-model/blob/0123456789abcdef0123456789abcdef01234567/core/skill-schema.md",
     "sections": [
       {
         "heading": "File Location",
@@ -217,7 +218,7 @@ Optional `type`, `direction` (`declares`, `declared-to` or `both`; needs `type`)
 
 ### `list_rules`
 
-No arguments. `tagline`, and `rules` with each rule's number, `title` and the `part` of the file it stands in.
+No arguments. `tagline`, and `rules` with each rule's number, `title` and the `part` of the file it stands in. `url` is that file, the `CONVENTIONS.md` beside the schemas at the served commit, null where a schema's would be.
 
 ```json
 {
@@ -225,6 +226,7 @@ No arguments. `tagline`, and `rules` with each rule's number, `title` and the `p
   "arguments": {},
   "answer": {
     "tagline": "What makes a graph of Markdown files checkable. Portable across companies by design: a rule that names an issue tracker, a wiki, a chat tool or a mail domain belongs in the instance, not here.",
+    "url": "https://github.com/companygraph/meta-model/blob/0123456789abcdef0123456789abcdef01234567/core/CONVENTIONS.md",
     "rules": [
       {
         "rule": "R1",
@@ -249,7 +251,7 @@ No arguments. `tagline`, and `rules` with each rule's number, `title` and the `p
 
 ### `describe_rule`
 
-`rule`, a number such as `R4`, in either case. The rule's `title`, `part` and `text` as written.
+`rule`, a number such as `R4`, in either case. The rule's `title`, `part` and `text` as written, and the `url` of the file it stands in, as `list_rules` gives it.
 
 ```json
 {
@@ -262,6 +264,7 @@ No arguments. `tagline`, and `rules` with each rule's number, `title` and the `p
     "title": "An unresolvable reference is an error",
     "part": "Structure",
     "text": "Not a warning. A reference naming an entity that does not exist, or that exists under a different type, fails the check.\n\nA reference to an owned type is resolved within the owner it is written in: th…",
+    "url": "https://github.com/companygraph/meta-model/blob/0123456789abcdef0123456789abcdef01234567/core/CONVENTIONS.md",
     "model": {
       "commit": "0123456789abcdef0123456789abcdef01234567",
       "repo": "companygraph/meta-model",
