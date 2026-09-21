@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { Client, InMemoryTransport } from "@modelcontextprotocol/client";
-import { ModelError, listTypes, describeSchema, listEntities, getEntity, findEvidence, search, fetchEntity } from "../lib/model.mjs";
+import { ModelError, listTypes, describeSchema, listEntities, getEntity, listReferences, REFERENCE_CAP, findEvidence, search, fetchEntity } from "../lib/model.mjs";
 import { createServer } from "../lib/server.mjs";
 import { instanceSnapshot, INSTANCE_COMMIT, INSTANCE_CORE, PARSER } from "./helpers.mjs";
 
@@ -23,16 +23,19 @@ test("the company of one: the identity and the profile share a name, and a bare 
   assert.equal(fetchEntity(s, "profiles/robert-blust").title, "Robert Blust");
 });
 
+// The profile draws more edges than one entity answer holds, so the answer is capped and says
+// by how much, and the claims are read where edges are filtered.
 test("which skills are Expert, and on what evidence", () => {
   const profile = getEntity(s, "profile", "Robert Blust").entity;
-  const expert = profile.references.filter((r) => r.via === "Skills.Skill" && r.attrs.Level.name === "Expert");
+  assert.equal(profile.references.length, REFERENCE_CAP);
+  assert.ok(profile.referenceCounts.references > REFERENCE_CAP);
+  const claims = listReferences(s, { entity: profile.id, direction: "out", via: "Skills.Skill", limit: 200 });
+  assert.equal(claims.page.hasMore, false);
+  const expert = claims.edges.filter((r) => r.attrs.Level.name === "Expert");
   assert.equal(expert.length, 24);
-  assert.ok(expert.some((r) => r.name === "Agentic AI development"));
+  assert.ok(expert.some((r) => r.to.name === "Agentic AI development"));
   const ev = findEvidence(s, "Agentic AI development");
-  // The claim and the facts under it are separate edges from the one profile, told apart by via:
-  // the Skills row carries the level, and each Evidence row what it shows and the experience it
-  // came from, resolved to that entry.
-  const claim = ev.evidence.profile.find((x) => x.id === "profiles/robert-blust" && x.via === "Skills.Skill");
+  const claim = ev.evidence.profile.find((x) => x.from.id === "profiles/robert-blust" && x.via === "Skills.Skill");
   assert.equal(claim.attrs.Level.name, "Expert");
   const row = ev.evidence.profile.find((x) => x.via === "Evidence.Skill" && x.attrs["What it shows"].startsWith("Built LIKE MAGIC's internal AI marketplace on Claude"));
   assert.equal(row.attrs.Experience.name, "Co-Founder & Head of Technology");

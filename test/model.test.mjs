@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { ModelError, listTypes, describeSchema, listEntities, getEntity, findEvidence, search, fetchEntity } from "../lib/model.mjs";
+import { ModelError, listTypes, describeSchema, listEntities, getEntity, getEntityById, entityBy, REFERENCE_CAP, findEvidence, search, fetchEntity } from "../lib/model.mjs";
 import { exampleSnapshot, COMMIT, withSharedName, withOwnedNameTwice, EXAMPLE_CORE, PARSER, EXAMPLE_TYPES } from "./helpers.mjs";
 
 const s = exampleSnapshot();
@@ -35,21 +35,32 @@ test("list_entities lists one type, sorted by id", () => {
   assert.throws(() => listEntities(s, "person"), ModelError);
 });
 
-test("get_entity resolves within the type and returns references both ways", () => {
+test("get_entity resolves within the type and returns references both ways, as edges", () => {
   const r = getEntity(s, "skill", "Domain-Driven Design");
   assert.equal(r.entity.id, "skills/domain-driven-design");
+  assert.equal(r.entity.owner, null);
   assert.equal(r.entity.url, `https://github.com/companygraph/meta-model/blob/${COMMIT}/example/model/skills/domain-driven-design.md`);
   assert.equal(r.entity.markdown, undefined);
-  const claim = r.entity.referencedBy.find((x) => x.via === "Skills.Skill" && x.id === "profiles/mira-halvorsen");
-  assert.equal(claim.type, "profile");
-  assert.equal(claim.name, "Mira Halvorsen");
+  const claim = r.entity.referencedBy.find((x) => x.via === "Skills.Skill" && x.from.id === "profiles/mira-halvorsen");
+  assert.deepEqual(claim.from, { id: "profiles/mira-halvorsen", type: "profile", name: "Mira Halvorsen" });
+  assert.deepEqual(claim.to, { id: "skills/domain-driven-design", type: "skill", name: "Domain-Driven Design" });
   assert.deepEqual(claim.attrs.Level, { id: "proficiency-levels/competent", type: "proficiency-level", name: "Competent" });
-  const row = r.entity.referencedBy.find((x) => x.via === "Evidence.Skill" && x.id === "profiles/mira-halvorsen");
+  const row = r.entity.referencedBy.find((x) => x.via === "Evidence.Skill" && x.from.id === "profiles/mira-halvorsen");
   assert.match(row.attrs["What it shows"], /bounded contexts/);
   assert.equal(row.attrs.Experience.name, "Splitting the billing domain");
   const source = r.entity.references.find((x) => x.via === "source");
-  assert.equal(source.type, "source");
-  assert.equal(source.name, "Local");
+  assert.deepEqual([source.to.type, source.to.name], ["source", "Local"]);
+  assert.deepEqual(r.entity.referenceCounts, { references: r.entity.references.length, referencedBy: r.entity.referencedBy.length });
+});
+
+test("get_entity takes an id, and the tool's entry takes either and refuses neither", () => {
+  assert.deepEqual(getEntityById(s, "skills/domain-driven-design"), getEntity(s, "skill", "Domain-Driven Design"));
+  assert.equal(entityBy(s, { id: "identity" }).entity.id, "identity");
+  assert.equal(entityBy(s, { type: "identity", name: "Beacon Systems" }).entity.id, "identity");
+  assert.equal(entityBy(s, { id: "identity", type: "skill", name: "Knitting" }).entity.id, "identity", "the id wins");
+  assert.throws(() => getEntityById(s, "nothing/here"), (e) => e instanceof ModelError && e.code === "unknown_entity");
+  for (const args of [{}, { type: "skill" }, { name: "Domain-Driven Design" }])
+    assert.throws(() => entityBy(s, args), (e) => e instanceof ModelError && e.code === "invalid_argument" && e.details.argument === "id");
 });
 
 test("get_entity serves each table once, under tables", () => {
@@ -65,11 +76,12 @@ test("get_entity serves ownership both ways, as owner", () => {
   assert.ok(owned.length >= 1);
   const profile = getEntity(s, "profile", "Mira Halvorsen").entity;
   const owns = profile.referencedBy.filter((x) => x.via === "owner");
-  assert.deepEqual(owns.map((x) => x.id).sort(), owned.map((e) => e.id).sort());
-  assert.deepEqual(owns[0], { via: "owner", id: owned[0].id, type: owned[0].type, name: owned[0].name, attrs: {} });
+  assert.deepEqual(owns.map((x) => x.from.id).sort(), owned.map((e) => e.id).sort());
   assert.equal(profile.references.filter((x) => x.via === "owner").length, 0);
-  const exp = getEntity(s, owned[0].type, owned[0].name).entity;
-  assert.deepEqual(exp.references.filter((x) => x.via === "owner"), [{ via: "owner", id: "profiles/mira-halvorsen", type: "profile", name: "Mira Halvorsen", attrs: {} }]);
+  const exp = getEntityById(s, owned[0].id).entity;
+  assert.equal(exp.owner, "profiles/mira-halvorsen");
+  assert.deepEqual(exp.references.filter((x) => x.via === "owner"),
+    [{ from: { id: owned[0].id, type: owned[0].type, name: owned[0].name }, via: "owner", to: { id: "profiles/mira-halvorsen", type: "profile", name: "Mira Halvorsen" }, attrs: {} }]);
 });
 
 test("get_entity is an R4 error for a name the type does not hold, even if another type does", () => {
@@ -79,17 +91,20 @@ test("get_entity is an R4 error for a name the type does not hold, even if anoth
 
 test("find_evidence groups every edge into the skill by the referencing type, attributes verbatim", () => {
   const r = findEvidence(s, "Domain-Driven Design");
+  assert.deepEqual(findEvidence(s, "skills/domain-driven-design"), r, "an id reaches the same skill");
   assert.deepEqual(r.skill, { id: "skills/domain-driven-design", type: "skill", name: "Domain-Driven Design", tagline: s.entities.find((e) => e.id === "skills/domain-driven-design").tagline });
   assert.deepEqual(Object.keys(r.evidence).sort(), ["experience", "profile", "role"]);
-  const mira = r.evidence.profile.find((x) => x.id === "profiles/mira-halvorsen" && x.via === "Skills.Skill");
+  const mira = r.evidence.profile.find((x) => x.from.id === "profiles/mira-halvorsen" && x.via === "Skills.Skill");
   assert.equal(mira.attrs.Level.name, "Competent");
-  const row = r.evidence.profile.find((x) => x.id === "profiles/mira-halvorsen" && x.via === "Evidence.Skill");
+  assert.equal(mira.owner, null);
+  assert.equal(mira.to.id, "skills/domain-driven-design");
+  const row = r.evidence.profile.find((x) => x.from.id === "profiles/mira-halvorsen" && x.via === "Evidence.Skill");
   assert.equal(row.attrs["What it shows"], "Split the billing domain into two bounded contexts; the seams have held under two years of change.");
   assert.equal(row.attrs.Experience.name, "Splitting the billing domain");
-  const exp = r.evidence.experience.find((x) => x.id === "profiles/mira-halvorsen/experiences/2022-beacon-systems");
+  const exp = r.evidence.experience.find((x) => x.from.id === "profiles/mira-halvorsen/experiences/2022-beacon-systems");
   assert.equal(exp.via, "skills");
   assert.equal(exp.owner, "profiles/mira-halvorsen");
-  assert.deepEqual(exp.stamp, s.entities.find((e) => e.id === exp.id).stamp);
+  assert.deepEqual(exp.stamp, s.entities.find((e) => e.id === exp.from.id).stamp);
   assert.throws(() => findEvidence(s, "Knitting"), (e) => e instanceof ModelError && /R4/.test(e.message));
 });
 
@@ -153,7 +168,7 @@ test("a name two owners each hold is refused by type and name, with every id nam
   const ids = snapshot.entities.filter((e) => e.type === "experience" && e.name === title).map((e) => e.id);
   assert.equal(ids.length, 2);
   for (const call of [() => getEntity(snapshot, "experience", title), () => fetchEntity(snapshot, title)])
-    assert.throws(call, (e) => e instanceof ModelError && /R2/.test(e.message) && ids.every((id) => e.message.includes(id)) && /fetch/.test(e.message) && !/different types/.test(e.message));
+    assert.throws(call, (e) => e instanceof ModelError && /R2/.test(e.message) && ids.every((id) => e.message.includes(id)) && /by its id/.test(e.message) && !/different types/.test(e.message));
   for (const id of ids) assert.equal(fetchEntity(snapshot, id).entity.id, id);
   assert.ok(owners.every((o) => ids.some((id) => id.startsWith(`${o}/`))));
 });
