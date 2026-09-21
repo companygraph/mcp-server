@@ -154,17 +154,105 @@ test("a snapshot that predates what a tool reads is refused by code", async () =
   await client.close();
 });
 
+test("sampleCalls leaves out a tool the snapshot gives nothing to ask, by name", () => {
+  const s = exampleSnapshot();
+  const noRules = sampleCalls({ ...s, rules: null });
+  assert.equal(noRules.list_rules, undefined);
+  assert.equal(noRules.describe_rule, undefined);
+  const { checks, ...noChecksSnapshot } = s;
+  assert.equal(sampleCalls(noChecksSnapshot).list_checks, undefined);
+  assert.doesNotThrow(() => sampleCalls({ ...s, rules: { tagline: "" } }));
+  for (const [, fixture] of FIXTURES) {
+    const calls = sampleCalls(fixture);
+    for (const name of Object.keys(OUTPUTS)) assert.ok(calls[name] !== undefined, `${name}: this fixture gives it something to be asked about`);
+  }
+});
+
 // Tests in one file run in the order written, so every refusal above has been seen by now.
 test("the refusals above carried every code, so a code added meets a case or fails here", () => {
   assert.deepEqual([...reached].sort(), [...CODES].sort());
 });
 
+// A depth-first search of a real answer for the tool's own payload to corrupt, under any key but
+// `model` and the two records a schema leaves open by design (`fields` on an entity, `attrs` on
+// an edge, where a value of `z.unknown()` or a qualifier's union may legitimately survive a wrong
+// type). The first array whose first element is a plain object is the target; failing that, the
+// first string leaf. Either way the path returned reaches into the tool's own answer, never into
+// `model`, so the corruption below is never the twelve-times-proven model schema again.
+const OPEN_RECORDS = new Set(["fields", "attrs"]);
+const PREFERRED_KEYS = ["id", "type", "name", "via", "heading", "rule", "title", "owner", "tagline", "part", "kind"];
+const isPlainObject = (v) => v !== null && typeof v === "object" && !Array.isArray(v);
+
+function firstArrayOfObjects(node, path = []) {
+  if (Array.isArray(node)) {
+    if (node.length > 0 && isPlainObject(node[0])) return { path, array: node };
+    for (let i = 0; i < node.length; i++) {
+      const found = firstArrayOfObjects(node[i], [...path, i]);
+      if (found) return found;
+    }
+    return null;
+  }
+  if (isPlainObject(node)) {
+    for (const [k, v] of Object.entries(node)) {
+      if (path.length === 0 && k === "model") continue;
+      if (OPEN_RECORDS.has(k)) continue;
+      const found = firstArrayOfObjects(v, [...path, k]);
+      if (found) return found;
+    }
+  }
+  return null;
+}
+
+function firstStringLeaf(node, path = []) {
+  if (typeof node === "string") return path.length ? path : null;
+  if (Array.isArray(node)) {
+    for (let i = 0; i < node.length; i++) {
+      const found = firstStringLeaf(node[i], [...path, i]);
+      if (found) return found;
+    }
+    return null;
+  }
+  if (isPlainObject(node)) {
+    for (const [k, v] of Object.entries(node)) {
+      if (path.length === 0 && k === "model") continue;
+      if (OPEN_RECORDS.has(k)) continue;
+      const found = firstStringLeaf(v, [...path, k]);
+      if (found) return found;
+    }
+  }
+  return null;
+}
+
+// A declared key the suite would recognize over one the walker merely happened upon, so the
+// corrupted field reads as a real finding rather than an accident of object order.
+const pickStringKey = (obj) => PREFERRED_KEYS.find((k) => typeof obj[k] === "string") ?? Object.keys(obj).find((k) => typeof obj[k] === "string");
+
+function withAt(good, path, value) {
+  const clone = structuredClone(good);
+  let node = clone;
+  for (let i = 0; i < path.length - 1; i++) node = node[path[i]];
+  node[path[path.length - 1]] = value;
+  return clone;
+}
+
+function withoutAt(good, path) {
+  const clone = structuredClone(good);
+  let node = clone;
+  for (let i = 0; i < path.length - 1; i++) node = node[path[i]];
+  delete node[path[path.length - 1]];
+  return clone;
+}
+
 // A schema that accepts anything passes every test above. Each one is shown a real answer with a
-// required field gone, and one with a field of the wrong type, and has to refuse both.
+// required field gone, and one with a field of the wrong type, and has to refuse both — both at
+// the shared `model` and, so a permissive tool schema cannot hide behind `model`'s own strictness,
+// within the tool's own payload: the first array of objects the walker above finds, corrupted by
+// type and by absence, or, where an answer holds no such array, its first string leaf by type.
 test("every schema refuses a missing field, a wrong type and a field nobody declared", async () => {
   const s = exampleSnapshot();
   const client = await connect(s);
   const calls = sampleCalls(s);
+  const controlled = new Set();
   for (const name of Object.keys(OUTPUTS)) {
     const good = (await client.callTool({ name, arguments: calls[name] })).structuredContent;
     assert.ok(OUTPUTS[name].safeParse(good).success, name);
@@ -174,7 +262,22 @@ test("every schema refuses a missing field, a wrong type and a field nobody decl
     }
     assert.ok(!OUTPUTS[name].safeParse({ ...good, model: { ...good.model, core: 7 } }).success, `${name} accepts a number for model.core`);
     assert.ok(!OUTPUTS[name].safeParse({ ...good, undeclared: true }).success, `${name} accepts a field nobody declared`);
+
+    const found = firstArrayOfObjects(good);
+    if (found) {
+      const key = pickStringKey(found.array[0]);
+      assert.ok(key, `${name}: no declared string key in ${JSON.stringify(found.array[0])} to corrupt`);
+      const at = [...found.path, 0, key];
+      assert.ok(!OUTPUTS[name].safeParse(withAt(good, at, 7)).success, `${name} accepts ${at.join(".")} as a number`);
+      assert.ok(!OUTPUTS[name].safeParse(withoutAt(good, at)).success, `${name} accepts ${found.path.join(".")}[0] without ${key}`);
+    } else {
+      const leaf = firstStringLeaf(good);
+      assert.ok(leaf, `${name}: the walker finds nothing under its own payload to corrupt`);
+      assert.ok(!OUTPUTS[name].safeParse(withAt(good, leaf, 7)).success, `${name} accepts ${leaf.join(".")} as a number`);
+    }
+    controlled.add(name);
   }
+  assert.deepEqual([...controlled].sort(), Object.keys(OUTPUTS).sort(), "every tool's own payload, not only model, was shown a wrong type");
   const listed = (await client.callTool({ name: "list_entities", arguments: calls.list_entities })).structuredContent;
   assert.ok(!OUTPUTS.list_entities.safeParse({ ...listed, entities: [{ ...listed.entities[0], id: 7 }] }).success, "an id that is a number");
   const { id, ...nameless } = listed.entities[0];
