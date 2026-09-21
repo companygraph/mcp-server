@@ -6,21 +6,21 @@ It serves a snapshot parsed at build time with the meta-model's own parser, so a
 
 ## Tools
 
-| Tool | Returns |
+| Tool | Purpose |
 | --- | --- |
-| `list_types` | every type the instance's schemas declare, with its tagline |
-| `describe_schema(type)` | the schema's frontmatter, sections, purpose and writing rules, and the type's relations both ways as data |
-| `describe_relations` | every reference the schemas declare between types, with its form and how many a page may hold; which type owns which; the values every enum permits; the joins between a schema's tables and the kind of list each section holds |
-| `list_rules` | the rules the instance is held to, from the `CONVENTIONS.md` its core vendors |
-| `describe_rule(rule)` | one rule as written, by its number |
-| `list_checks` | every check the pinned checker runs over an instance, with the rule it cites; a list, not a verdict |
-| `list_entities(type)` | the canonical names and taglines of one type |
-| `get_entity(type, name)` | one entity with every reference it makes and receives |
-| `find_evidence(skill)` | each profile's claim on the skill with its level, each evidence row under it with the experience it came from, and every experience that lists it; entries are told apart by `via` |
-| `search(query)` | matching entities across types |
-| `fetch(id)` | one entity by the id `search` returned, with its page as written |
+| `list_types` | every type the schemas declare |
+| `describe_schema` | one type's schema and its relations |
+| `describe_relations` | what the schemas declare between types, whole or narrowed |
+| `list_rules`, `describe_rule` | the rules the model is held to, and one as written |
+| `list_checks` | the checks the model's gate runs; a list, not a verdict |
+| `list_entities` | the entities of one type, paged |
+| `get_entity` | one entity as structured data, by id or by type and name |
+| `list_references` | the model's edges, filtered and paged |
+| `find_evidence` | everything the model says about one skill |
+| `search` | entities by words, or by exact name |
+| `fetch` | one entity's page as written, by id |
 
-A name resolves within a type, and a name of an owned type, an experience or a phase, within its owner, so two owners may each hold one name. A lookup that finds a name more than once, under two types or in two owners, refuses and names every id, which `fetch` then takes. Every answer carries the model commit, the core version and the parser's tag.
+[`docs/INTERFACE.md`](docs/INTERFACE.md) is the contract: every tool's arguments and answer with a real response, the codes of every refusal, how a list is paged, and what counts as a break. Every answer carries the model commit, the core version and the parser's tag. A name resolves within a type, and a name of an owned type within its owner, so two owners may each hold one name; a lookup that meets two refuses with every candidate's id, and an id reaches each.
 
 ## Running it
 
@@ -45,7 +45,7 @@ The page and the sheet it ships with are held to each other by `test/page-contra
 
 ## Tests
 
-`npm test` fetches `companygraph/meta-model` at the tag `package.json` pins and `robertblust/mental-model` at a named commit into `test/fixtures/`, and runs every tool against the worked example and the reference instance.
+`npm test` fetches `companygraph/meta-model` at the tag `package.json` pins and `robertblust/mental-model` at a named commit into `test/fixtures/`, and runs every tool against the worked example and the reference instance. `test/contract.test.mjs` holds every tool's answer, every refusal and every page to the schema the tool declares, and `test/interface.test.mjs` holds the document's examples to what the server answers; `npm run interface` rewrites them.
 
 ## Deployment
 

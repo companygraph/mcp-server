@@ -33,7 +33,8 @@
   "scripts": {
     "fixtures": "node scripts/fixtures.mjs",
     "pretest": "node scripts/fixtures.mjs",
-    "test": "node --test 'test/*.test.mjs'"
+    "test": "node --test 'test/*.test.mjs'",
+    "interface": "node scripts/interface.mjs"
   },
   "dependencies": {
     "@modelcontextprotocol/node": "^2.0.0",
