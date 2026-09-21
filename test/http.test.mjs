@@ -150,6 +150,46 @@ test("a Host outside the allowed list is refused, an allowed one served regardle
   assert.equal(good.statusCode, 200);
 });
 
+// A browser names the page a request came from, and the protocol asks a server to hold that
+// name to a policy; a connector's backend and every other client outside a browser sends none.
+// So no Origin passes, an Origin of the deployment's own hosts passes, and any other is refused
+// before the transport sees it, as a Host is: a foreign page, `null` from a sandboxed frame or a
+// file, and a value that is no origin at all.
+test("an Origin outside the allowed hosts is refused, and no Origin or the host's own is served", async () => {
+  const base = await listen({ allowedHosts: ["mcp.example"] });
+  const port = Number(new URL(base).port);
+  const post = (origin) => new Promise((resolve, reject) => {
+    const req = http.request(
+      { host: "127.0.0.1", port, path: "/mcp", method: "POST", headers: { ...headers, host: "mcp.example", ...(origin === undefined ? {} : { origin }) } },
+      (res) => { const chunks = []; res.on("data", (c) => chunks.push(c)); res.on("end", () => resolve({ status: res.statusCode, body: Buffer.concat(chunks).toString("utf8") })); },
+    );
+    req.on("error", reject);
+    req.end(JSON.stringify({ jsonrpc: "2.0", id: 1, method: "tools/list" }));
+  });
+  for (const origin of ["https://untrusted.example", "null", "not an origin", "https://mcp.example.evil.test"]) {
+    const r = await post(origin);
+    assert.equal(r.status, 403, origin);
+    assert.doesNotMatch(r.body, /list_types/, `${origin} was handed the tool catalog`);
+    assert.equal(JSON.parse(r.body).jsonrpc, "2.0", origin);
+  }
+  for (const origin of [undefined, "https://mcp.example", "https://mcp.example:8443"]) {
+    const r = await post(origin);
+    assert.equal(r.status, 200, String(origin));
+    assert.match(r.body, /list_types/, String(origin));
+  }
+});
+
+test("with no allowed hosts, the local case, an Origin is not checked, as a Host is not", async () => {
+  const base = await listen();
+  const port = Number(new URL(base).port);
+  const status = await new Promise((resolve, reject) => {
+    const req = http.request({ host: "127.0.0.1", port, path: "/mcp", method: "POST", headers: { ...headers, origin: "http://localhost:6274" } }, (res) => { res.resume(); res.on("end", () => resolve(res.statusCode)); });
+    req.on("error", reject);
+    req.end(JSON.stringify(INIT));
+  });
+  assert.equal(status, 200);
+});
+
 test("a body over the cap is 413, and the server still answers a normal request after", async () => {
   const base = await listen();
   const big = await fetch(`${base}/mcp`, { method: "POST", headers, body: "x".repeat(MAX_BODY_BYTES + 1) });
