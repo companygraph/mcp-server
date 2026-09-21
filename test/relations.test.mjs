@@ -86,3 +86,39 @@ test("the declarations and the rules survive the snapshot being written out and 
   assert.deepEqual(describeRelations(back), describeRelations(s));
   assert.deepEqual(listRules(back), listRules(s));
 });
+
+test("a type keeps the declarations it stands in, and a side keeps one half of them", () => {
+  const whole = describeRelations(s);
+  const role = describeRelations(s, { type: "role" });
+  assert.ok(role.relations.length > 0 && role.relations.length < whole.relations.length);
+  assert.ok(role.relations.every((x) => x.from === "role" || x.to === "role"));
+  const declares = describeRelations(s, { type: "role", direction: "declares" });
+  assert.deepEqual(declares.relations.map((x) => x.via).sort(), ["requires", "source"]);
+  const into = describeRelations(s, { type: "role", direction: "declared-to" });
+  assert.ok(into.relations.length > 0 && into.relations.every((x) => x.to === "role"));
+  assert.equal(role.relations.length, declares.relations.length + into.relations.length);
+  assert.deepEqual(describeRelations(s, { type: "role", direction: "both" }).relations, role.relations);
+});
+
+test("the other lists narrow to the type, and the explanations always arrive whole", () => {
+  const whole = describeRelations(s);
+  const process = describeRelations(s, { type: "process" });
+  assert.deepEqual(process.ownership.map((x) => x.owned).sort(), ["phase", "track"]);
+  for (const key of ["enums", "joins", "lists"]) assert.ok(process[key].every((x) => x.type === "process"), key);
+  assert.deepEqual([process.forms, process.reading], [whole.forms, whole.reading]);
+});
+
+test("via keeps one field or column, among the references and the enums", () => {
+  const r = describeRelations(s, { via: "Skills.Level" });
+  assert.deepEqual(r.relations.map((x) => `${x.from}.${x.via}`), ["profile.Skills.Level"]);
+  const kind = describeRelations(s, { via: "Also known as.Kind" });
+  assert.ok(kind.enums.length >= 1 && kind.enums.every((x) => x.via === "Also known as.Kind"));
+  assert.deepEqual(describeRelations(s, { via: "No.Such" }).relations, []);
+});
+
+test("a side with no type, an unknown side and an unknown type are refused by code", () => {
+  const code = (args) => { try { describeRelations(s, args); } catch (e) { return [e.code, e.details.argument ?? e.details.type]; } assert.fail("not refused"); };
+  assert.deepEqual(code({ direction: "declares" }), ["invalid_argument", "direction"]);
+  assert.deepEqual(code({ type: "role", direction: "out" }), ["invalid_argument", "direction"]);
+  assert.deepEqual(code({ type: "person" }), ["unknown_type", "person"]);
+});
