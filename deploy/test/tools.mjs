@@ -47,6 +47,7 @@ export function registerToolsTests() {
     await createServer(s).connect(a);
     const client = new Client({ name: "test", version: "0" });
     await client.connect(b);
+    assert.equal(client.getServerVersion().title, s.root);
     const { tools } = await client.listTools();
     const types = listTypes(s).types;
     const skill = s.entities.find((e) => e.type === "skill");
