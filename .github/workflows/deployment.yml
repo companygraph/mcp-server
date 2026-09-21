@@ -59,10 +59,12 @@ jobs:
           jq -r '"PROJECT=\(.project)\nPROJECT_NUMBER=\(.project_number)\nREGION=\(.region)"' ../deployment.json >> "$GITHUB_ENV"
       - run: |
           echo "WIF_PROVIDER=projects/$PROJECT_NUMBER/locations/global/workloadIdentityPools/github/providers/github" >> "$GITHUB_ENV"
+      # A pull request plans as terraform-plan@, which reads and changes nothing; only a push to main
+      # applies, as terraform@, and the bootstrap lets neither account be used the other way.
       - uses: google-github-actions/auth@v3
         with:
           workload_identity_provider: ${{ env.WIF_PROVIDER }}
-          service_account: terraform@${{ env.PROJECT }}.iam.gserviceaccount.com
+          service_account: ${{ github.event_name == 'push' && 'terraform' || 'terraform-plan' }}@${{ env.PROJECT }}.iam.gserviceaccount.com
       - uses: hashicorp/setup-terraform@v4
         with:
           terraform_version: 1.9.8
