@@ -42,6 +42,15 @@ test("every class the sheet styles is one the page emits", () => {
     `styled and never emitted: ${dead.join(", ")} — a rule for markup that is gone`);
 });
 
+// A tool description carries Markdown code spans, and the page is not a Markdown renderer: it
+// converts only that one form, and only after escaping, so nothing inside a span can inject
+// markup and no backtick reaches a reader as a literal character.
+test("a description's code spans render as code, escaped first", () => {
+  assert.ok(!html.includes("`"), "a literal backtick reached the page");
+  assert.match(html, /<code class="mono">type<\/code>/, "a plain span becomes <code class=\"mono\">");
+  assert.match(html, /<code class="mono">match: &quot;text&quot;<\/code>/, "a quote inside a span stays escaped");
+});
+
 // The README is what a deployment reads before writing a stylesheet of its own, so a name that
 // is in the markup and not in the README is a name nobody knows to style.
 test("the README names every class the page emits", () => {
