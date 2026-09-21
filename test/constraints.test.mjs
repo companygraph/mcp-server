@@ -35,7 +35,7 @@ test("the joins and the list kinds are served for the whole vocabulary, each nam
 
 test("what min, max, a join and a list kind mean is said once, in the answer that uses them", () => {
   const { reading } = describeRelations(s);
-  assert.deepEqual(Object.keys(reading).sort(), ["lists", "min and max", "required", "under"]);
+  assert.deepEqual(Object.keys(reading).sort(), ["enums", "lists", "min and max", "required", "roles", "under"]);
   for (const text of Object.values(reading)) assert.ok(text.length > 20);
 });
 
@@ -52,5 +52,26 @@ test("describe_schema carries its own type's joins and lists, and the bounds bot
 test("it survives the snapshot being written out, and an older snapshot is refused by name", () => {
   assert.deepEqual(describeRelations(JSON.parse(JSON.stringify(s))), describeRelations(s));
   const { constraints, ...old } = s;
+  assert.throws(() => describeRelations(old), (e) => e instanceof ModelError && /rebuil/.test(e.message));
+});
+
+test("an enum is served with the values it permits, a field's and a column's alike", () => {
+  const { enums } = describeRelations(s);
+  assert.deepEqual(enums.find((e) => e.type === "profile" && e.via === "nature"),
+    { type: "profile", via: "nature", tokens: ["human", "agent"], required: true });
+  assert.deepEqual(enums.find((e) => e.type === "concept" && e.via === "Relations.Cardinality"),
+    { type: "concept", via: "Relations.Cardinality", tokens: ["one", "maybe one", "many", "one to many"], required: true });
+  assert.deepEqual(describeSchema(s, "concept").relations.enums.map((e) => e.via).sort(), ["Also known as.Kind", "Relations.Cardinality"]);
+  assert.deepEqual(describeSchema(s, "skill").relations.enums, []);
+});
+
+test("the table whose repeated references carry distinct roles is served as a join", () => {
+  assert.deepEqual(describeRelations(s).joins.filter((j) => j.kind === "roles"),
+    [{ type: "concept", kind: "roles", section: "Relations", column: "As", by: "Concept" }]);
+});
+
+test("a snapshot written before enums were kept is refused rather than read as having none", () => {
+  const old = JSON.parse(JSON.stringify(s));
+  for (const c of Object.values(old.constraints)) delete c.enums;
   assert.throws(() => describeRelations(old), (e) => e instanceof ModelError && /rebuil/.test(e.message));
 });
