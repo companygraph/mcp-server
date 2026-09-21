@@ -113,7 +113,10 @@ test("via keeps one field or column, among the references and the enums", () => 
   assert.deepEqual(r.relations.map((x) => `${x.from}.${x.via}`), ["profile.Skills.Level"]);
   const kind = describeRelations(s, { via: "Also known as.Kind" });
   assert.ok(kind.enums.length >= 1 && kind.enums.every((x) => x.via === "Also known as.Kind"));
-  assert.deepEqual(describeRelations(s, { via: "No.Such" }).relations, []);
+  const none = describeRelations(s, { via: "No.Such" });
+  const whole = describeRelations(s);
+  assert.deepEqual(none.relations, []);
+  assert.deepEqual([none.joins, none.lists, none.ownership], [whole.joins, whole.lists, whole.ownership]);
 });
 
 test("a side with no type, an unknown side and an unknown type are refused by code", () => {

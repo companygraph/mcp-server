@@ -60,6 +60,7 @@ export async function render(text) {
     const next = out.indexOf("\n### ", at + 1);
     if (open < 0 || (next > 0 && open > next)) throw new Error(`"### ${heading}" has no json fence of its own`);
     const close = out.indexOf("\n```", open + 8);
+    if (close < 0) throw new Error(`"### ${heading}" has no closing fence`);
     out = out.slice(0, open + 8) + block + out.slice(close);
   }
   await plain.close();

@@ -59,8 +59,8 @@ test("get_entity takes an id, and the tool's entry takes either and refuses neit
   assert.equal(entityBy(s, { type: "identity", name: "Beacon Systems" }).entity.id, "identity");
   assert.equal(entityBy(s, { id: "identity", type: "skill", name: "Knitting" }).entity.id, "identity", "the id wins");
   assert.throws(() => getEntityById(s, "nothing/here"), (e) => e instanceof ModelError && e.code === "unknown_entity");
-  for (const args of [{}, { type: "skill" }, { name: "Domain-Driven Design" }])
-    assert.throws(() => entityBy(s, args), (e) => e instanceof ModelError && e.code === "invalid_argument" && e.details.argument === "id");
+  for (const [args, argument] of [[{}, "id"], [{ type: "skill" }, "name"], [{ name: "Domain-Driven Design" }, "type"]])
+    assert.throws(() => entityBy(s, args), (e) => e instanceof ModelError && e.code === "invalid_argument" && e.details.argument === argument);
 });
 
 test("get_entity serves each table once, under tables", () => {

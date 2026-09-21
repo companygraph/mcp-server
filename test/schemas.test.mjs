@@ -2,7 +2,7 @@
 // come from the queries directly; test/contract.test.mjs holds them through a client.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { OUTPUTS, ErrorResult, Edge, Page, Stamp, Entity } from "../lib/schemas.mjs";
+import { OUTPUTS, ErrorResult, Edge, Page, Stamp } from "../lib/schemas.mjs";
 import { TOOLS } from "../lib/tools.mjs";
 import * as model from "../lib/model.mjs";
 import { exampleSnapshot, instanceSnapshot } from "./helpers.mjs";

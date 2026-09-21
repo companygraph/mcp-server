@@ -178,7 +178,8 @@ test("the refusals above carried every code, so a code added meets a case or fai
 // an edge, where a value of `z.unknown()` or a qualifier's union may legitimately survive a wrong
 // type). The first array whose first element is a plain object is the target; failing that, the
 // first string leaf. Either way the path returned reaches into the tool's own answer, never into
-// `model`, so the corruption below is never the twelve-times-proven model schema again.
+// `model`: `model` is the one sub-object every output shares, so corrupting it would prove that
+// schema again and nothing about the tool whose answer is under test.
 const OPEN_RECORDS = new Set(["fields", "attrs"]);
 const PREFERRED_KEYS = ["id", "type", "name", "via", "heading", "rule", "title", "owner", "tagline", "part", "kind"];
 const isPlainObject = (v) => v !== null && typeof v === "object" && !Array.isArray(v);
@@ -280,8 +281,8 @@ test("every schema refuses a missing field, a wrong type and a field nobody decl
   assert.deepEqual([...controlled].sort(), Object.keys(OUTPUTS).sort(), "every tool's own payload, not only model, was shown a wrong type");
   const listed = (await client.callTool({ name: "list_entities", arguments: calls.list_entities })).structuredContent;
   assert.ok(!OUTPUTS.list_entities.safeParse({ ...listed, entities: [{ ...listed.entities[0], id: 7 }] }).success, "an id that is a number");
-  const { id, ...nameless } = listed.entities[0];
-  assert.ok(!OUTPUTS.list_entities.safeParse({ ...listed, entities: [nameless] }).success, "an entity without its id");
+  const { id, ...idless } = listed.entities[0];
+  assert.ok(!OUTPUTS.list_entities.safeParse({ ...listed, entities: [idless] }).success, "an entity without its id");
   const refused = (await client.callTool({ name: "get_entity", arguments: { id: "nothing/here" } })).structuredContent;
   assert.ok(ErrorResult.safeParse(refused).success);
   assert.ok(!ErrorResult.safeParse({ ...refused, error: { ...refused.error, code: "not_a_code" } }).success);
@@ -293,4 +294,5 @@ test("every schema refuses a missing field, a wrong type and a field nobody decl
 test("checkAnswer itself fails with the tool and the field named", () => {
   assert.throws(() => checkAnswer("fetch", { structuredContent: { id: "a", title: "A", type: "t", url: null, model: {} } }), /fetch[\s\S]*text/);
   assert.throws(() => checkAnswer("no_such_tool", { structuredContent: {} }), /no_such_tool/);
+  assert.throws(() => checkAnswer("no_such_tool", { isError: true, structuredContent: {} }), /no_such_tool/);
 });

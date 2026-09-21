@@ -15,7 +15,7 @@ An **id** identifies one entity across the whole model, such as `skills/domain-d
 | entity reference | `id`, `type`, `name` |
 | edge | `from` and `to`, each an entity reference; `via`; `attrs`, the row's other columns verbatim, a resolved qualifier arriving as an entity reference |
 | `page` | `total`, the count after filters; `returned`; `hasMore`; `nextCursor`, null when there is none |
-| `model` | `commit`, `repo`, `core`, `parser`: where the answer came from, on every answer and every refusal |
+| `model` | `commit`, `repo`, `core`, `parser`: where the answer came from, on every answer and every refusal; `commit` and `repo` are null where the model is served from a working tree |
 
 A shape this package builds is closed, and a field it does not declare fails the package's own suite. What the parser builds is open beyond its named fields: an entity, a section, a table, an enum, a join, a list kind, a check. An entity's `fields` and an edge's `attrs` vary by schema and stay open by design.
 
@@ -156,7 +156,7 @@ No arguments. `types` holds every type the schemas declare, with its `owner` typ
 
 ### `describe_relations`
 
-Optional `type`, `direction` (`declares`, `declared-to` or `both`; needs `type`) and `via`. `relations`, `ownership`, `enums`, `joins` and `lists` narrow to what was asked; `forms` and `reading` always arrive whole, since they explain the terms of whatever part is returned. Not paged: the vocabulary is the size of the core.
+Optional `type`, `direction` (`declares`, `declared-to` or `both`; needs `type`) and `via`. `type` narrows `relations`, `ownership`, `enums`, `joins` and `lists` to the one type, `direction` keeps one side of its `relations`, and `via` narrows the two lists that carry one, `relations` and `enums`; `forms` and `reading` always arrive whole, since they explain the terms of whatever part is returned. Not paged: the vocabulary is the size of the core.
 
 ```json
 {
@@ -659,7 +659,7 @@ Optional `entity`, an id; `direction` (`out`, `in` or `both`, relative to the en
 
 ### `search`
 
-`query`; optional `match`; `type` and `owner`, an id, which keep one type's entities and one owner's; `limit` and `cursor`. `match: "text"`, the default, is a case-insensitive substring over name, tagline, fields, section text and table cells. `match: "name"` is the exact canonical name, case-insensitive, across types. `matched` says where each result hit: `where` is one of `name`, `tagline`, `field`, `section` or `table`, and `key` the field or section heading, null for the first two. Results are ordered by type, then name, then id: a listing, not a ranking. A result's name is under `title`, as it is for `fetch`, because some clients call only these two tools and require that field.
+`query`; optional `match`; `type`, to keep one type's entities; `owner`, an id, to keep one owner's; `limit` and `cursor`. `match: "text"`, the default, is a case-insensitive substring over name, tagline, fields, section text and table cells. `match: "name"` is the exact canonical name, case-insensitive, across types. `matched` says where each result hit: `where` is one of `name`, `tagline`, `field`, `section` or `table`, and `key` the field or section heading, null for the first two. Results are ordered by type, then name, then id: a listing, not a ranking. A result's name is under `title`, as it is for `fetch`, because some clients call only these two tools and require that field.
 
 ```json
 {
@@ -745,9 +745,9 @@ Optional `entity`, an id; `direction` (`out`, `in` or `both`, relative to the en
 
 ## Paging
 
-`list_entities`, `list_references` and `search` take `limit`, 50 by default and 200 at most, and `cursor`. A limit outside the range is served at the nearest bound and not refused. Follow `page.nextCursor` while `page.hasMore`. The order of each list is fixed and a served model never changes, so a walk neither repeats nor skips.
+`list_entities`, `list_references` and `search` take `limit`, 50 by default, at least 1 and 200 at most, and `cursor`. A limit outside the range is served at the nearest bound and not refused. Follow `page.nextCursor` while `page.hasMore`. The order of each list is fixed and a served model never changes, so a walk neither repeats nor skips.
 
-A cursor is opaque. It belongs to one commit of the model: sent after the deployment moved to another, it is refused as `invalid_cursor` with the reason `other_commit`, and the walk starts again. What is not detected is a cursor sent with other filters than the call that produced it; the answer is then a page of the wrong list, so a client keeps its arguments unchanged for the length of a walk.
+A cursor is opaque. It belongs to one commit of the model: sent after the deployment moved to another, it is refused as `invalid_cursor` with the reason `other_commit`, and the walk starts again. What is not detected is a cursor sent with other arguments than the call that produced it, or to another tool; the answer is then a page of the wrong list, so a client keeps its tool and its arguments unchanged for the length of a walk.
 
 ## Refusals
 
