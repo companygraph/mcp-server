@@ -7,3 +7,7 @@ node_modules
 
 test/fixtures/
 snapshot.json
+
+# What terraform init downloads into a module directory; never a module's own lock file, which
+# a caller ignores and which would only mislead there.
+.terraform/

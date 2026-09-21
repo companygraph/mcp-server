@@ -1,6 +1,6 @@
 {
   "name": "companygraph-mcp-server",
-  "version": "0.16.0",
+  "version": "0.17.0",
   "description": "A read-only MCP server for any CompanyGraph instance",
   "license": "Apache-2.0",
   "type": "module",
@@ -9,19 +9,23 @@
   },
   "files": [
     "lib",
-    "bin"
+    "bin",
+    "deploy"
   ],
   "bin": {
     "companygraph-mcp": "bin/stdio.mjs",
     "companygraph-mcp-snapshot": "bin/snapshot.mjs",
-    "companygraph-mcp-http": "bin/http.mjs"
+    "companygraph-mcp-http": "bin/http.mjs",
+    "companygraph-mcp-deploy": "bin/deploy.mjs"
   },
   "exports": {
     ".": "./lib/server.mjs",
     "./model": "./lib/model.mjs",
     "./snapshot": "./lib/snapshot.mjs",
     "./read": "./lib/read.mjs",
-    "./http": "./lib/http.mjs"
+    "./http": "./lib/http.mjs",
+    "./deploy": "./deploy/build/index.mjs",
+    "./deploy/tests": "./deploy/test/index.mjs"
   },
   "scripts": {
     "fixtures": "node scripts/fixtures.mjs",
