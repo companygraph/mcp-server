@@ -63,11 +63,21 @@ test("every tool returns structured content carrying the model", async () => {
   }
 });
 
-test("a model error is a tool error with the rule in its text", async () => {
+test("a refusal is a tool error: its sentence as text, and the same refusal as data", async () => {
   const client = await connect();
   const r = await client.callTool({ name: "get_entity", arguments: { type: "skill", name: "Beacon Systems" } });
   assert.equal(r.isError, true);
   assert.match(r.content[0].text, /R4/);
+  assert.deepEqual(r.structuredContent, { error: { code: "unknown_entity", message: r.content[0].text, rule: "R4", details: { type: "skill", name: "Beacon Systems" } }, model: MODEL });
+});
+
+test("the listing carries each tool's own output schema", async () => {
+  const client = await connect();
+  const { tools } = await client.listTools();
+  const entities = tools.find((t) => t.name === "list_entities").outputSchema;
+  assert.deepEqual(entities.required.sort(), ["entities", "model", "page", "type"]);
+  assert.equal(entities.additionalProperties, false);
+  assert.ok(tools.every((t) => t.outputSchema.required.includes("model")));
 });
 
 test("a model without a vision still has instructions", async () => {
