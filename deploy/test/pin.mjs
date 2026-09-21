@@ -32,7 +32,10 @@ export function registerPinTests() {
 
   // A pin split across package.json, a workflow and a Terraform module drifts the moment one of
   // them is edited alone: package.json moves to a release while a workflow or the module still
-  // names the one it superseded, and nothing before this ran either against the other.
+  // names the one it superseded, and nothing before this ran either against the other. A count
+  // of two refs alone would pass on two workflow files and no module at all, which is exactly
+  // the shape a deployment that forgot to re-pin its `?ref=` takes, so each kind is required on
+  // its own rather than folded into one total.
   test("the server's release is named once, in package.json, the workflows and the module", () => {
     const tag = pkg.dependencies["companygraph-mcp-server"].split("#")[1];
     const refs = [];
@@ -40,10 +43,11 @@ export function registerPinTests() {
       const d = path.join(ROOT, dir);
       if (!fs.existsSync(d)) continue;
       for (const f of fs.readdirSync(d).filter((f) => /\.(ya?ml|tf)$/.test(f)))
-        for (const m of fs.readFileSync(path.join(d, f), "utf8").matchAll(/companygraph\/mcp-server[^\s"']*?(?:@|\?ref=)(v[\d.]+)/g))
-          refs.push({ file: `${dir}/${f}`, ref: m[1] });
+        for (const m of fs.readFileSync(path.join(d, f), "utf8").matchAll(/companygraph\/mcp-server[^\s"']*?(@|\?ref=)(v[\d.]+)/g))
+          refs.push({ file: `${dir}/${f}`, kind: m[1] === "@" ? "workflow" : "module", ref: m[2] });
     }
-    assert.ok(refs.length >= 2, "a deployment names the release in its workflows and its module");
+    assert.ok(refs.some((r) => r.kind === "workflow"), "a deployment names the release in at least one workflow, by @tag");
+    assert.ok(refs.some((r) => r.kind === "module"), "a deployment names the release in its Terraform module, by ?ref=tag");
     for (const { file, ref } of refs) assert.equal(ref, tag, `${file} names ${ref}; package.json pins ${tag}`);
   });
 }
