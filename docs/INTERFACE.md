@@ -461,51 +461,39 @@ Optional `entity`, an id; `direction` (`out`, `in` or `both`, relative to the en
 {
   "tool": "list_references",
   "arguments": {
-    "entity": "skills/domain-driven-design",
+    "entity": "profiles/mira-halvorsen",
     "direction": "in",
-    "via": "Skills.Skill"
+    "via": "nested-in"
   },
   "answer": {
     "edges": [
       {
         "from": {
+          "id": "profiles/mira-halvorsen/experiences/2018-northwind-atelier",
+          "type": "experience",
+          "name": "Rebuilding the order pipeline"
+        },
+        "via": "nested-in",
+        "to": {
           "id": "profiles/mira-halvorsen",
           "type": "profile",
           "name": "Mira Halvorsen"
         },
-        "via": "Skills.Skill",
-        "to": {
-          "id": "skills/domain-driven-design",
-          "type": "skill",
-          "name": "Domain-Driven Design"
-        },
-        "attrs": {
-          "Level": {
-            "id": "proficiency-levels/competent",
-            "type": "proficiency-level",
-            "name": "Competent"
-          }
-        }
+        "attrs": {}
       },
       {
         "from": {
-          "id": "profiles/tomas-reyes",
-          "type": "profile",
-          "name": "Tomas Reyes"
+          "id": "profiles/mira-halvorsen/experiences/2022-beacon-systems",
+          "type": "experience",
+          "name": "Splitting the billing domain"
         },
-        "via": "Skills.Skill",
+        "via": "nested-in",
         "to": {
-          "id": "skills/domain-driven-design",
-          "type": "skill",
-          "name": "Domain-Driven Design"
+          "id": "profiles/mira-halvorsen",
+          "type": "profile",
+          "name": "Mira Halvorsen"
         },
-        "attrs": {
-          "Level": {
-            "id": "proficiency-levels/familiar",
-            "type": "proficiency-level",
-            "name": "Familiar"
-          }
-        }
+        "attrs": {}
       }
     ],
     "page": {

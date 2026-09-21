@@ -23,7 +23,7 @@ export const EXAMPLES = {
   "`list_checks`": { name: "list_checks", arguments: {} },
   "`list_entities`": { name: "list_entities", arguments: { type: "skill", limit: 2 } },
   "`get_entity`": { name: "get_entity", arguments: { id: DDD } },
-  "`list_references`": { name: "list_references", arguments: { entity: DDD, direction: "in", via: "Skills.Skill" } },
+  "`list_references`": { name: "list_references", arguments: { entity: "profiles/mira-halvorsen", direction: "in", via: "nested-in" } },
   "`find_evidence`": { name: "find_evidence", arguments: { skill: DDD } },
   "`search`": { name: "search", arguments: { query: "bounded context", limit: 2 } },
   "`fetch`": { name: "fetch", arguments: { id: DDD } },

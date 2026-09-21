@@ -49,7 +49,7 @@ test("a schema's own owner field is a reference via owner, and nesting is not am
   const nestedIn = listReferences(s, { via: "nested-in", limit: 200 });
   assert.equal(nestedIn.edges.length, nesting);
   assert.ok(nestedIn.edges.every((x) => byId(x.from.id).owner === x.to.id));
-  assert.deepEqual(nestedIn.edges[0].attrs, {});
+  for (const x of nestedIn.edges) assert.deepEqual(x.attrs, {});
 });
 
 test("type is the far end's with an entity, and either end's without", () => {
