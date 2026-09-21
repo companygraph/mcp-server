@@ -180,22 +180,25 @@ export function registerPageTests() {
       await page.close();
     });
 
-    // The crawler test does not carry any instance's facts: it reads whatever `dist/jsonld.json`
-    // the deployment built and asks whether the page serves the same graph `jsonld()` would
-    // build from the same model, which is the rule every deployment shares rather than one this
-    // file would otherwise have to restate. An instance whose surface names no url for itself
-    // builds no file, and the page it serves carries no script at all.
+    // The crawler test does not carry any instance's facts: it computes what `jsonld()` would
+    // build from this model and asks whether `dist/jsonld.json` and the served page agree with
+    // it, which is the rule every deployment shares rather than one this file would otherwise
+    // have to restate. It computes `want` first rather than branching on whether the file
+    // exists — a model that DOES name a surface but whose JSON-LD build step silently wrote
+    // nothing must fail here, not pass by reading an absent file as "no surface".
     test("a crawler is told the subject the model implies, or nothing at all", async () => {
+      const want = jsonld(s, { repository: deployment().repository });
       const page = await browser.newPage({ viewport: { width: 1400, height: 900 } });
       await page.goto(base, { waitUntil: "networkidle" });
       const script = await page.evaluate(() =>
         document.querySelector('script[type="application/ld+json"]')?.textContent ?? null);
-      if (!hasJsonld) {
-        assert.equal(script, null, "no jsonld.json was built, so the page carries no structured data");
+      if (want === null) {
+        assert.ok(!fs.existsSync(jsonldPath), "the model names no surface, so no jsonld.json should have been written");
+        assert.equal(script, null, "the model names no surface, so the page carries no structured data");
         await page.close();
         return;
       }
-      const want = jsonld(s, { repository: deployment().repository });
+      assert.ok(fs.existsSync(jsonldPath), "the model names a surface, so jsonld.json should have been written");
       assert.deepEqual(JSON.parse(script), want, "the served graph is the one jsonld() builds from this model");
       await page.close();
     });
