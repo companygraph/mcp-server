@@ -48,6 +48,6 @@ resource "google_cloud_run_v2_service_iam_member" "public" {
 check "run_host" {
   assert {
     condition     = google_cloud_run_v2_service.mcp.uri == "https://${local.run_host}"
-    error_message = "The service's URI is not the deterministic host in MCP_ALLOWED_HOSTS; a POST to /mcp on the run.app address will be refused until run.tf names the real host."
+    error_message = "The service's URI is not the run_host in MCP_ALLOWED_HOSTS; a POST to /mcp on the run.app address will be refused until deployment.json names the host this URI carries as run_host."
   }
 }

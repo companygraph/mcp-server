@@ -11,7 +11,7 @@ import path from "node:path";
 import { isNewer } from "companygraph-meta-model/checks";
 import { Client, InMemoryTransport } from "@modelcontextprotocol/client";
 import { createServer } from "companygraph-mcp-server";
-import { listTypes, getEntity } from "companygraph-mcp-server/model";
+import { listTypes, describeSchema, listEntities, getEntity } from "companygraph-mcp-server/model";
 import { ROOT, source, snapshot } from "../build/config.mjs";
 
 export function registerToolsTests() {
@@ -35,6 +35,8 @@ export function registerToolsTests() {
 
   test("every type describes and lists, and one entity of each resolves", () => {
     for (const t of listTypes(s).types) {
+      assert.equal(describeSchema(s, t.type).type, t.type);
+      assert.equal(listEntities(s, t.type).entities.length, t.count, `${t.type} lists as many entities as list_types counts`);
       if (t.count === 0) continue;
       const { entity } = getEntity(s, t.type, s.entities.find((e) => e.type === t.type).name);
       assert.equal(entity.type, t.type);
