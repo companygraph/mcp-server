@@ -17,20 +17,25 @@
 import fs from "node:fs";
 import path from "node:path";
 import { createRequire } from "node:module";
-import { blockFor } from "@robertblust/design/fences";
+import { pathToFileURL } from "node:url";
 import { ROOT, DIST } from "./config.mjs";
 
 // The design package is the deployment's own devDependency (never this package's, so this
 // package gains no dependency on the family's design), so its files are resolved from the
 // deployment's own node_modules rather than from wherever this script happens to be installed.
-const designPkg = createRequire(path.join(ROOT, "package.json")).resolve("@robertblust/design/package.json");
+// Its exports map lists no "./package.json", so resolving that path throws on a real install;
+// "./fences" is the one subpath it does list, and resolving it also gives the package's own
+// root, so one resolution serves both the blocks and the font files below, from one copy.
+const fencesPath = createRequire(path.join(ROOT, "package.json")).resolve("@robertblust/design/fences");
+const { blockFor } = await import(pathToFileURL(fencesPath).href);
+const DESIGN = path.dirname(path.dirname(fencesPath));
 // The design package ships the font files the blocks name, and `tokens.css` states the rule the
 // family holds itself to: nothing may name a family the site does not ship. The page has no
 // static directory to serve them from — it is rendered by a server, not deployed as files — so
 // they travel inside the stylesheet as data. Ninety-one kilobytes become about a hundred and
 // twenty-five base64, paid on a visit to one page that is otherwise five. The alternative was a
 // static route in a package that has no business growing one.
-const FONT_DIR = path.join(path.dirname(designPkg), "assets/fonts/");
+const FONT_DIR = path.join(DESIGN, "assets", "fonts");
 const FONTS = [
   { family: "Bricolage Grotesque", file: "Bricolage-var.woff2", weight: "200 800" },
   { family: "Instrument Sans", file: "InstrumentSans-var.woff2", weight: "400 700" },
