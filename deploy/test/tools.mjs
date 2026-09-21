@@ -11,7 +11,8 @@ import path from "node:path";
 import { isNewer } from "companygraph-meta-model/checks";
 import { Client, InMemoryTransport } from "@modelcontextprotocol/client";
 import { createServer } from "companygraph-mcp-server";
-import { listTypes, describeSchema, listEntities, getEntity } from "companygraph-mcp-server/model";
+import { listTypes, describeSchema, listEntities, getEntityById } from "companygraph-mcp-server/model";
+import { sampleCalls, checkAnswer } from "companygraph-mcp-server/contract";
 import { ROOT, source, snapshot } from "../build/config.mjs";
 
 export function registerToolsTests() {
@@ -36,41 +37,37 @@ export function registerToolsTests() {
   test("every type describes and lists, and one entity of each resolves", () => {
     for (const t of listTypes(s).types) {
       assert.equal(describeSchema(s, t.type).type, t.type);
-      assert.equal(listEntities(s, t.type).entities.length, t.count, `${t.type} lists as many entities as list_types counts`);
+      assert.equal(listEntities(s, t.type).page.total, t.count, `${t.type} lists as many entities as list_types counts`);
       if (t.count === 0) continue;
-      const { entity } = getEntity(s, t.type, s.entities.find((e) => e.type === t.type).name);
+      const { entity } = getEntityById(s, s.entities.find((e) => e.type === t.type).id);
       assert.equal(entity.type, t.type);
       assert.ok(Array.isArray(entity.references) && Array.isArray(entity.referencedBy));
     }
   });
 
-  test("every tool the server lists answers, and every answer carries the commit", async (t) => {
+  test("every tool the server lists answers inside its schema, and every answer carries the commit", async (t) => {
     const [a, b] = InMemoryTransport.createLinkedPair();
     await createServer(s).connect(a);
     const client = new Client({ name: "test", version: "0" });
     await client.connect(b);
     assert.equal(client.getServerVersion().title, s.root);
     const { tools } = await client.listTools();
-    const types = listTypes(s).types;
-    const skill = s.entities.find((e) => e.type === "skill");
-    // No count is held here: the list is the server's, and a tool it gains is called like the
-    // rest. One it gains that this table has no arguments for fails by name, never in silence.
-    const ARGS = { list_types: {}, describe_schema: { type: types[0]?.type }, describe_relations: {}, list_rules: {},
-      describe_rule: { rule: "R4" }, list_checks: {}, list_entities: { type: types.find((x) => x.count > 0)?.type },
-      get_entity: { type: "identity", name: s.root }, find_evidence: skill ? { skill: skill.name } : undefined,
-      search: { query: "model" }, fetch: { id: "identity" } };
+    // No count and no argument is held here: the list is the server's and the arguments are read
+    // from this snapshot by the package that declares the tools. A tool it gains with no sample
+    // call fails by name, never in silence.
+    const calls = sampleCalls(s);
     assert.ok(tools.length > 0);
     for (const name of tools.map((x) => x.name)) {
-      assert.ok(name in ARGS, `${name} is served and this test has no arguments to call it with`);
+      assert.ok(name in calls, `${name} is served and the package ships no sample call for it`);
       // Ruling 5: an instance that claims no skill has nothing find_evidence could be asked
       // about, so the call itself is skipped rather than made up against a name that isn't there.
-      if (name === "find_evidence" && !skill) {
-        await t.test("find_evidence", (t2) => t2.skip("this instance claims no skill, so find_evidence has nothing to be asked"));
+      if (calls[name] === undefined) {
+        await t.test(name, (t2) => t2.skip(`this instance gives ${name} nothing to be asked about`));
         continue;
       }
-      const r = await client.callTool({ name, arguments: ARGS[name] });
+      const r = await client.callTool({ name, arguments: calls[name] });
       assert.equal(r.isError, undefined, name);
-      assert.equal(r.structuredContent.model.commit, src.commit, name);
+      assert.equal(checkAnswer(name, r).model.commit, src.commit, name);
     }
     await client.close();
   });
