@@ -27,7 +27,7 @@ test("the two retrieval tools each say when, and name the other", () => {
 });
 
 test("a paged tool says how to continue, and a tool with a sibling names it", () => {
-  for (const name of ["list_entities", "list_references", "search"]) assert.match(of(name), /`cursor`/, name);
+  for (const name of ["list_entities", "list_references", "find_evidence", "search"]) assert.match(of(name), /`cursor`/, name);
   assert.match(of("list_entities"), /\bsearch\b/);
   assert.match(of("describe_relations"), /\bdescribe_schema\b/);
   assert.match(of("describe_schema"), /\bdescribe_relations\b/);
@@ -49,11 +49,11 @@ test("the terms are defined once, in the instructions, before the sentence on pr
 // A client that reads only the tool listing meets `limit` and `cursor` as bare arguments, and a
 // limit outside the range is served at the nearest bound and never refused, so `limit: 0` comes
 // back as one entry with nothing to say why. The arguments say it themselves, in the schema
-// every client is handed, in one wording on all three paged tools; and what they say is held to
+// every client is handed, in one wording on every paged tool; and what they say is held to
 // what the server does.
 test("limit and cursor describe themselves, identically on every paged tool, and truly", () => {
   const paged = TOOLS.filter((t) => "limit" in t.input.shape);
-  assert.deepEqual(paged.map((t) => t.name).sort(), ["list_entities", "list_references", "search"]);
+  assert.deepEqual(paged.map((t) => t.name).sort(), ["find_evidence", "list_entities", "list_references", "search"]);
   const said = paged.map((t) => z.toJSONSchema(t.input).properties).map((p) => [p.limit.description, p.cursor.description]);
   for (const [limit, cursor] of said) {
     assert.deepEqual([limit, cursor], said[0]);
