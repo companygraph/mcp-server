@@ -16,10 +16,11 @@ test("the instance parses to what its site publishes", () => {
   assert.deepEqual(listTypes(s).model, { commit: INSTANCE_COMMIT, repo: "robertblust/mental-model", core: INSTANCE_CORE, parser: PARSER });
 });
 
-test("the company of one: the identity and the profile share a name, and a bare name is refused", () => {
+test("the company of one: the identity and the profile share a name, and each is reached by type or by id", () => {
   assert.equal(getEntity(s, "identity", "Robert Blust").entity.id, "identity");
   assert.equal(getEntity(s, "profile", "Robert Blust").entity.id, "profiles/robert-blust");
-  assert.throws(() => fetchEntity(s, "Robert Blust"), (e) => e instanceof ModelError && /R2/.test(e.message) && /identity/.test(e.message) && /profile/.test(e.message));
+  assert.deepEqual(search(s, "Robert Blust", { match: "name" }).results.map((x) => x.id), ["identity", "profiles/robert-blust"]);
+  assert.throws(() => fetchEntity(s, "Robert Blust"), (e) => e instanceof ModelError && e.code === "unknown_entity");
   assert.equal(fetchEntity(s, "profiles/robert-blust").title, "Robert Blust");
 });
 

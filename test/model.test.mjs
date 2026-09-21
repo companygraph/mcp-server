@@ -136,16 +136,15 @@ test("every declared type describes, lists and, where it holds an entity, gets o
   }
 });
 
-test("fetch takes an id, falls back to a name held by exactly one type, and refuses a shared name", () => {
-  const byId = fetchEntity(s, "skills/domain-driven-design");
-  assert.equal(byId.title, "Domain-Driven Design");
-  assert.match(byId.text, /^---\n/);
-  assert.equal(byId.entity.id, "skills/domain-driven-design");
-  assert.equal(byId.entity.markdown, undefined);
-  assert.equal(fetchEntity(s, "Beacon Systems").entity.id, "identity");
-  const shared = withSharedName();
-  assert.throws(() => fetchEntity(shared, "Beacon Systems"), (e) => e instanceof ModelError && /R2/.test(e.message) && /identity/.test(e.message) && /profile/.test(e.message));
-  assert.throws(() => fetchEntity(s, "nothing/here"), (e) => e instanceof ModelError && /nothing\/here/.test(e.message));
+test("fetch is the page as written, by id, and carries no structured copy", () => {
+  const r = fetchEntity(s, "skills/domain-driven-design");
+  assert.deepEqual(Object.keys(r), ["id", "title", "type", "url", "text", "model"]);
+  assert.deepEqual([r.title, r.type], ["Domain-Driven Design", "skill"]);
+  assert.match(r.text, /^---\n/);
+  assert.equal(r.text, s.entities.find((e) => e.id === r.id).markdown);
+  // A name is no id. search finds the id a name belongs to, under every type that holds it.
+  assert.throws(() => fetchEntity(s, "Beacon Systems"), (e) => e instanceof ModelError && e.code === "unknown_entity" && /match "name"/.test(e.message));
+  assert.deepEqual(search(withSharedName(), "Beacon Systems", { match: "name" }).results.map((x) => x.id), ["identity", "profiles/beacon-systems"]);
 });
 
 // A tagline wrapped across `>` lines is one paragraph, and an agent reads the whole of it. The
@@ -160,13 +159,15 @@ test("a wrapped tagline reaches every tool whole", () => {
 
 // Core 0.31.0 lets two owners each own an entity of one name, and a lookup by type and name alone
 // then meets two. Handing back the first would answer for the wrong person without saying so, so
-// both lookups refuse and name every id, and an id reaches each.
+// the lookup refuses with every candidate, and an id reaches each.
 test("a name two owners each hold is refused by type and name, with every id named, and each is reached by id", () => {
   const { snapshot, title, owners } = withOwnedNameTwice();
   const ids = snapshot.entities.filter((e) => e.type === "experience" && e.name === title).map((e) => e.id);
   assert.equal(ids.length, 2);
-  for (const call of [() => getEntity(snapshot, "experience", title), () => fetchEntity(snapshot, title)])
-    assert.throws(call, (e) => e instanceof ModelError && /R2/.test(e.message) && ids.every((id) => e.message.includes(id)) && /by its id/.test(e.message) && !/different types/.test(e.message));
-  for (const id of ids) assert.equal(fetchEntity(snapshot, id).entity.id, id);
+  assert.throws(() => getEntity(snapshot, "experience", title), (e) => e instanceof ModelError && /R2/.test(e.message) && ids.every((id) => e.message.includes(id)) && /by its id/.test(e.message));
+  for (const id of ids) {
+    assert.equal(getEntityById(snapshot, id).entity.id, id);
+    assert.equal(fetchEntity(snapshot, id).id, id);
+  }
   assert.ok(owners.every((o) => ids.some((id) => id.startsWith(`${o}/`))));
 });
