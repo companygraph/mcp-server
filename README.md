@@ -13,6 +13,7 @@ It serves a snapshot parsed at build time with the meta-model's own parser, so a
 | `describe_relations` | what the schemas declare between types, whole or narrowed |
 | `list_rules`, `describe_rule` | the rules the model is held to, and one as written |
 | `list_checks` | the checks the model's gate runs; a list, not a verdict |
+| `describe_errors` | what a refused call looks like: every code and the refusal's JSON Schema |
 | `list_entities` | the entities of one type, paged |
 | `get_entity` | one entity as structured data, by id or by type and name |
 | `list_references` | the model's edges, filtered and paged |

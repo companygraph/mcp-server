@@ -21,6 +21,7 @@ export const EXAMPLES = {
   "`list_rules`": { name: "list_rules", arguments: {} },
   "`describe_rule`": { name: "describe_rule", arguments: { rule: "R4" } },
   "`list_checks`": { name: "list_checks", arguments: {} },
+  "`describe_errors`": { name: "describe_errors", arguments: {} },
   "`list_entities`": { name: "list_entities", arguments: { type: "skill", limit: 2 } },
   "`get_entity`": { name: "get_entity", arguments: { id: DDD } },
   "`list_references`": { name: "list_references", arguments: { entity: "profiles/mira-halvorsen", direction: "in", via: "nested-in" } },
