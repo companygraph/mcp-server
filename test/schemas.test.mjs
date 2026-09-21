@@ -2,7 +2,7 @@
 // come from the queries directly; test/contract.test.mjs holds them through a client.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { OUTPUTS, ErrorResult, Edge, Page } from "../lib/schemas.mjs";
+import { OUTPUTS, ErrorResult, Edge, Page, Stamp, Entity } from "../lib/schemas.mjs";
 import { TOOLS } from "../lib/tools.mjs";
 import * as model from "../lib/model.mjs";
 import { exampleSnapshot, instanceSnapshot } from "./helpers.mjs";
@@ -35,6 +35,16 @@ test("a closed shape refuses what it does not declare, and an open one allows it
   assert.ok(!Edge.safeParse({ from: ref, via: "f", to: ref, attrs: {}, extra: 1 }).success);
   assert.ok(!Edge.safeParse({ from: ref, via: "f", to: { id: "a", type: "t" }, attrs: {} }).success);
   assert.ok(!Page.safeParse({ total: 1, returned: 1, hasMore: false }).success, "nextCursor is required, null when there is none");
+});
+
+// The parser attaches a stamp when either `kind` or `start` is set, never only when both are, so
+// an entity with a start and no kind, or a kind and no start, legitimately carries a stamp with
+// null in the other field; a schema that required both would refuse those real answers.
+test("a stamp may lack its kind or its start, since the parser attaches one when either is set", () => {
+  assert.ok(Stamp.safeParse({ kind: null, start: "2020-01", end: null }).success);
+  assert.ok(Stamp.safeParse({ kind: "Role", start: null, end: null }).success);
+  assert.ok(!Stamp.safeParse({ kind: 7, start: "2020-01", end: null }).success);
+  assert.ok(!Stamp.safeParse({ kind: "Role", start: "2020-01" }).success, "end is required");
 });
 
 test("the error schema fixes the details of each code", () => {
