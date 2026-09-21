@@ -25,7 +25,7 @@
 
 ### Rulings the plan makes where the spec is silent
 
-1. **`via: "owner"` names two things, as it does today:** nesting on disk, and a schema's own `owner` field (a process's owner is a role). The far end's type tells them apart. `docs/INTERFACE.md` says so; nothing is renamed.
+1. **The nesting edge is `via: "nested-in"`.** `owner` is also a field some schemas declare, and a `via` names one thing; the owner decided the split after the plan ran, and the code, the glossary and `docs/INTERFACE.md` say so.
 2. **`describe_relations`: `direction` without `type` is refused** as `invalid_argument`, as it is for `list_references` without `entity`. `via` narrows `relations` and `enums`, the two lists that carry a `via`.
 3. **Functions a deployment's suite imports keep their arguments.** `getEntity(s, type, name)` stays positional; `getEntityById(s, id)` stands beside it and `entityBy(s, args)` is what the tool calls. `search(s, query, options)` and `listEntities(s, type, options)` take their new arguments as a trailing object. `ModelError` is still exported from `lib/model.mjs`.
 4. **A schema is strict where this package builds the object and loose where the parser does.** Entities, sections, tables, enums, joins, lists and checks are spread from the parser's output, so they require their known keys and allow others; a parser release that adds a key must not make every answer fail the SDK's output validation. Everything else is `z.strictObject`, so an undeclared field fails the suite.

@@ -4,9 +4,9 @@ What a client of this server may rely on: the tools, their arguments, the fields
 
 ## Terms
 
-An **id** identifies one entity across the whole model, such as `skills/domain-driven-design`, and every tool that takes an entity takes its id. A **canonical name** is an entity's title, unique within its type and, for an owned type, within its owner, so a name alone can be ambiguous where an id cannot. An **owner** is the entity another is nested under. A **reference** is an edge from one entity to another, and **`via`** names the field or `Section.Column` that drew it. A **qualifier** is a value on a table row that describes that row's edge and draws none of its own.
+An **id** identifies one entity across the whole model, such as `skills/domain-driven-design`, and every tool that takes an entity takes its id. A **canonical name** is an entity's title, unique within its type and, for an owned type, within its owner, so a name alone can be ambiguous where an id cannot. An **owner** is the entity another is nested under. A **reference** is an edge from one entity to another, and **`via`** names the field or `Section.Column` that drew it, or `nested-in` for nesting. A **qualifier** is a value on a table row that describes that row's edge and draws none of its own.
 
-`via: "owner"` names two things. Nesting on disk is served as an edge from the owned entity to its owner; a schema's own `owner` field, a process's owner for one, draws an edge of the same name. The far end's type tells them apart.
+Nesting on disk is served as an edge from the owned entity to its owner, under `nested-in`. The name is this server's own and no schema declares it, so it never collides with a field: a schema's own `owner` field, a process's owner for one, draws an edge via `owner` like any other reference.
 
 ## Shapes every tool shares
 

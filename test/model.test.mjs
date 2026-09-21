@@ -71,17 +71,17 @@ test("get_entity serves each table once, under tables", () => {
   assert.ok(s.entities.find((e) => e.id === "profiles/mira-halvorsen").sections.find((x) => x.heading === "Skills").table, "the snapshot keeps the parser's graph untouched");
 });
 
-test("get_entity serves ownership both ways, as owner", () => {
+test("get_entity serves ownership both ways, as nested-in", () => {
   const owned = s.entities.filter((e) => e.owner === "profiles/mira-halvorsen");
   assert.ok(owned.length >= 1);
   const profile = getEntity(s, "profile", "Mira Halvorsen").entity;
-  const owns = profile.referencedBy.filter((x) => x.via === "owner");
+  const owns = profile.referencedBy.filter((x) => x.via === "nested-in");
   assert.deepEqual(owns.map((x) => x.from.id).sort(), owned.map((e) => e.id).sort());
-  assert.equal(profile.references.filter((x) => x.via === "owner").length, 0);
+  assert.equal(profile.references.filter((x) => x.via === "nested-in").length, 0);
   const exp = getEntityById(s, owned[0].id).entity;
   assert.equal(exp.owner, "profiles/mira-halvorsen");
-  assert.deepEqual(exp.references.filter((x) => x.via === "owner"),
-    [{ from: { id: owned[0].id, type: owned[0].type, name: owned[0].name }, via: "owner", to: { id: "profiles/mira-halvorsen", type: "profile", name: "Mira Halvorsen" }, attrs: {} }]);
+  assert.deepEqual(exp.references.filter((x) => x.via === "nested-in"),
+    [{ from: { id: owned[0].id, type: owned[0].type, name: owned[0].name }, via: "nested-in", to: { id: "profiles/mira-halvorsen", type: "profile", name: "Mira Halvorsen" }, attrs: {} }]);
 });
 
 test("get_entity is an R4 error for a name the type does not hold, even if another type does", () => {

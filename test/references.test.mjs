@@ -31,12 +31,25 @@ test("direction reads relative to the entity, and both is the default", () => {
   assert.equal(both.page.total, out.page.total + into.page.total);
 });
 
-test("nesting is an edge from the owned to its owner, via owner", () => {
+test("nesting is an edge from the owned to its owner, via nested-in", () => {
   const owned = s.entities.filter((e) => e.owner === MIRA).map((e) => e.id).sort();
   assert.ok(owned.length >= 1);
-  const r = listReferences(s, { entity: MIRA, direction: "in", via: "owner" });
+  const r = listReferences(s, { entity: MIRA, direction: "in", via: "nested-in" });
   assert.deepEqual(r.edges.map((x) => x.from.id).sort(), owned);
   assert.deepEqual(r.edges[0].attrs, {});
+});
+
+test("a schema's own owner field is a reference via owner, and nesting is not among them", () => {
+  const byId = (id) => s.entities.find((e) => e.id === id);
+  const owner = listReferences(s, { via: "owner", limit: 200 });
+  assert.ok(owner.edges.length >= 1);
+  assert.ok(owner.edges.every((x) => x.to.type === "role"));
+  assert.ok(owner.edges.every((x) => byId(x.from.id).owner !== x.to.id));
+  const nesting = s.entities.filter((e) => e.owner).length;
+  const nestedIn = listReferences(s, { via: "nested-in", limit: 200 });
+  assert.equal(nestedIn.edges.length, nesting);
+  assert.ok(nestedIn.edges.every((x) => byId(x.from.id).owner === x.to.id));
+  assert.deepEqual(nestedIn.edges[0].attrs, {});
 });
 
 test("type is the far end's with an entity, and either end's without", () => {
