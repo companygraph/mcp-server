@@ -106,6 +106,10 @@ test("the other lists narrow to the type, and the explanations always arrive who
   assert.deepEqual(process.ownership.map((x) => x.owned).sort(), ["phase", "track"]);
   for (const key of ["enums", "joins", "lists"]) assert.ok(process[key].every((x) => x.type === "process"), key);
   assert.deepEqual([process.forms, process.reading], [whole.forms, whole.reading]);
+  // direction enters only the relations filter: ownership, enums, joins and lists narrow with
+  // type alone, so a side of relations leaves these four lists exactly as `{ type }` gives them.
+  const declaredTo = describeRelations(s, { type: "process", direction: "declared-to" });
+  for (const key of ["ownership", "enums", "joins", "lists"]) assert.deepEqual(declaredTo[key], process[key], key);
 });
 
 test("via keeps one field or column, among the references and the enums", () => {

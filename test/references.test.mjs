@@ -3,7 +3,7 @@
 // list of edges belongs to no single entity.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { ModelError, listReferences } from "../lib/model.mjs";
+import { ModelError, listReferences, describeRelations } from "../lib/model.mjs";
 import { exampleSnapshot, instanceSnapshot, COMMIT, EXAMPLE_CORE, PARSER } from "./helpers.mjs";
 
 const s = exampleSnapshot();
@@ -84,6 +84,18 @@ test("what cannot be answered is refused by code", () => {
   assert.equal(code({ type: "person" })[0], "unknown_type");
   assert.deepEqual(code({ direction: "out" }), ["invalid_argument", { argument: "direction", reason: "needs entity" }]);
   assert.deepEqual(code({ entity: DDD, direction: "sideways" }), ["invalid_argument", { argument: "direction", reason: "one of out, in, both" }]);
+});
+
+// nested-in is this package's own name, declared by no schema; the day a core declares a field
+// or a column of that name, the synthetic nesting edge and a real reference share one via, and
+// this holds the ground that day would move.
+test("nested-in names no declared field or column, over both fixtures", () => {
+  for (const snapshot of [exampleSnapshot(), instanceSnapshot()]) {
+    const r = describeRelations(snapshot);
+    assert.ok(r.relations.every((x) => x.via !== "nested-in"));
+    assert.ok(r.enums.every((x) => x.via !== "nested-in"));
+    assert.ok(r.relations.some((x) => x.via === "source"));
+  }
 });
 
 test("the reference instance's profile holds more edges than one page, and they walk", () => {

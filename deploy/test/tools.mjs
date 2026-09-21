@@ -59,8 +59,10 @@ export function registerToolsTests() {
     assert.ok(tools.length > 0);
     for (const name of tools.map((x) => x.name)) {
       assert.ok(name in calls, `${name} is served and the package ships no sample call for it`);
-      // Ruling 5: an instance that claims no skill has nothing find_evidence could be asked
-      // about, so the call itself is skipped rather than made up against a name that isn't there.
+      // Ruling 5: the skip covers every tool whose sample call above is undefined — find_evidence
+      // where the instance claims no skill, list_rules and describe_rule where its core ships no
+      // rules, list_checks where the snapshot carries no checks — each skipped by name rather
+      // than made up against something that isn't there.
       if (calls[name] === undefined) {
         await t.test(name, (t2) => t2.skip(`this instance gives ${name} nothing to be asked about`));
         continue;

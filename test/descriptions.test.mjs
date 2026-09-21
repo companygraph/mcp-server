@@ -32,6 +32,11 @@ test("a paged tool says how to continue, and a tool with a sibling names it", ()
   assert.match(of("list_rules"), /\bdescribe_rule\b/);
 });
 
+test("describe_relations names direction as one side of relations, not a narrower it shares with every list", () => {
+  assert.match(of("describe_relations"), /one side of relations/);
+  assert.doesNotMatch(of("describe_relations"), /narrow every list/);
+});
+
 test("the terms are defined once, in the instructions, before the sentence on provenance", () => {
   for (const term of ["id", "canonical name", "owner", "`via`", "reference", "qualifier"]) assert.ok(GLOSSARY.includes(term), term);
   const text = instructionsFor(exampleSnapshot());
