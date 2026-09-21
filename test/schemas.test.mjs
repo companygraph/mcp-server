@@ -16,7 +16,7 @@ test("the queries' own answers satisfy their schemas, on both fixtures", () => {
   for (const s of [exampleSnapshot(), instanceSnapshot()]) {
     const answers = {
       list_types: model.listTypes(s), describe_schema: model.describeSchema(s, "profile"), describe_relations: model.describeRelations(s),
-      list_rules: model.listRules(s), describe_rule: model.describeRule(s, "R4"), list_checks: model.listChecks(s),
+      list_rules: model.listRules(s), describe_rule: model.describeRule(s, "R4"), list_checks: model.listChecks(s), describe_errors: model.describeErrors(s),
       list_entities: model.listEntities(s, "experience"), get_entity: model.getEntityById(s, s.entities.find((e) => e.type === "experience").id),
       list_references: model.listReferences(s, {}), find_evidence: model.findEvidence(s, s.entities.find((e) => e.type === "skill").id),
       search: model.search(s, "a"), fetch: model.fetchEntity(s, "identity"),

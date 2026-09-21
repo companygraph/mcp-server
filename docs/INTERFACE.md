@@ -307,6 +307,226 @@ No arguments. `checks` with each check's `name`, the `rule` it cites and that ru
 }
 ```
 
+### `describe_errors`
+
+No argument. What a refused call looks like, for a client that reads only the protocol: a tool declares one output schema, which covers its answers, and an error result is exempt from it, so no tool's listing says what a refusal holds. `errors` has every code in the order of the table under Refusals, each with `when` it is raised and `details`, the JSON Schema of that code's details; `schema` is the JSON Schema of a whole refusal, `error` beside `model`. Both are written from the schema this package's suite holds every refusal to, and nothing in the answer but `model` depends on the instance. The example below is cut like every other, which here also shortens `required` and `oneOf`: the served schema requires every field of a refusal and holds every code.
+
+```json
+{
+  "tool": "describe_errors",
+  "arguments": {},
+  "answer": {
+    "errors": [
+      {
+        "code": "unknown_type",
+        "when": "no schema declares the type",
+        "details": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string"
+            },
+            "declared": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "required": [
+            "type",
+            "declared"
+          ],
+          "additionalProperties": false
+        }
+      },
+      {
+        "code": "unknown_entity",
+        "when": "an id, or a type and name, resolves to nothing",
+        "details": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "type",
+                "name"
+              ],
+              "additionalProperties": false
+            }
+          ]
+        }
+      }
+    ],
+    "schema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "error": {
+          "oneOf": [
+            {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string",
+                  "const": "unknown_type"
+                },
+                "message": {
+                  "type": "string"
+                },
+                "rule": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "details": {
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string"
+                    },
+                    "declared": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "required": [
+                    "type",
+                    "declared"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string",
+                  "const": "unknown_entity"
+                },
+                "message": {
+                  "type": "string"
+                },
+                "rule": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "details": {
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "id"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string"
+                        },
+                        "name": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "type",
+                        "name"
+                      ],
+                      "additionalProperties": false
+                    }
+                  ]
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ],
+              "additionalProperties": false
+            }
+          ]
+        },
+        "model": {
+          "type": "object",
+          "properties": {
+            "commit": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "repo": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "core": {
+              "type": "string"
+            },
+            "parser": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "commit",
+            "repo"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "error",
+        "model"
+      ],
+      "additionalProperties": false
+    },
+    "model": {
+      "commit": "0123456789abcdef0123456789abcdef01234567",
+      "repo": "companygraph/meta-model",
+      "core": "0.0.0",
+      "parser": "v0.0.0"
+    }
+  }
+}
+```
+
 ### `list_entities`
 
 `type`; optional `owner`, an id, to keep one owner's entities; `limit` and `cursor`. `entities` in id order, and `page`.
@@ -742,7 +962,7 @@ A cursor is opaque. It belongs to one commit of the model: sent after the deploy
 
 ## Refusals
 
-A refused call is a tool error. Its text is a sentence for a reader, and its structured content is the same refusal for a program: `error.code`, `error.message`, `error.rule`, the convention it rests on or null, and `error.details`, whose keys the code fixes. `model` stands beside `error`.
+A refused call is a tool error. Its text is a sentence for a reader, and its structured content is the same refusal for a program: `error.code`, `error.message`, `error.rule`, the convention it rests on or null, and `error.details`, whose keys the code fixes. `model` stands beside `error`. `describe_errors` serves this section to a client as data: the codes, when each is raised, and the refusal's JSON Schema.
 
 | Code | When | `details` |
 | --- | --- | --- |

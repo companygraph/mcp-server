@@ -39,7 +39,7 @@ test("the instructions name no commit and no version, which a client would keep 
 test("the tools, by their exact names", async () => {
   const client = await connect();
   const { tools } = await client.listTools();
-  assert.deepEqual(tools.map((t) => t.name).sort(), ["describe_relations", "describe_rule", "describe_schema", "fetch", "find_evidence", "get_entity", "list_checks", "list_entities", "list_references", "list_rules", "list_types", "search"]);
+  assert.deepEqual(tools.map((t) => t.name).sort(), ["describe_errors", "describe_relations", "describe_rule", "describe_schema", "fetch", "find_evidence", "get_entity", "list_checks", "list_entities", "list_references", "list_rules", "list_types", "search"]);
   for (const t of tools) assert.ok(t.description.length > 20, t.name);
 });
 
@@ -47,7 +47,7 @@ test("every tool returns structured content carrying the model", async () => {
   const client = await connect();
   const calls = [
     ["list_types", {}], ["describe_schema", { type: "skill" }], ["describe_relations", {}], ["list_rules", {}],
-    ["describe_rule", { rule: "R4" }], ["list_checks", {}], ["list_entities", { type: "skill" }],
+    ["describe_rule", { rule: "R4" }], ["list_checks", {}], ["describe_errors", {}], ["list_entities", { type: "skill" }],
     ["get_entity", { type: "skill", name: "Domain-Driven Design" }], ["list_references", { entity: "skills/domain-driven-design" }],
     ["find_evidence", { skill: "Domain-Driven Design" }],
     ["search", { query: "billing" }], ["fetch", { id: "skills/domain-driven-design" }],
