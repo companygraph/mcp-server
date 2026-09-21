@@ -11,7 +11,12 @@ terraform {
 variable "project" { type = string }
 variable "region" { type = string }
 variable "repository" { type = string }
+# GitHub's numeric id for the repository, which a name reused after a delete or a rename
+# cannot take over: `gh api repos/<owner>/<name> --jq .id`.
+variable "repository_id" { type = string }
+variable "project_number" { type = string }
 variable "billing_account" { type = string }
+variable "organization" { type = string }
 
 # Enabling an API already on is a no-op; disabling one on destroy never happens.
 resource "google_project_service" "bootstrap" {
@@ -60,15 +65,24 @@ resource "google_iam_workload_identity_pool_provider" "github" {
   workload_identity_pool_id          = google_iam_workload_identity_pool.github.workload_identity_pool_id
   workload_identity_pool_provider_id = "github"
   attribute_mapping = {
-    "google.subject"       = "assertion.sub"
-    "attribute.repository" = "assertion.repository"
+    "google.subject"          = "assertion.sub"
+    "attribute.repository"    = "assertion.repository"
+    "attribute.repository_id" = "assertion.repository_id"
+    "attribute.ref"           = "assertion.ref"
   }
-  attribute_condition = "assertion.repository == \"${var.repository}\""
+  # The id, not the name: a repository deleted or renamed frees its name for anyone, and a
+  # condition on the name would hand this project to whoever takes it.
+  attribute_condition = "assertion.repository_id == \"${var.repository_id}\""
   oidc { issuer_uri = "https://token.actions.githubusercontent.com" }
 }
 
+# Only this repository's tokens pass the provider, so a principal set over one attribute is
+# already that repository's. A run of it on any ref may plan; only a run on main may change
+# anything, which keeps a pull request, Dependabot's included, to reading.
 locals {
-  principal = "principalSet://iam.googleapis.com/${google_iam_workload_identity_pool.github.name}/attribute.repository/${var.repository}"
+  pool      = "principalSet://iam.googleapis.com/${google_iam_workload_identity_pool.github.name}"
+  any_run   = "${local.pool}/attribute.repository_id/${var.repository_id}"
+  main_runs = "${local.pool}/attribute.ref/refs/heads/main"
 }
 
 # The project sits under the flatland.ch organization, whose domain-restricted sharing refuses
@@ -81,6 +95,29 @@ resource "google_org_policy_policy" "allow_public_members" {
   spec {
     rules {
       allow_all = "TRUE"
+    }
+  }
+  depends_on = [google_project_service.bootstrap]
+}
+
+# The override above lifts the domain restriction entirely, so on its own it lets any member
+# from anywhere into the project's policies. The managed constraint narrows it back to what
+# the server needs: allUsers for the invoker, the organization's own principals, and this
+# project's identity pool. It runs as a dry run first, logging what it would refuse without
+# refusing it, and is enforced only once those logs have been read.
+resource "google_org_policy_policy" "allowed_members" {
+  name   = "projects/${var.project}/policies/iam.managed.allowedPolicyMembers"
+  parent = "projects/${var.project}"
+  dry_run_spec {
+    rules {
+      enforce = "TRUE"
+      parameters = jsonencode({
+        allowedMemberSubjects = ["allUsers"]
+        allowedPrincipalSets = [
+          "//cloudresourcemanager.googleapis.com/organizations/${var.organization}",
+          "//iam.googleapis.com/projects/${var.project_number}/locations/global/workloadIdentityPools/${google_iam_workload_identity_pool.github.workload_identity_pool_id}",
+        ]
+      })
     }
   }
   depends_on = [google_project_service.bootstrap]
@@ -127,7 +164,48 @@ resource "google_storage_bucket_iam_member" "terraform_state" {
 resource "google_service_account_iam_member" "terraform_wif" {
   service_account_id = google_service_account.terraform.name
   role               = "roles/iam.workloadIdentityUser"
-  member             = local.principal
+  member             = local.main_runs
+}
+
+# Plans a pull request: reads everything ../ declares and the state it keeps, and can change
+# none of it. -lock=false in the plan is what lets it do without write on the bucket.
+resource "google_service_account" "plan" {
+  account_id   = "terraform-plan"
+  display_name = "Terraform plan, run by GitHub Actions on a pull request"
+  depends_on   = [google_project_service.bootstrap]
+}
+
+resource "google_project_iam_member" "plan" {
+  for_each = toset([
+    "roles/viewer",
+    "roles/run.viewer",
+    "roles/firebase.viewer",
+    "roles/firebasehosting.viewer",
+    "roles/serviceusage.serviceUsageConsumer",
+  ])
+  project    = var.project
+  role       = each.value
+  member     = "serviceAccount:${google_service_account.plan.email}"
+  depends_on = [google_project_service.bootstrap]
+}
+
+# The budget is read from the billing account, as it is written there.
+resource "google_billing_account_iam_member" "plan_budgets" {
+  billing_account_id = var.billing_account
+  role               = "roles/billing.viewer"
+  member             = "serviceAccount:${google_service_account.plan.email}"
+}
+
+resource "google_storage_bucket_iam_member" "plan_state" {
+  bucket = google_storage_bucket.state.name
+  role   = "roles/storage.objectViewer"
+  member = "serviceAccount:${google_service_account.plan.email}"
+}
+
+resource "google_service_account_iam_member" "plan_wif" {
+  service_account_id = google_service_account.plan.name
+  role               = "roles/iam.workloadIdentityUser"
+  member             = local.any_run
 }
 
 # Pushes images and nothing else.
@@ -147,11 +225,12 @@ resource "google_artifact_registry_repository_iam_member" "deploy" {
 resource "google_service_account_iam_member" "deploy_wif" {
   service_account_id = google_service_account.deploy.name
   role               = "roles/iam.workloadIdentityUser"
-  member             = local.principal
+  member             = local.main_runs
 }
 
 output "workload_identity_provider" { value = google_iam_workload_identity_pool_provider.github.name }
 output "terraform_service_account" { value = google_service_account.terraform.email }
 output "deploy_service_account" { value = google_service_account.deploy.email }
+output "plan_service_account" { value = google_service_account.plan.email }
 output "registry" { value = "${var.region}-docker.pkg.dev/${var.project}/${google_artifact_registry_repository.mcp.repository_id}" }
 output "state_bucket" { value = google_storage_bucket.state.name }
