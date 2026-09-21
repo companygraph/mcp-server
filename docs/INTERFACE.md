@@ -976,11 +976,11 @@ A refused call is a tool error. Its text is a sentence for a reader, and its str
 | `unknown_entity` | an id, or a type and name, resolves to nothing | `id`, or `type` and `name` |
 | `ambiguous_name` | more than one entity of the type holds the name | `type`, `name`, `candidates`: entity references, each with `owner` |
 | `unknown_rule` | no rule has the number | `rule`, `rules` |
-| `invalid_argument` | an empty query, neither id nor type and name, a direction with nothing to be relative to | `argument`, `reason` |
+| `invalid_argument` | an argument missing, of the wrong type or outside its enumeration; an empty query, neither id nor type and name, a direction with nothing to be relative to | `argument`, `reason` |
 | `invalid_cursor` | a cursor this server did not write, or one from another commit | `reason`: `malformed` or `other_commit` |
 | `unsupported_snapshot` | the snapshot predates what the tool reads | `missing` |
 
-One kind of refusal carries no code. Arguments that fail a tool's input schema, a number where a string belongs or a value outside an enumeration, are refused by the MCP SDK before this package runs, as a sentence alone.
+Arguments that fail a tool's input schema, a missing one, a number where a string belongs or a value outside an enumeration, are refused like any other: `invalid_argument`, with the `argument` at fault and the `reason`. Where several are at fault the sentence names each and `details` holds the first. An argument no schema names is ignored and not refused. What carries no code is what never reaches a tool: a tool name nobody registered and a request that is not the protocol's are answered by the MCP SDK as JSON-RPC errors, not as tool results.
 
 ### A refusal
 
