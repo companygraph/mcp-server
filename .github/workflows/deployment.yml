@@ -1,9 +1,8 @@
+# The caller holds the concurrency group: a caller and its called workflow sharing one group is
+# a deadlock, and GitHub cancels the run rather than serialize it.
 name: deployment
 on:
   workflow_call:
-concurrency:
-  group: deploy-${{ github.ref }}
-  cancel-in-progress: false
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -59,7 +58,6 @@ jobs:
       - run: |
           jq -r '"PROJECT=\(.project)\nPROJECT_NUMBER=\(.project_number)\nREGION=\(.region)"' ../deployment.json >> "$GITHUB_ENV"
       - run: |
-          echo "REGISTRY=$REGION-docker.pkg.dev/$PROJECT/mcp" >> "$GITHUB_ENV"
           echo "WIF_PROVIDER=projects/$PROJECT_NUMBER/locations/global/workloadIdentityPools/github/providers/github" >> "$GITHUB_ENV"
       - uses: google-github-actions/auth@v3
         with:
