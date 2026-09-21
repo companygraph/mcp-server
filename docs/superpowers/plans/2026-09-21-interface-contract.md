@@ -2506,7 +2506,7 @@ Expected: `test`, `terraform` and `conventions / conventions` green. Report the 
 
 ## After the merge, on the owner's word
 
-Not tasks of this plan. The repository's pattern is a pull request of its own that sets `package.json` and `package-lock.json` to 0.19.0, then the tag `v0.19.0` and a GitHub Release. The notes, drafted for that day:
+Not tasks of this plan. The repository's pattern is a pull request of its own that sets `package.json` and `package-lock.json` to the next minor after the version `main` carries that day, then its tag and a GitHub Release. The number is read then and not written here: another release took the one this plan first named while the plan was still running. The notes, drafted for that day:
 
 > **Interface.** This release breaks the tool interface, once, to give it a contract; `docs/INTERFACE.md` is that contract from here on. `fetch` takes an id only and answers with `id`, `title`, `type`, `url` and `text`; it no longer resolves a name and no longer returns `entity`. `get_entity` takes `id`, or `type` and `name`; its `references` and `referencedBy` are edges naming both ends (`from`, `via`, `to`, `attrs`), capped at fifty each way, with the totals under `referenceCounts`. `find_evidence` entries take the same edge shape, so an entry's page is `from.id` where it was `id`. `list_entities` and `search` answer a page at a time: `limit`, `cursor`, and `page` in the answer; `search`'s `total` is now `page.total` and `matched` holds `{where, key}` objects where it held strings. A refused call carries `error.code`, `error.rule` and `error.details` as structured content beside its sentence. Ids are formed as before.
 >
