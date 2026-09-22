@@ -98,7 +98,10 @@ resource "google_org_policy_policy" "allow_public_members" {
   depends_on = [google_project_service.bootstrap]
 }
 
-# Applies ../: Cloud Run, Firebase, Hosting, the budget, the APIs it needs.
+# Applies ../: Cloud Run, Firebase, Hosting, the budget, the APIs it needs. And, in the same
+# project, the chat's module from companygraph/chat-server: the project's one Firestore
+# database, which needs the datastore owner, and the chat runtime's two project roles, which
+# need the project IAM administrator; neither is a role this identity needs for the server alone.
 resource "google_service_account" "terraform" {
   account_id   = "terraform"
   display_name = "Terraform, run by GitHub Actions"
@@ -114,6 +117,8 @@ resource "google_project_iam_member" "terraform" {
     "roles/firebase.admin",
     "roles/firebasehosting.admin",
     "roles/artifactregistry.reader",
+    "roles/datastore.owner",
+    "roles/resourcemanager.projectIamAdmin",
   ])
   project    = var.project
   role       = each.value
