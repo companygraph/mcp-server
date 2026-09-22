@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { jsonld, serverJson } from "../deploy/build/index.mjs";
-import { exampleSnapshot, instanceSnapshot } from "./helpers.mjs";
+import { exampleSnapshot, instanceSnapshot, withSharedName } from "./helpers.mjs";
 
 // The subject is read from the model: a profile carrying the identity's own name is a company
 // of one, whose company and person are one name, and the subject is that person.
@@ -39,4 +39,27 @@ test("the registry entry is the deployment's name and host, and refuses a long d
   assert.equal(j.title, s.root);
   assert.deepEqual(j.remotes, [{ type: "streamable-http", url: "https://mcp.example.test/mcp" }]);
   assert.throws(() => serverJson({ ...s, root: "x".repeat(90) }, { name: "a/b", url: "https://x/mcp" }, "1"), /100/);
+});
+
+// The person's picture, where the profile carries one: the address get_entity serves, so a
+// crawler and a client are told the same file. Read from a core that declares the field; the
+// instance fixture's core predates it, and a picture named there is a fact its schema does not
+// declare, so nothing is written for it.
+test("a Person carries image where the profile names a picture, and nothing where it does not", () => {
+  const surface = (s, repository) => {
+    const t = structuredClone(s);
+    t.entities.push({ type: "surface", id: "surfaces/mcp-example", name: "Example MCP server", tagline: "An example.",
+      fields: { url: "https://mcp.example.test", "built-by": `https://github.com/${repository}`, production: "built" }, sections: [] });
+    return t;
+  };
+  const shared = surface(withSharedName(), "example/mcp-example");
+  // A person is addressed by an Also at, which the shared-name profile does not carry.
+  shared.entities.find((e) => e.type === "profile" && e.name === shared.root).sections.push(
+    { heading: "Also at", text: "", tables: [{ caption: null, columns: ["Where", "URL"], rows: [["GitHub", "https://github.com/beacon"]] }] });
+  const bare = jsonld(shared, { repository: "example/mcp-example" })["@graph"].find((n) => n["@type"] === "Person");
+  assert.ok(bare && !("image" in bare), "the profile names no picture");
+  const profile = shared.entities.find((e) => e.type === "profile" && e.name === shared.root);
+  profile.fields.image = "beacon.png";
+  const person = jsonld(shared, { repository: "example/mcp-example" })["@graph"].find((n) => n["@type"] === "Person");
+  assert.equal(person.image, `https://beacon.example/images/${profile.id}.png`);
 });

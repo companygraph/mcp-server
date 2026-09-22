@@ -574,7 +574,7 @@ No argument. What a refused call looks like, for a client that reads only the pr
 
 ### `get_entity`
 
-`id`, or `type` and `name`; given both, the id wins. The entity's `fields`, `sections` and tables, and its edges both ways. `references` and `referencedBy` hold at most 50 edges each, in the order `list_references` gives them; `referenceCounts` holds the true totals, and `list_references` pages the rest. An entity's own content is never cut.
+`id`, or `type` and `name`; given both, the id wins. The entity's `fields`, `sections` and tables, and its edges both ways. An entity whose schema declares an `image` field and that names a picture carries `image_url`, where the site the identity names serves it, at `images/<id>.<extension>`; an entity without one carries no such key. `references` and `referencedBy` hold at most 50 edges each, in the order `list_references` gives them; `referenceCounts` holds the true totals, and `list_references` pages the rest. An entity's own content is never cut.
 
 ```json
 {

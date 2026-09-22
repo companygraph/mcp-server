@@ -14,6 +14,8 @@
 //
 // The endpoint is a `WebAPI`, which is what this surface is and what no other surface in the
 // family has. Its `@id` is this host's, not the identity's, because it is this host's thing.
+import { imageUrl } from "../../lib/model.mjs";
+
 export function jsonld(snapshot, { repository }) {
   const byId = (id) => snapshot.entities.find((e) => e.id === id);
   const identity = byId(snapshot.rootId);
@@ -43,8 +45,11 @@ export function jsonld(snapshot, { repository }) {
   if (!sameAs.length) throw new Error(`the ${profile ? "profile" : "identity"}'s Also at holds no address`);
   const kind = profile ? "Person" : "Organization";
   const subjectId = `${origin}/#${kind.toLowerCase()}`;
+  // The person's picture, where the profile carries one: the address get_entity serves, so a
+  // crawler and a client are told the same file.
+  const image = profile ? imageUrl(snapshot, profile) : null;
   return { "@context": "https://schema.org", "@graph": [
-    { "@type": kind, "@id": subjectId, name: identity.name, url: identity.fields.url, sameAs },
+    { "@type": kind, "@id": subjectId, name: identity.name, url: identity.fields.url, ...(image ? { image } : {}), sameAs },
     { "@type": "WebAPI", "@id": `${origin}/#api`, name: surface.name, description: surface.tagline,
       url: `${origin}/mcp`, documentation: `${origin}/`, provider: { "@id": subjectId }, about: { "@id": subjectId } },
   ] };

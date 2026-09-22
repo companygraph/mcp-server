@@ -1,5 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { readDir, readGitHub } from "../lib/read.mjs";
 import { fixtureRoot } from "./helpers.mjs";
@@ -74,4 +76,24 @@ test("readGitHub fails on a truncated listing and on a failed blob", async () =>
     fetch: async (url) => url.includes("/git/trees/")
       ? { ok: true, json: async () => ({ truncated: false, tree: [{ type: "blob", path: "model/x.md" }] }) }
       : { ok: false, status: 500 } }), /model\/x\.md: HTTP 500/);
+});
+
+// A picture beside a page (core 0.38.0) is bytes the snapshot has no use for: neither reader
+// takes it, and the GitHub reader does not fetch it.
+test("neither reader takes a picture beside a page", async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "mcp-read-"));
+  fs.mkdirSync(path.join(dir, "profiles", "mira"), { recursive: true });
+  fs.writeFileSync(path.join(dir, "profiles", "mira", "mira.md"), "---\nimage: mira.jpg\n---\n\n# Mira\n");
+  fs.writeFileSync(path.join(dir, "profiles", "mira", "mira.jpg"), Buffer.from([0xff, 0xd8, 0xff, 0xe0]));
+  assert.deepEqual([...readDir(dir).keys()], ["profiles/mira/mira.md"]);
+  const fetched = [];
+  const fetch = async (url) => {
+    fetched.push(url);
+    if (url.includes("/git/trees/")) return { ok: true, json: async () => ({ truncated: false, tree: [
+      { type: "blob", path: "model/profiles/mira/mira.md" }, { type: "blob", path: "model/profiles/mira/mira.jpg" }] }) };
+    return { ok: true, text: async () => "# Mira\n" };
+  };
+  const files = await readGitHub({ repo: "o/r", commit: "abc", sub: "model/", fetch });
+  assert.deepEqual([...files.keys()], ["profiles/mira/mira.md"]);
+  assert.ok(!fetched.some((u) => u.endsWith("mira.jpg")), "the picture was fetched");
 });

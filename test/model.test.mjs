@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { ModelError, listTypes, describeSchema, listEntities, getEntity, getEntityById, entityBy, REFERENCE_CAP, findEvidence, search, fetchEntity } from "../lib/model.mjs";
-import { exampleSnapshot, COMMIT, withSharedName, withOwnedNameTwice, EXAMPLE_CORE, PARSER, EXAMPLE_TYPES } from "./helpers.mjs";
+import { exampleSnapshot, COMMIT, withSharedName, withOwnedNameTwice, EXAMPLE_CORE, PARSER, EXAMPLE_TYPES, instanceSnapshot } from "./helpers.mjs";
 
 const s = exampleSnapshot();
 const MODEL = { commit: COMMIT, repo: "companygraph/meta-model", core: EXAMPLE_CORE, parser: PARSER };
@@ -194,4 +194,23 @@ test("a name two owners each hold is refused by type and name, with every id nam
     assert.equal(fetchEntity(snapshot, id).id, id);
   }
   assert.ok(owners.every((o) => ids.some((id) => id.startsWith(`${o}/`))));
+});
+
+// A profile's picture is served by the site the identity names, at the entity's id: the
+// address a client can fetch, beside the file name the field holds.
+test("get_entity names where an entity's picture is served, and nothing where it carries none", () => {
+  const agent = getEntityById(s, "profiles/ai-agent").entity;
+  assert.equal(agent.fields.image, "ai-agent.png");
+  assert.equal(agent.image_url, "https://beacon.example/images/profiles/ai-agent.png");
+  const mira = getEntityById(s, "profiles/mira-halvorsen").entity;
+  assert.equal(mira.fields.image, undefined);
+  assert.ok(!("image_url" in mira));
+  assert.ok(!("image_url" in getEntityById(s, "identity").entity));
+});
+
+// A core older than the type declares no image field, so a snapshot from it names no picture,
+// whatever a page happens to hold: the reference fixture vendors such a core.
+test("a snapshot from a core that predates image names no picture", () => {
+  const old = instanceSnapshot();
+  for (const e of old.entities) assert.ok(!("image_url" in getEntityById(old, e.id).entity), e.id);
 });
