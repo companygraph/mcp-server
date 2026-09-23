@@ -48,7 +48,7 @@ test("every class the sheet styles is one the page emits", () => {
 test("a description's code spans render as code, escaped first", () => {
   assert.ok(!html.includes("`"), "a literal backtick reached the page");
   assert.match(html, /<code class="mono">type<\/code>/, "a plain span becomes <code class=\"mono\">");
-  assert.match(html, /<code class="mono">match: &quot;text&quot;<\/code>/, "a quote inside a span stays escaped");
+  assert.match(html, /<code class="mono">match: &quot;words&quot;<\/code>/, "a quote inside a span stays escaped");
 });
 
 // The README is what a deployment reads before writing a stylesheet of its own, so a name that
