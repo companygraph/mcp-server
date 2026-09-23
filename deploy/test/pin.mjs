@@ -5,11 +5,12 @@
 // package is installed by name; the image then runs the old server while every visible pin
 // says otherwise. It happened on 2026-09-17. The installed package's own version is the one
 // thing the tag cannot lie about.
-import { test } from "node:test";
+import { test, after } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
-import { ROOT } from "../build/config.mjs";
+import { createHttpServer } from "companygraph-mcp-server/http";
+import { ROOT, snapshot } from "../build/config.mjs";
 
 export function registerPinTests() {
   const pkg = JSON.parse(fs.readFileSync(path.join(ROOT, "package.json"), "utf8"));
@@ -49,5 +50,23 @@ export function registerPinTests() {
     assert.ok(refs.some((r) => r.kind === "workflow"), "a deployment names the release in at least one workflow, by @tag");
     assert.ok(refs.some((r) => r.kind === "module"), "a deployment names the release in its Terraform module, by ?ref=tag");
     for (const { file, ref } of refs) assert.equal(ref, tag, `${file} names ${ref}; package.json pins ${tag}`);
+  });
+
+  // The installed package's version is read from a file; what a deployment serves is what its
+  // process answers, and the two are the same only if the image ran the package the tests read.
+  // The page and the health body name the release from the package that is serving, so a
+  // deployment that built green from a stale lockfile is visible to anyone who opens its page,
+  // and this holds both to the tag the deployment pins.
+  test("the served page and the health body name the release package.json pins", async () => {
+    const tag = pkg.dependencies["companygraph-mcp-server"].split("#")[1];
+    const server = createHttpServer(snapshot());
+    await new Promise((r) => server.listen(0, "127.0.0.1", r));
+    after(() => server.close());
+    const base = `http://127.0.0.1:${server.address().port}`;
+    const health = await (await fetch(`${base}/health`)).json();
+    assert.equal(health.server.name, "companygraph-mcp-server");
+    assert.equal("v" + health.server.version, tag, `the health body names ${health.server.version}; package.json pins ${tag}`);
+    const html = await (await fetch(`${base}/`)).text();
+    assert.ok(html.includes(`served by companygraph-mcp-server ${tag}.`), `the page does not say it is served by ${tag}`);
   });
 }

@@ -1,5 +1,6 @@
 import { test, after } from "node:test";
 import assert from "node:assert/strict";
+import fs from "node:fs";
 import http from "node:http";
 import { Client } from "@modelcontextprotocol/client";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/client";
@@ -50,6 +51,17 @@ test("other methods and paths", async () => {
   assert.equal(h.status, 200);
   assert.equal(h.headers.get("cache-control"), "no-store");
   assert.deepEqual((await h.json()).model, { commit: COMMIT, repo: "companygraph/meta-model", core: EXAMPLE_CORE, parser: PARSER });
+});
+
+// A person with curl and no client can check a deployment's release against its pin in one
+// line. The field is additive: whoever read ok and model reads what they read.
+test("/health names the release that serves it, beside what it answered before", async () => {
+  const base = await listen();
+  const body = await (await fetch(`${base}/health`)).json();
+  const pkg = JSON.parse(fs.readFileSync(new URL("../package.json", import.meta.url), "utf8"));
+  assert.deepEqual(Object.keys(body).sort(), ["model", "ok", "server"]);
+  assert.equal(body.ok, true);
+  assert.deepEqual(body.server, { name: pkg.name, version: pkg.version });
 });
 
 test("GET / is a page naming the model, the endpoint it was reached by and every tool", async () => {
