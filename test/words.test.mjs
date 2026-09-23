@@ -40,3 +40,18 @@ test("the paper's own examples, run through the whole algorithm", () => {
   for (const [word, expected] of [["caresses", "caress"], ["ponies", "poni"], ["ties", "ti"], ["caress", "caress"], ["cats", "cat"], ["feed", "feed"], ["agreed", "agre"], ["plastered", "plaster"], ["bled", "bled"], ["motoring", "motor"], ["sing", "sing"], ["conflated", "conflat"], ["troubled", "troubl"], ["sized", "size"], ["hopping", "hop"], ["tanned", "tan"], ["falling", "fall"], ["hissing", "hiss"], ["fizzed", "fizz"], ["failing", "fail"], ["filing", "file"], ["happy", "happi"], ["sky", "sky"], ["relational", "relat"], ["conditional", "condit"], ["rational", "ration"], ["valenci", "valenc"], ["hesitanci", "hesit"], ["digitizer", "digit"], ["conformabli", "conform"], ["radicalli", "radic"], ["differentli", "differ"], ["vileli", "vile"], ["analogousli", "analog"], ["vietnamization", "vietnam"], ["predication", "predic"], ["operator", "oper"], ["feudalism", "feudal"], ["decisiveness", "decis"], ["hopefulness", "hope"], ["callousness", "callous"], ["formaliti", "formal"], ["sensitiviti", "sensit"], ["sensibiliti", "sensibl"], ["triplicate", "triplic"], ["formative", "form"], ["formalize", "formal"], ["electriciti", "electr"], ["electrical", "electr"], ["hopeful", "hope"], ["goodness", "good"], ["revival", "reviv"], ["allowance", "allow"], ["inference", "infer"], ["airliner", "airlin"], ["gyroscopic", "gyroscop"], ["adjustable", "adjust"], ["defensible", "defens"], ["irritant", "irrit"], ["replacement", "replac"], ["adjustment", "adjust"], ["dependent", "depend"], ["adoption", "adopt"], ["homologou", "homolog"], ["communism", "commun"], ["activate", "activ"], ["angulariti", "angular"], ["homologous", "homolog"], ["effective", "effect"], ["bowdlerize", "bowdler"], ["probate", "probat"], ["rate", "rate"], ["cease", "ceas"], ["controll", "control"], ["roll", "roll"]])
     assert.equal(stemOf(word), expected, word);
 });
+
+// The query side is a stranger's text on a public endpoint, so the stemmer's cost is bounded by
+// the word's length and not by its shape: a run of y's, each decided by the letter before it, is
+// the case that a per-letter look-back made quadratic and deep enough to overflow.
+test("a run of y is stemmed in time linear in its length, and never overflows", () => {
+  const start = performance.now();
+  let out;
+  assert.doesNotThrow(() => { out = stems("y".repeat(20000) + "ational"); });
+  assert.equal(out.length, 1);
+  assert.ok(performance.now() - start < 1000, "twenty thousand y's stem within a second");
+});
+
+test("a compatibility character that decomposes to a capital is lowered after it decomposes", () => {
+  assert.deepEqual(words("𝔸bc"), ["abc"]);
+});
