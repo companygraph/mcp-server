@@ -9,6 +9,7 @@ import { createServer } from "../lib/server.mjs";
 import { OUTPUTS, ErrorResult } from "../lib/schemas.mjs";
 import { CODES } from "../lib/errors.mjs";
 import { sampleCalls, checkAnswer } from "../lib/contract.mjs";
+import { words } from "../lib/words.mjs";
 import { exampleSnapshot, instanceSnapshot, withOwnedNameTwice } from "./helpers.mjs";
 
 async function connect(s) {
@@ -62,6 +63,20 @@ for (const [label, s] of FIXTURES) {
     await client.close();
   });
 
+  test(`${label}: a search by words answers in the schema, names what it searched for, and finds the identity by its own name`, async () => {
+    const client = await connect(s);
+    const root = s.entities.find((e) => e.id === s.rootId);
+    const r = checkAnswer("search", await client.callTool({ name: "search", arguments: { query: root.name, match: "words", type: root.type } }));
+    assert.equal(r.match, "words");
+    assert.deepEqual(r.words.map((w) => w.word), words(root.name));
+    assert.ok(r.results.some((x) => x.id === s.rootId), "the identity holds every word of its own name");
+    const none = checkAnswer("search", await client.callTool({ name: "search", arguments: { query: "zzzz qqqq", match: "words" } }));
+    assert.deepEqual([none.results, none.page], [[], EMPTY_PAGE]);
+    const text = checkAnswer("search", await client.callTool({ name: "search", arguments: { query: root.name } }));
+    assert.equal("words" in text, false);
+    await client.close();
+  });
+
   test(`${label}: a walk over the pages is the whole list, at any page size`, async () => {
     const client = await connect(s);
     async function walk(name, args, limit) {
@@ -108,6 +123,7 @@ for (const [label, s] of FIXTURES) {
       ["describe_rule", { rule: "R999" }, "unknown_rule", (d) => d.rule === "R999" && d.rules.includes("R4")],
       ["get_entity", {}, "invalid_argument", (d) => d.argument === "id"],
       ["search", { query: "   " }, "invalid_argument", (d) => d.argument === "query"],
+      ["search", { query: "… — ...", match: "words" }, "invalid_argument", (d) => d.argument === "query"],
       ["list_references", { direction: "out" }, "invalid_argument", (d) => d.argument === "direction"],
       ["describe_relations", { direction: "declares" }, "invalid_argument", (d) => d.argument === "direction"],
       ["list_entities", { type, cursor: "not-a-cursor" }, "invalid_cursor", (d) => d.reason === "malformed"],
