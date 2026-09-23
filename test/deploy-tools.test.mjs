@@ -40,10 +40,14 @@ function deployment({ commit, tag, register }) {
   // `--test` run recognizes it and steps aside; without stripping that mark, the child below
   // would see it too and skip its file rather than run it, and this test would read an empty
   // pass instead of the deployment's own suite.
+  //
+  // The child names its reporter, because the default one depends on where it runs: a terminal
+  // gets marks, CI gets TAP, and a test reading the child's lines by their form would pass in
+  // one place and fail in the other.
   const env = { ...process.env };
   delete env.NODE_TEST_CONTEXT;
   delete env.NODE_TEST_WORKER_ID;
-  const r = spawnSync(process.execPath, ["--test", "shared.test.mjs"], { cwd: dir, encoding: "utf8", env });
+  const r = spawnSync(process.execPath, ["--test", "--test-reporter=tap", "shared.test.mjs"], { cwd: dir, encoding: "utf8", env });
   fs.rmSync(dir, { recursive: true, force: true });
   return r;
 }
@@ -70,11 +74,11 @@ test("and fail over one that is not, so a pass above means something", () => {
 test("the shared pin tests pass over a deployment that pins this release everywhere", () => {
   const r = deployment({ commit: COMMIT, tag: OWN, register: PIN });
   assert.equal(r.status, 0, r.stdout + r.stderr);
-  assert.match(r.stdout, /✔ the served page and the health body name the release package\.json pins/);
+  assert.match(r.stdout, /^ok \d+ - the served page and the health body name the release package\.json pins/m);
 });
 
 test("and fail over one that pins another release, so the served page is held to the pin", () => {
   const r = deployment({ commit: COMMIT, tag: "v0.0.1", register: PIN });
   assert.notEqual(r.status, 0);
-  assert.match(r.stdout, /✖ the served page and the health body name the release package\.json pins/);
+  assert.match(r.stdout, /^not ok \d+ - the served page and the health body name the release package\.json pins/m);
 });
