@@ -164,3 +164,11 @@ test("a word asked twice is reported twice, and common is counted over the whole
   assert.deepEqual(values.words.map((w) => w.common), [true, false], "florp is common in the instance though no value holds it");
   assert.equal(values.page.total, 0);
 });
+
+test("a possessive asks for its noun, so the apostrophe narrows nothing", () => {
+  const owned = search(s, "the company's billing", { match: "words" });
+  const plain = search(s, "the company billing", { match: "words" });
+  assert.deepEqual(owned.words.map((w) => w.word), ["the", "company", "billing"]);
+  assert.deepEqual(owned.results.map((x) => x.id), plain.results.map((x) => x.id));
+  assert.ok(owned.page.total > 0);
+});

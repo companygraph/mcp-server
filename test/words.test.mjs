@@ -10,6 +10,8 @@ test("a word is a maximal run of letters and digits, lowered, with diacritics fo
   assert.deepEqual(words("domain-driven design"), ["domain", "driven", "design"]);
   assert.deepEqual(words("Deciding well over build fast."), ["deciding", "well", "over", "build", "fast"]);
   assert.deepEqual(words("R14, core 0.31.0 — 16,000 events"), ["r14", "core", "0", "31", "0", "16", "000", "events"]);
+  assert.deepEqual(words("the company's vision, the owners’ plan, IT'S"), ["the", "company", "vision", "the", "owners", "plan", "it"], "a possessive is its noun");
+  assert.deepEqual(words("s corporation, R&S"), ["s", "corporation", "r", "s"], "a bare s that is no possessive stays");
   assert.deepEqual(words("  …  ---  "), []);
   assert.deepEqual(words(""), []);
   assert.deepEqual(words(null), []);
