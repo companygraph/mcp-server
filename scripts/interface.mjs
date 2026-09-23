@@ -27,6 +27,7 @@ export const EXAMPLES = {
   "`list_references`": { name: "list_references", arguments: { entity: "profiles/mira-halvorsen", direction: "in", via: "nested-in" } },
   "`find_evidence`": { name: "find_evidence", arguments: { skill: DDD } },
   "`search`": { name: "search", arguments: { query: "bounded context", limit: 2 } },
+  "`search` with `words`": { name: "search", arguments: { query: "decided the billing contexts", match: "words", limit: 2 } },
   "`fetch`": { name: "fetch", arguments: { id: DDD } },
   "A refusal": { name: "get_entity", ambiguous: true },
 };
