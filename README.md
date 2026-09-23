@@ -18,7 +18,7 @@ It serves a snapshot parsed at build time with the meta-model's own parser, so a
 | `get_entity` | one entity as structured data, by id or by type and name |
 | `list_references` | the model's edges, filtered and paged |
 | `find_evidence` | everything the model says about one skill, paged |
-| `search` | entities by words, or by exact name |
+| `search` | entities by stem, by substring or by exact name |
 | `fetch` | one entity's page as written, by id |
 
 [`docs/INTERFACE.md`](docs/INTERFACE.md) is the contract: every tool's arguments and answer with a real response, the codes of every refusal, how a list is paged, and what counts as a break. Every answer carries the model commit, the core version and the parser's tag. A name resolves within a type, and a name of an owned type within its owner, so two owners may each hold one name; a lookup that meets two refuses with every candidate's id, and an id reaches each.

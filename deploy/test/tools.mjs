@@ -73,4 +73,19 @@ export function registerToolsTests() {
     }
     await client.close();
   });
+
+  // The mode reaches a deployment with a re-pin and nothing else, so each holds it against the
+  // model it serves: the identity's own name, word by word, finds the identity.
+  test("a search by words finds the identity by its own name over this snapshot", async () => {
+    const [a, b] = InMemoryTransport.createLinkedPair();
+    await createServer(s).connect(a);
+    const client = new Client({ name: "test", version: "0" });
+    await client.connect(b);
+    const root = s.entities.find((e) => e.id === s.rootId);
+    const r = checkAnswer("search", await client.callTool({ name: "search", arguments: { query: root.name, match: "words", type: root.type } }));
+    assert.equal(r.match, "words");
+    assert.ok(r.words.length > 0 && r.words.every((w) => typeof w.stem === "string" && typeof w.common === "boolean"));
+    assert.ok(r.results.some((x) => x.id === s.rootId));
+    await client.close();
+  });
 }

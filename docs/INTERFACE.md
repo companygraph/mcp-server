@@ -876,7 +876,7 @@ Optional `entity`, an id; `direction` (`out`, `in` or `both`, relative to the en
 
 ### `search`
 
-`query`; optional `match`; `type`, to keep one type's entities; `owner`, an id, to keep one owner's; `limit` and `cursor`. `match: "text"`, the default, is a case-insensitive substring over name, tagline, fields, section text and table cells. `match: "name"` is the exact canonical name, case-insensitive, across types. `matched` says where each result hit: `where` is one of `name`, `tagline`, `field`, `section` or `table`, and `key` the field or section heading, null for the first two. Results are ordered by type, then name, then id: a listing, not a ranking. A result's name is under `title`, as it is for `fetch`, because some clients call only these two tools and require that field.
+`query`; optional `match`; `type`, to keep one type's entities; `owner`, an id, to keep one owner's; `limit` and `cursor`. `match: "text"`, the default, is a case-insensitive substring over name, tagline, fields, section text and table cells. `match: "name"` is the exact canonical name, case-insensitive, across types. `match: "words"` cuts the query into words, reduces each to its stem and keeps every entity whose name, tagline, fields, section text or table cells hold every required stem, anywhere: the words need not stand together or in one place. A word is a run of letters and digits, lowered, with diacritics folded and a possessive's apostrophe-s dropped, so "the owner's" asks for owner. The stemmer is Porter's algorithm for English, which joins the inflections of one word and not its relatives, so deciding meets decide and decided, and decision meets neither. A stem that occurs in more than half of the model's entities is common: it is reported and not required, and a query of common stems alone is held to all of them. A function word outside that set is required like any other, so a client sends the words that carry the meaning and leaves the rest out. A query with no words is refused as `invalid_argument` on `query`. `matched` says where each result hit: `where` is one of `name`, `tagline`, `field`, `section` or `table`, and `key` the field or section heading, null for the first two; in words mode it names each place where a required stem occurs. Results are ordered by type, then name, then id: a listing, not a ranking. A result's name is under `title`, as it is for `fetch`, because some clients call only these two tools and require that field.
 
 ```json
 {
@@ -914,6 +914,87 @@ Optional `entity`, an id; `direction` (`out`, `in` or `both`, relative to the en
           {
             "where": "section",
             "key": "What it takes"
+          }
+        ]
+      }
+    ],
+    "page": {
+      "total": 2,
+      "returned": 2,
+      "hasMore": false,
+      "nextCursor": null
+    },
+    "model": {
+      "commit": "0123456789abcdef0123456789abcdef01234567",
+      "repo": "companygraph/meta-model",
+      "core": "0.0.0",
+      "parser": "v0.0.0"
+    }
+  }
+}
+```
+
+### `search` with `words`
+
+The same tool in its third mode. Beside `query` and `match` the answer carries `words`, one `{word, stem, common}` per word of the query in the query's order: what the server read, what it searched for, and whether the stem was too common in this model to be required. The field is absent in the other two modes.
+
+```json
+{
+  "tool": "search",
+  "arguments": {
+    "query": "decided the billing contexts",
+    "match": "words",
+    "limit": 2
+  },
+  "answer": {
+    "query": "decided the billing contexts",
+    "match": "words",
+    "words": [
+      {
+        "word": "decided",
+        "stem": "decid",
+        "common": false
+      },
+      {
+        "word": "the",
+        "stem": "the",
+        "common": true
+      }
+    ],
+    "results": [
+      {
+        "id": "profiles/tomas-reyes/experiences/2022-beacon-systems",
+        "title": "Deciding which billing goes first",
+        "type": "experience",
+        "owner": "profiles/tomas-reyes",
+        "tagline": "Ongoing. Choosing which of the two billing contexts serves customers first, and saying why.",
+        "url": "https://github.com/companygraph/meta-model/blob/0123456789abcdef0123456789abcdef01234567/example/model/profiles/tomas-reyes/experiences/2022-beacon-systems.md",
+        "matched": [
+          {
+            "where": "name",
+            "key": null
+          },
+          {
+            "where": "tagline",
+            "key": null
+          }
+        ]
+      },
+      {
+        "id": "profiles/tomas-reyes",
+        "title": "Tomas Reyes",
+        "type": "profile",
+        "owner": null,
+        "tagline": "Product person who learned to read the code so the conversation with engineering stayed honest.",
+        "url": "https://github.com/companygraph/meta-model/blob/0123456789abcdef0123456789abcdef01234567/example/model/profiles/tomas-reyes/tomas-reyes.md",
+        "matched": [
+          {
+            "where": "table",
+            "key": "Evidence"
+          },
+          {
+            "where": "section",
+            "key": "Summary"
           }
         ]
       }
