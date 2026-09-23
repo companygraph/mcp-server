@@ -156,3 +156,11 @@ test("a query with no words is refused on query, and the stems are never written
   assert.equal(JSON.stringify(s), before);
   assert.equal(Object.keys(s.entities[0]).includes("stems"), false);
 });
+
+test("a word asked twice is reported twice, and common is counted over the whole instance whatever the filter keeps", () => {
+  assert.deepEqual(search(s, "deciding deciding", { match: "words" }).words.map((w) => w.word), ["deciding", "deciding"]);
+  const { snapshot } = withBoundary();
+  const values = search(snapshot, "florp glorp", { match: "words", type: "value" });
+  assert.deepEqual(values.words.map((w) => w.common), [true, false], "florp is common in the instance though no value holds it");
+  assert.equal(values.page.total, 0);
+});
