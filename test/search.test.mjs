@@ -3,7 +3,9 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { ModelError, listEntities, search } from "../lib/model.mjs";
-import { exampleSnapshot, withSharedName, withOwnedNameTwice } from "./helpers.mjs";
+import { OUTPUTS } from "../lib/schemas.mjs";
+import { buildSnapshot } from "../lib/snapshot.mjs";
+import { exampleSnapshot, exampleFiles, withSharedName, withOwnedNameTwice, COMMIT, PARSER } from "./helpers.mjs";
 
 const s = exampleSnapshot();
 const MIRA = "profiles/mira-halvorsen";
@@ -72,4 +74,85 @@ test("what search cannot take is refused by code", () => {
   assert.throws(() => search(s, "x", { match: "fuzzy" }), (e) => e instanceof ModelError && e.code === "invalid_argument" && e.details.argument === "match");
   assert.throws(() => search(s, "x", { type: "person" }), (e) => e instanceof ModelError && e.code === "unknown_type");
   assert.throws(() => search(s, "x", { owner: "nothing/here" }), (e) => e instanceof ModelError && e.code === "unknown_entity");
+});
+
+// The two headlines the owner put to the chat, on a fixture built the way withSharedName builds
+// its own, so the case waits on no re-pin of the reference instance. The example's words are
+// counted: "in" and "open" fall short of half of its entities and are required, so both
+// experiences carry them, and only one carries "ideas".
+function withHeadlines() {
+  const { files, schemas } = exampleFiles();
+  files.set("values/decide-well-over-build-fast.md", "---\nsource: Local\n---\n\n# Decide well over build fast\n\n> A choice made once beats a feature shipped twice.\n\n## In practice\n\nWe write the decision down before the code.\n");
+  files.set("profiles/nils-aker/nils-aker.md", "---\nsource: Local\nnature: human\n---\n\n# Nils Aker\n\n> Deciding well is the whole job.\n\n## Summary\n\nOne person.\n");
+  files.set("profiles/nils-aker/experiences/2024-open-review.md", "---\nsource: Local\nkind: Role\nstart: 2024-01\n---\n\n# The open review\n\n> A year of reviews held where anyone could read them.\n\n## Achievements\n\n### Decisions\n\n- Put the validation of every number in front of the customer.\n\n### Results\n\n- Held the review in the open, on the list.\n- Two ideas from the list shipped.\n");
+  files.set("profiles/nils-aker/experiences/2025-closed-review.md", "---\nsource: Local\nkind: Role\nstart: 2025-01\n---\n\n# The closed review\n\n> A year of reviews held in one room.\n\n## Achievements\n\n### Decisions\n\n- Put the validation of every number in front of the customer.\n\n### Results\n\n- Held the review in the open, on the list.\n");
+  return buildSnapshot({ files, schemas, sub: "example/model/", commit: COMMIT, repo: "companygraph/meta-model", parserTag: PARSER });
+}
+
+// The boundary of common: the example's entities plus two more than their number, every added
+// one holding "florp" and all but one of them "glorp", so florp stands in more than half of the
+// whole and glorp in exactly half.
+function withBoundary() {
+  const { files, schemas } = exampleFiles();
+  const n = exampleSnapshot().entities.length;
+  for (let i = 0; i < n + 2; i++)
+    files.set(`skills/boundary-${i}.md`, `---\nsource: Local\n---\n\n# Boundary ${i}\n\n> florp${i < n + 1 ? " glorp" : ""}.\n\n## In practice\n\nNothing.\n`);
+  return { snapshot: buildSnapshot({ files, schemas, sub: "example/model/", commit: COMMIT, repo: "companygraph/meta-model", parserTag: PARSER }), added: n + 2 };
+}
+
+test("Deciding well finds the value Decide well over build fast and the profile whose tagline says it", () => {
+  const r = search(withHeadlines(), "Deciding well", { match: "words" });
+  assert.equal(r.match, "words");
+  assert.deepEqual(r.words, [{ word: "deciding", stem: "decid", common: false }, { word: "well", stem: "well", common: false }]);
+  const value = r.results.find((x) => x.id === "values/decide-well-over-build-fast");
+  const profile = r.results.find((x) => x.id === "profiles/nils-aker");
+  assert.deepEqual(value.matched, [{ where: "name", key: null }]);
+  assert.deepEqual(profile.matched, [{ where: "tagline", key: null }]);
+  assert.equal(search(exampleSnapshot(), "Deciding well").results.length, 0, "the substring finds neither");
+});
+
+test("validated in the open finds the experience whose bullets hold validation, open and ideas, and not the one short of ideas", () => {
+  const r = search(withHeadlines(), "validated in the open ideas", { match: "words" });
+  assert.deepEqual(r.words.map((w) => [w.word, w.stem]), [["validated", "valid"], ["in", "in"], ["the", "the"], ["open", "open"], ["ideas", "idea"]]);
+  assert.deepEqual(r.words.map((w) => w.common), [false, false, true, false, false]);
+  assert.deepEqual(r.results.map((x) => x.id), ["profiles/nils-aker/experiences/2024-open-review"]);
+  assert.deepEqual(r.results[0].matched, [{ where: "name", key: null }, { where: "section", key: "Achievements" }], "open in the name, the rest in the bullets");
+});
+
+test("a query whose stems occur nowhere is an empty page in words mode too", () => {
+  const none = search(s, "zzzz qqqq", { match: "words" });
+  assert.deepEqual([none.results, none.page], [[], { total: 0, returned: 0, hasMore: false, nextCursor: null }]);
+  assert.deepEqual(none.words.map((w) => w.common), [false, false]);
+});
+
+test("a stem in more than half of the entities is common and not required; one in exactly half is required", () => {
+  const { snapshot, added } = withBoundary();
+  const both = search(snapshot, "florp glorp", { match: "words", limit: 200 });
+  assert.deepEqual(both.words, [{ word: "florp", stem: "florp", common: true }, { word: "glorp", stem: "glorp", common: false }]);
+  assert.equal(both.page.total, added - 1, "every entity holding glorp, whether or not it also holds florp");
+  const common = search(snapshot, "florp", { match: "words", limit: 200 });
+  assert.deepEqual(common.words, [{ word: "florp", stem: "florp", common: true }]);
+  assert.equal(common.page.total, added, "all common: the entities holding every one of them");
+  for (const x of common.results) assert.deepEqual(x.matched, [{ where: "tagline", key: null }]);
+});
+
+test("words is in the query's order, absent in text mode, and the schema ties it to the mode", () => {
+  const r = search(s, "billing deciding", { match: "words" });
+  assert.deepEqual(r.words.map((w) => w.word), ["billing", "deciding"]);
+  assert.ok(OUTPUTS.search.safeParse(JSON.parse(JSON.stringify(r))).success);
+  const t = search(s, "billing");
+  assert.equal("words" in t, false);
+  assert.ok(OUTPUTS.search.safeParse(JSON.parse(JSON.stringify(t))).success);
+  assert.ok(!OUTPUTS.search.safeParse({ ...t, words: [] }).success, "words under match text is refused");
+  const { words: _, ...bare } = r;
+  assert.ok(!OUTPUTS.search.safeParse(bare).success, "a words answer without words is refused");
+  assert.ok(!OUTPUTS.search.safeParse({ ...t, match: "fuzzy" }).success);
+});
+
+test("a query with no words is refused on query, and the stems are never written into the snapshot", () => {
+  assert.throws(() => search(s, "… — ...", { match: "words" }), (e) => e instanceof ModelError && e.code === "invalid_argument" && e.details.argument === "query");
+  const before = JSON.stringify(s);
+  search(s, "billing", { match: "words" });
+  assert.equal(JSON.stringify(s), before);
+  assert.equal(Object.keys(s.entities[0]).includes("stems"), false);
 });
