@@ -53,7 +53,7 @@ test("get_entity resolves within the type and returns references both ways, as e
   assert.deepEqual(r.entity.referenceCounts, { references: r.entity.references.length, referencedBy: r.entity.referencedBy.length });
 });
 
-// core 0.40.0's `ref → by <Column> in <Column>` form (R9): a question's "Rests on" row draws an
+// core 0.40.0's `ref → by <Column> in <Owner>` form (R9): a question's "Rests on" row draws an
 // edge to the entity its own `Entity` cell names, of the type its own `Type` cell names, resolved
 // within the owner its own `Owner` cell names. The row's other columns, `Type` and `Owner`
 // included, arrive verbatim in `attrs`, with no backticks, since the row's own words are not a

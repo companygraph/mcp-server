@@ -64,7 +64,7 @@ No arguments. `types` holds every type the schemas declare, with its `owner` typ
 
 ### `describe_schema`
 
-`type`. The schema's `sections` as written and its `relations` as data: `owner`, `owns`, `references`, `referencedBy`, `enums`, `joins`, `lists`. `url` is the schema's own file at the served commit, in the core the instance vendors and not in the meta-model's, since the server answers from the first; it is null where the repository, the commit or the core's place is not known. The file location a schema's first section gives is where an entity of the type is written, which is another file.
+`type`. The schema's `sections` as written and its `relations` as data: `owner`, `owns`, `references`, `referencedBy`, `enums`, `joins`, `lists`. `url` is the schema's own file at the served commit, in the core the instance vendors and not in the meta-model's, since the server answers from the first; it is null where the repository, the commit or the core's place is not known. The file location a schema's first section gives is where an entity of the type is written, which is another file. A reference whose own row names the type it draws, rather than the schema declaring one, carries `to: null` with `by` and `in` naming the columns that carry it, and appears in `referencedBy` for every type, this one included, since it may point at any of them.
 
 ```json
 {
@@ -163,7 +163,7 @@ No arguments. `types` holds every type the schemas declare, with its `owner` typ
 
 ### `describe_relations`
 
-Optional `type`, `direction` (`declares`, `declared-to` or `both`; needs `type`) and `via`. `type` narrows `relations`, `ownership`, `enums`, `joins` and `lists` to the one type, `direction` keeps one side of its `relations`, and `via` narrows the two lists that carry one, `relations` and `enums`; `forms` and `reading` always arrive whole, since they explain the terms of whatever part is returned. Not paged: the vocabulary is the size of the core.
+Optional `type`, `direction` (`declares`, `declared-to` or `both`; needs `type`) and `via`. `type` narrows `relations`, `ownership`, `enums`, `joins` and `lists` to the one type, `direction` keeps one side of its `relations`, and `via` narrows the two lists that carry one, `relations` and `enums`; `forms` and `reading` always arrive whole, since they explain the terms of whatever part is returned. Not paged: the vocabulary is the size of the core. A relation's `to` is null where the reference reads its type from its own row instead of the schema declaring one (`by` and `in` name the columns that carry it), and such a relation stands on the declared-to side of every type at once, not only the ones it happens to draw an edge to.
 
 ```json
 {

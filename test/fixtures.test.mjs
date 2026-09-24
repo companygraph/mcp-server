@@ -30,7 +30,8 @@ test("the parser installed, and the one package-lock.json records, are the relea
   const installed = JSON.parse(fs.readFileSync(new URL("../node_modules/companygraph-meta-model/package.json", import.meta.url), "utf8"));
   assert.equal("v" + installed.version, tag);
   const lock = JSON.parse(fs.readFileSync(new URL("../package-lock.json", import.meta.url), "utf8"));
+  assert.equal(lock.packages[""].dependencies["companygraph-meta-model"], pkg.dependencies["companygraph-meta-model"]);
   const entry = lock.packages["node_modules/companygraph-meta-model"];
   assert.equal(entry.version, installed.version);
-  assert.match(entry.resolved, /^git\+ssh:\/\/git@github\.com\/companygraph\/meta-model\.git#[0-9a-f]{40}$/);
+  assert.match(entry.resolved, /^git\+(ssh:\/\/git@github\.com|https:\/\/github\.com)\/companygraph\/meta-model\.git#[0-9a-f]{40}$/);
 });

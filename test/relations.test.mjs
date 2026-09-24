@@ -122,8 +122,16 @@ test("a question's own by/in relation is on both sides of itself, so both is not
   const into = describeRelations(s, { type: "question", direction: "declared-to" });
   assert.ok(declares.relations.some((x) => x.via === "Rests on.Entity"), "declares: from question");
   assert.ok(into.relations.some((x) => x.from === "question" && x.via === "Rests on.Entity"), "declared-to: to every type, question included");
-  assert.equal(both.relations.length, 2);
-  assert.equal(declares.relations.length + into.relations.length, 3, "declares and into overlap by one, so their sum overcounts both");
+  // `both` is the de-duplicated union of `declares` and `into`, not their sum: a relation on
+  // both sides is listed there once. A count pinned to today's core would break for the wrong
+  // reason the day core gains one more reference anywhere, so the union is checked by shape.
+  const key = (x) => `${x.from}.${x.via}`;
+  const declaredKeys = new Set(declares.relations.map(key));
+  const intoKeys = new Set(into.relations.map(key));
+  assert.equal(both.relations.length, new Set([...declaredKeys, ...intoKeys]).size, "both holds no relation twice");
+  assert.deepEqual(new Set(both.relations.map(key)), new Set([...declaredKeys, ...intoKeys]));
+  const overlap = [...declaredKeys].filter((k) => intoKeys.has(k));
+  assert.deepEqual(overlap, ["question.Rests on.Entity"], "exactly one relation, question's own by/in form, stands in both sides");
 });
 
 test("the other lists narrow to the type, and the explanations always arrive whole", () => {
@@ -156,7 +164,7 @@ test("a side with no type, an unknown side and an unknown type are refused by co
   assert.deepEqual(code({ type: "person" }), ["unknown_type", "person"]);
 });
 
-// core 0.40.0's `ref → by <Column> in <Column>` form (R9): a question's "Rests on" row names its
+// core 0.40.0's `ref → by <Column> in <Owner>` form (R9): a question's "Rests on" row names its
 // own type and, where owned, its own owner, so nothing here declares a target and the relation
 // carries `to: null` with `by` and `in` naming the columns instead.
 test("a reference whose type is read from its row carries to: null, by and in named, and no other relation does", () => {
