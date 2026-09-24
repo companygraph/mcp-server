@@ -109,6 +109,23 @@ test("a type keeps the declarations it stands in, and a side keeps one half of t
   assert.deepEqual(describeRelations(s, { type: "role", direction: "both" }).relations, role.relations);
 });
 
+// `declares + into === both` held for "role" above, but a by/in relation stands on both sides at
+// once for the type that draws it: a question may rest on another question, so `question`'s own
+// Rests on.Entity is both declared by it (from: "question") and declared to it (readsAny), and
+// `both` lists it once where `declares` and `into` each list it and so double-count it.
+test("a question's own by/in relation is on both sides of itself, so both is not declares plus into", () => {
+  const question = describeSchema(s, "question").relations;
+  assert.ok(question.references.some((x) => x.via === "Rests on.Entity"), "references: question declares it");
+  assert.ok(question.referencedBy.some((x) => x.from === "question" && x.via === "Rests on.Entity"), "referencedBy: question is among what it may reference");
+  const both = describeRelations(s, { type: "question" });
+  const declares = describeRelations(s, { type: "question", direction: "declares" });
+  const into = describeRelations(s, { type: "question", direction: "declared-to" });
+  assert.ok(declares.relations.some((x) => x.via === "Rests on.Entity"), "declares: from question");
+  assert.ok(into.relations.some((x) => x.from === "question" && x.via === "Rests on.Entity"), "declared-to: to every type, question included");
+  assert.equal(both.relations.length, 2);
+  assert.equal(declares.relations.length + into.relations.length, 3, "declares and into overlap by one, so their sum overcounts both");
+});
+
 test("the other lists narrow to the type, and the explanations always arrive whole", () => {
   const whole = describeRelations(s);
   const process = describeRelations(s, { type: "process" });
