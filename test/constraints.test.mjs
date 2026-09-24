@@ -12,14 +12,14 @@ const find = (list, from, via) => list.find((x) => x.from === from && x.via === 
 test("a reference says how many of it a page may hold", () => {
   const { relations } = describeRelations(s);
   assert.deepEqual(find(relations, "phase", "gate-approvers"),
-    { from: "phase", via: "gate-approvers", to: "role", form: "ref", array: true, required: true, min: 1, max: null });
+    { from: "phase", via: "gate-approvers", to: "role", form: "ref", by: null, in: null, array: true, required: true, min: 1, max: null });
   assert.deepEqual(find(relations, "phase", "owner"),
-    { from: "phase", via: "owner", to: "role", form: "ref", array: false, required: true, min: 1, max: 1 });
+    { from: "phase", via: "owner", to: "role", form: "ref", by: null, in: null, array: false, required: true, min: 1, max: 1 });
   assert.deepEqual(find(relations, "experience", "organization"),
-    { from: "experience", via: "organization", to: "identity", form: "ref?", array: false, required: false, min: 0, max: 1 });
+    { from: "experience", via: "organization", to: "identity", form: "ref?", by: null, in: null, array: false, required: false, min: 0, max: 1 });
   // A column is of a row, and nothing bounds the rows.
   assert.deepEqual(find(relations, "profile", "Skills.Level"),
-    { from: "profile", via: "Skills.Level", to: "proficiency-level", form: "qualifier", array: false, required: true, min: 0, max: null });
+    { from: "profile", via: "Skills.Level", to: "proficiency-level", form: "qualifier", by: null, in: null, array: false, required: true, min: 0, max: null });
 });
 
 test("the joins and the list kinds are served for the whole vocabulary, each naming its type", () => {
@@ -35,7 +35,7 @@ test("the joins and the list kinds are served for the whole vocabulary, each nam
 
 test("what min, max, a join and a list kind mean is said once, in the answer that uses them", () => {
   const { reading } = describeRelations(s);
-  assert.deepEqual(Object.keys(reading).sort(), ["enums", "lists", "min and max", "required", "roles", "under"]);
+  assert.deepEqual(Object.keys(reading).sort(), ["by and in", "enums", "lists", "min and max", "required", "roles", "under"]);
   for (const text of Object.values(reading)) assert.ok(text.length > 20);
 });
 
@@ -46,7 +46,7 @@ test("describe_schema carries its own type's joins and lists, and the bounds bot
   const role = describeSchema(s, "role").relations;
   assert.deepEqual(role.lists, [{ section: "What it never does", kind: "Bulleted", required: true, min: 1 }]);
   assert.deepEqual(role.referencedBy.find((x) => x.from === "phase" && x.via === "gate-approvers"),
-    { from: "phase", via: "gate-approvers", form: "ref", array: true, required: true, min: 1, max: null });
+    { from: "phase", via: "gate-approvers", form: "ref", by: null, in: null, array: true, required: true, min: 1, max: null });
 });
 
 test("it survives the snapshot being written out, and an older snapshot is refused by name", () => {
