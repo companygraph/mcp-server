@@ -32,16 +32,30 @@ const DESIGN = path.dirname(path.dirname(fencesPath));
 // The design package ships the font files the blocks name, and `tokens.css` states the rule the
 // family holds itself to: nothing may name a family the site does not ship. The page has no
 // static directory to serve them from — it is rendered by a server, not deployed as files — so
-// they travel inside the stylesheet as data. Ninety-one kilobytes become about a hundred and
-// twenty-five base64, paid on a visit to one page that is otherwise five. The alternative was a
-// static route in a package that has no business growing one.
+// they travel inside the stylesheet as data, a third larger as base64, paid on a visit to one
+// page that is otherwise a few kilobytes. The alternative was a static route in a package that
+// has no business growing one.
 const FONT_DIR = path.join(DESIGN, "assets", "fonts");
 const FONTS = [
-  { family: "Bricolage Grotesque", file: "Bricolage-var.woff2", weight: "200 800" },
-  { family: "Instrument Sans", file: "InstrumentSans-var.woff2", weight: "400 700" },
-  { family: "Plex Mono", file: "PlexMono-400.woff2", weight: "400" },
-  { family: "Plex Mono", file: "PlexMono-600.woff2", weight: "600" },
+  { family: "Bricolage Grotesque", file: "Bricolage-var.woff2", weight: "200 800", license: "Bricolage.LICENSE.txt" },
+  { family: "Instrument Sans", file: "InstrumentSans-var.woff2", weight: "400 700", license: "InstrumentSans.LICENSE.txt" },
+  { family: "Plex Mono", file: "PlexMono-400.woff2", weight: "400", license: "PlexMono.LICENSE.txt" },
+  { family: "Plex Mono", file: "PlexMono-600.woff2", weight: "600", license: "PlexMono.LICENSE.txt" },
 ];
+
+// Every face is under the SIL Open Font License, which lets a font travel only with its
+// copyright notice and the license text in every copy, and this stylesheet is a copy. The design
+// package ships each family's text beside its faces from v0.83.0, so each is written here once,
+// as a comment ahead of the faces it covers. A design package without them is refused rather
+// than served without a notice, and so is a text that would end its own comment.
+const licenses = [...new Set(FONTS.map((f) => f.license))].map((file) => {
+  const at = path.join(FONT_DIR, file);
+  if (!fs.existsSync(at))
+    throw new Error(`${file} is not in the design package at ${FONT_DIR}; a face is not inlined without its license, so take @robertblust/design v0.83.0 or later`);
+  const text = fs.readFileSync(at, "utf8").replace(/\r\n/g, "\n").trim();
+  if (text.includes("*/")) throw new Error(`${file} contains "*/" and cannot be written as a CSS comment`);
+  return `/* ${file}, for the faces below\n\n${text}\n*/`;
+}).join("\n\n");
 
 // One `src` per face, not the two a site writes. A page serving these from `/fonts/` names the
 // same file twice, as `woff2-variations` and as `woff2`, and pays nothing for the second; here
@@ -70,5 +84,5 @@ const own = fs.readFileSync(path.join(ROOT, "own.css"), "utf8");
 
 fs.mkdirSync(DIST, { recursive: true });
 const out = path.join(DIST, "page.css");
-fs.writeFileSync(out, [faces, tokens, reset, title, own].join("\n\n") + "\n");
+fs.writeFileSync(out, [licenses, faces, tokens, reset, title, own].join("\n\n") + "\n");
 console.log(`wrote ${out}: ${fs.statSync(out).size} bytes from the design package's own blocks`);
