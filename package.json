@@ -37,13 +37,13 @@
     "interface": "node scripts/interface.mjs"
   },
   "dependencies": {
-    "@modelcontextprotocol/node": "^2.0.0",
+    "@modelcontextprotocol/node": "^2.1.0",
     "@modelcontextprotocol/server": "^2.0.0",
     "companygraph-meta-model": "github:companygraph/meta-model#v0.45.0",
     "zod": "^4.2.0"
   },
   "devDependencies": {
-    "@modelcontextprotocol/client": "^2.0.0",
+    "@modelcontextprotocol/client": "^2.1.0",
     "playwright": "^1.63.0"
   }
 }
