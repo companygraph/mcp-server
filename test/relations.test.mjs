@@ -5,6 +5,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { ModelError, describeSchema, describeRelations } from "../lib/model.mjs";
+import { OUTPUTS } from "../lib/schemas.mjs";
 import { exampleSnapshot, instanceSnapshot, COMMIT, EXAMPLE_CORE, PARSER } from "./helpers.mjs";
 
 const s = exampleSnapshot();
@@ -15,15 +16,15 @@ test("describe_relations serves every declared reference with its form, as data"
   const r = describeRelations(s);
   assert.deepEqual(r.model, MODEL);
   assert.deepEqual(find(r.relations, "experience", "organization"),
-    { from: "experience", via: "organization", to: "identity", form: "ref?", array: false, required: false, min: 0, max: 1 });
+    { from: "experience", via: "organization", to: "identity", form: "ref?", by: null, in: null, array: false, required: false, min: 0, max: 1 });
   assert.deepEqual(find(r.relations, "phase", "gate-approvers"),
-    { from: "phase", via: "gate-approvers", to: "role", form: "ref", array: true, required: true, min: 1, max: null });
+    { from: "phase", via: "gate-approvers", to: "role", form: "ref", by: null, in: null, array: true, required: true, min: 1, max: null });
   assert.deepEqual(find(r.relations, "profile", "Skills.Level"),
-    { from: "profile", via: "Skills.Level", to: "proficiency-level", form: "qualifier", array: false, required: true, min: 0, max: null });
+    { from: "profile", via: "Skills.Level", to: "proficiency-level", form: "qualifier", by: null, in: null, array: false, required: true, min: 0, max: null });
   assert.deepEqual(find(r.relations, "profile", "Evidence.Experience"),
-    { from: "profile", via: "Evidence.Experience", to: "experience", form: "qualifier", array: false, required: false, min: 0, max: null });
+    { from: "profile", via: "Evidence.Experience", to: "experience", form: "qualifier", by: null, in: null, array: false, required: false, min: 0, max: null });
   assert.deepEqual(find(r.relations, "experience", "Achievements.Kind"),
-    { from: "experience", via: "Achievements.Kind", to: "achievement-kind", form: "ref", array: false, required: false, min: 0, max: null });
+    { from: "experience", via: "Achievements.Kind", to: "achievement-kind", form: "ref", by: null, in: null, array: false, required: false, min: 0, max: null });
 });
 
 test("ownership is served apart from references, because it is nesting and not a field", () => {
@@ -46,7 +47,7 @@ test("describe_schema carries the type's relations both ways, read from the decl
   assert.equal(role.owner, null);
   // `source` is on every type, and the declarations say so where a schema's prose may not.
   assert.deepEqual(role.references.map((x) => x.via).sort(), ["requires", "source"]);
-  assert.deepEqual(role.references.find((x) => x.via === "requires"), { via: "requires", to: "skill", form: "ref", array: true, required: false, min: 0, max: null });
+  assert.deepEqual(role.references.find((x) => x.via === "requires"), { via: "requires", to: "skill", form: "ref", by: null, in: null, array: true, required: false, min: 0, max: null });
   const into = role.referencedBy.map((x) => `${x.from}.${x.via}`);
   for (const edge of ["profile.roles", "process.owner", "process.supported-by", "phase.owner", "phase.executed-by", "phase.gate-approvers", "phase.escalation-authority"])
     assert.ok(into.includes(edge), edge);
@@ -65,7 +66,11 @@ test("every relation names declared types, in the instance's own core too", () =
     const types = new Set(snapshot.schemas.map((x) => x.id.slice("core/".length)));
     assert.ok(r.relations.length > 0);
     for (const x of r.relations) {
-      assert.ok(types.has(x.from) && types.has(x.to), `${x.from}.${x.via} → ${x.to}`);
+      assert.ok(types.has(x.from), `${x.from}.${x.via} → ${x.to}`);
+      // `to` is null exactly for a reference whose type is read from its own row (`by` set),
+      // never null on an ordinary declared reference.
+      if (x.to === null) assert.ok(typeof x.by === "string", `${x.from}.${x.via}: to is null but by is not named`);
+      else { assert.ok(types.has(x.to), `${x.from}.${x.via} → ${x.to}`); assert.equal(x.by, null); assert.equal(x.in, null); }
       assert.ok(["ref", "ref?", "qualifier"].includes(x.form), x.form);
       assert.equal(typeof x.array, "boolean");
       assert.equal(typeof x.required, "boolean");
@@ -87,17 +92,46 @@ test("the declarations and the rules survive the snapshot being written out and 
   assert.deepEqual(listRules(back), listRules(s));
 });
 
+// A relation with `to: null` reads its type from its own row and may point at any type (R9's
+// `by`/`in` form), so it stands on the declared-to side of every type, "role" included.
+const readsAny = (x) => x.to === null && x.by !== null;
+
 test("a type keeps the declarations it stands in, and a side keeps one half of them", () => {
   const whole = describeRelations(s);
   const role = describeRelations(s, { type: "role" });
   assert.ok(role.relations.length > 0 && role.relations.length < whole.relations.length);
-  assert.ok(role.relations.every((x) => x.from === "role" || x.to === "role"));
+  assert.ok(role.relations.every((x) => x.from === "role" || x.to === "role" || readsAny(x)));
   const declares = describeRelations(s, { type: "role", direction: "declares" });
   assert.deepEqual(declares.relations.map((x) => x.via).sort(), ["requires", "source"]);
   const into = describeRelations(s, { type: "role", direction: "declared-to" });
-  assert.ok(into.relations.length > 0 && into.relations.every((x) => x.to === "role"));
+  assert.ok(into.relations.length > 0 && into.relations.every((x) => x.to === "role" || readsAny(x)));
   assert.equal(role.relations.length, declares.relations.length + into.relations.length);
   assert.deepEqual(describeRelations(s, { type: "role", direction: "both" }).relations, role.relations);
+});
+
+// `declares + into === both` held for "role" above, but a by/in relation stands on both sides at
+// once for the type that draws it: a question may rest on another question, so `question`'s own
+// Rests on.Entity is both declared by it (from: "question") and declared to it (readsAny), and
+// `both` lists it once where `declares` and `into` each list it and so double-count it.
+test("a question's own by/in relation is on both sides of itself, so both is not declares plus into", () => {
+  const question = describeSchema(s, "question").relations;
+  assert.ok(question.references.some((x) => x.via === "Rests on.Entity"), "references: question declares it");
+  assert.ok(question.referencedBy.some((x) => x.from === "question" && x.via === "Rests on.Entity"), "referencedBy: question is among what it may reference");
+  const both = describeRelations(s, { type: "question" });
+  const declares = describeRelations(s, { type: "question", direction: "declares" });
+  const into = describeRelations(s, { type: "question", direction: "declared-to" });
+  assert.ok(declares.relations.some((x) => x.via === "Rests on.Entity"), "declares: from question");
+  assert.ok(into.relations.some((x) => x.from === "question" && x.via === "Rests on.Entity"), "declared-to: to every type, question included");
+  // `both` is the de-duplicated union of `declares` and `into`, not their sum: a relation on
+  // both sides is listed there once. A count pinned to today's core would break for the wrong
+  // reason the day core gains one more reference anywhere, so the union is checked by shape.
+  const key = (x) => `${x.from}.${x.via}`;
+  const declaredKeys = new Set(declares.relations.map(key));
+  const intoKeys = new Set(into.relations.map(key));
+  assert.equal(both.relations.length, new Set([...declaredKeys, ...intoKeys]).size, "both holds no relation twice");
+  assert.deepEqual(new Set(both.relations.map(key)), new Set([...declaredKeys, ...intoKeys]));
+  const overlap = [...declaredKeys].filter((k) => intoKeys.has(k));
+  assert.deepEqual(overlap, ["question.Rests on.Entity"], "exactly one relation, question's own by/in form, stands in both sides");
 });
 
 test("the other lists narrow to the type, and the explanations always arrive whole", () => {
@@ -128,4 +162,30 @@ test("a side with no type, an unknown side and an unknown type are refused by co
   assert.deepEqual(code({ direction: "declares" }), ["invalid_argument", "direction"]);
   assert.deepEqual(code({ type: "role", direction: "out" }), ["invalid_argument", "direction"]);
   assert.deepEqual(code({ type: "person" }), ["unknown_type", "person"]);
+});
+
+// core 0.40.0's `ref → by <Column> in <Owner>` form (R9): a question's "Rests on" row names its
+// own type and, where owned, its own owner, so nothing here declares a target and the relation
+// carries `to: null` with `by` and `in` naming the columns instead.
+test("a reference whose type is read from its row carries to: null, by and in named, and no other relation does", () => {
+  const { relations } = describeRelations(s);
+  const rests = find(relations, "question", "Rests on.Entity");
+  assert.deepEqual(rests, { from: "question", via: "Rests on.Entity", to: null, form: "ref", by: "Type", in: "Owner", array: false, required: true, min: 0, max: null });
+  for (const x of relations) if (x.via !== "Rests on.Entity" || x.from !== "question") assert.deepEqual([x.by, x.in], [null, null], `${x.from}.${x.via}`);
+});
+
+test("a relation that reads its type from its row stands among what may reference every type", () => {
+  const declaredTo = describeRelations(s, { type: "profile", direction: "declared-to" });
+  assert.ok(declaredTo.relations.some((x) => x.from === "question" && x.via === "Rests on.Entity"));
+  const declares = describeRelations(s, { type: "profile", direction: "declares" });
+  assert.ok(!declares.relations.some((x) => x.via === "Rests on.Entity"), "declares is the from side, and profile draws no such reference");
+  assert.deepEqual(describeSchema(s, "profile").relations.referencedBy.find((x) => x.from === "question" && x.via === "Rests on.Entity"),
+    { from: "question", via: "Rests on.Entity", form: "ref", by: "Type", in: "Owner", array: false, required: true, min: 0, max: null });
+});
+
+test("describe_relations and describe_schema for question satisfy their output schemas", () => {
+  assert.ok(OUTPUTS.describe_relations.safeParse(describeRelations(s)).success);
+  const schema = describeSchema(s, "question");
+  assert.ok(OUTPUTS.describe_schema.safeParse(schema).success);
+  assert.ok(schema.relations.references.some((x) => x.via === "Rests on.Entity" && x.to === null));
 });

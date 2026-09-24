@@ -64,7 +64,7 @@ No arguments. `types` holds every type the schemas declare, with its `owner` typ
 
 ### `describe_schema`
 
-`type`. The schema's `sections` as written and its `relations` as data: `owner`, `owns`, `references`, `referencedBy`, `enums`, `joins`, `lists`. `url` is the schema's own file at the served commit, in the core the instance vendors and not in the meta-model's, since the server answers from the first; it is null where the repository, the commit or the core's place is not known. The file location a schema's first section gives is where an entity of the type is written, which is another file.
+`type`. The schema's `sections` as written and its `relations` as data: `owner`, `owns`, `references`, `referencedBy`, `enums`, `joins`, `lists`. `url` is the schema's own file at the served commit, in the core the instance vendors and not in the meta-model's, since the server answers from the first; it is null where the repository, the commit or the core's place is not known. The file location a schema's first section gives is where an entity of the type is written, which is another file. A reference whose own row names the type it draws, rather than the schema declaring one, carries `to: null` with `by` and `in` naming the columns that carry it, and appears in `referencedBy` for every type, this one included, since it may point at any of them.
 
 ```json
 {
@@ -115,6 +115,8 @@ No arguments. `types` holds every type the schemas declare, with its `owner` typ
           "via": "source",
           "to": "source",
           "form": "ref",
+          "by": null,
+          "in": null,
           "array": false,
           "required": true,
           "min": 1,
@@ -126,6 +128,8 @@ No arguments. `types` holds every type the schemas declare, with its `owner` typ
           "from": "experience",
           "via": "skills",
           "form": "ref",
+          "by": null,
+          "in": null,
           "array": true,
           "required": false,
           "min": 0,
@@ -135,6 +139,8 @@ No arguments. `types` holds every type the schemas declare, with its `owner` typ
           "from": "profile",
           "via": "Skills.Skill",
           "form": "ref",
+          "by": null,
+          "in": null,
           "array": false,
           "required": true,
           "min": 0,
@@ -157,7 +163,7 @@ No arguments. `types` holds every type the schemas declare, with its `owner` typ
 
 ### `describe_relations`
 
-Optional `type`, `direction` (`declares`, `declared-to` or `both`; needs `type`) and `via`. `type` narrows `relations`, `ownership`, `enums`, `joins` and `lists` to the one type, `direction` keeps one side of its `relations`, and `via` narrows the two lists that carry one, `relations` and `enums`; `forms` and `reading` always arrive whole, since they explain the terms of whatever part is returned. Not paged: the vocabulary is the size of the core.
+Optional `type`, `direction` (`declares`, `declared-to` or `both`; needs `type`) and `via`. `type` narrows `relations`, `ownership`, `enums`, `joins` and `lists` to the one type, `direction` keeps one side of its `relations`, and `via` narrows the two lists that carry one, `relations` and `enums`; `forms` and `reading` always arrive whole, since they explain the terms of whatever part is returned. Not paged: the vocabulary is the size of the core. A relation's `to` is null where the reference reads its type from its own row instead of the schema declaring one (`by` and `in` name the columns that carry it), and such a relation stands on the declared-to side of every type at once, not only the ones it happens to draw an edge to.
 
 ```json
 {
@@ -173,6 +179,8 @@ Optional `type`, `direction` (`declares`, `declared-to` or `both`; needs `type`)
         "via": "skills",
         "to": "skill",
         "form": "ref",
+        "by": null,
+        "in": null,
         "array": true,
         "required": false,
         "min": 0,
@@ -183,6 +191,8 @@ Optional `type`, `direction` (`declares`, `declared-to` or `both`; needs `type`)
         "via": "Skills.Skill",
         "to": "skill",
         "form": "ref",
+        "by": null,
+        "in": null,
         "array": false,
         "required": true,
         "min": 0,
@@ -204,7 +214,8 @@ Optional `type`, `direction` (`declares`, `declared-to` or `both`; needs `type`)
       "under": "A join: the section's table and the one it stands under reference the same entities, both ways, so nothing here stands under something the other never names and nothing named there is left without a r…",
       "lists": "A join: the entity the column's cell names carries, in the named field, the entity the same row's `by` column names. A blank cell is held to nothing.",
       "roles": "A join: where two rows of the section's table name the same entity in the `by` column, each carries a value in the named column and no two carry the same one, because that value is the only thing tell…",
-      "enums": "The values a field or a column typed enum permits, named by `via` as a reference is. A value outside them is an error; `required` reads as it does for a reference."
+      "enums": "The values a field or a column typed enum permits, named by `via` as a reference is. A value outside them is an error; `required` reads as it does for a reference.",
+      "by and in": "A reference whose type is read from its row (R9) rather than declared by the schema: the row's `by` column names the type and, where that type is owned, its `in` column names the owner. `to` is null, …"
     },
     "model": {
       "commit": "0123456789abcdef0123456789abcdef01234567",
@@ -263,7 +274,7 @@ No arguments. `tagline`, and `rules` with each rule's number, `title` and the `p
     "rule": "R4",
     "title": "An unresolvable reference is an error",
     "part": "Structure",
-    "text": "Not a warning. A reference naming an entity that does not exist, or that exists under a different type, fails the check.\n\nA reference to an owned type is resolved within the owner it is written in: th…",
+    "text": "Not a warning. A reference naming an entity that does not exist, or that exists under a different type, fails the check.\n\nA reference whose schema names an owned type, `ref → <type>` and its sibling f…",
     "url": "https://github.com/companygraph/meta-model/blob/0123456789abcdef0123456789abcdef01234567/core/CONVENTIONS.md",
     "model": {
       "commit": "0123456789abcdef0123456789abcdef01234567",
