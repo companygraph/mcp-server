@@ -100,8 +100,11 @@ resource "google_org_policy_policy" "allow_public_members" {
 
 # Applies ../: Cloud Run, Firebase, Hosting, the budget, the APIs it needs. And, in the same
 # project, the chat's module from companygraph/chat-server: the project's one Firestore
-# database, which needs the datastore owner, and the chat runtime's two project roles, which
-# need the project IAM administrator; neither is a role this identity needs for the server alone.
+# database, which needs the datastore owner; the chat runtime's two project roles, which need
+# the project IAM administrator; the log bucket, sink, exclusion and view that keep the chat's
+# questions, which need the logging configuration writer; and the reports bucket with its one
+# grant, which needs the storage administrator, since no narrower role both makes a bucket and
+# sets its policy. None is a role this identity needs for the server alone.
 resource "google_service_account" "terraform" {
   account_id   = "terraform"
   display_name = "Terraform, run by GitHub Actions"
@@ -119,6 +122,8 @@ resource "google_project_iam_member" "terraform" {
     "roles/artifactregistry.reader",
     "roles/datastore.owner",
     "roles/resourcemanager.projectIamAdmin",
+    "roles/logging.configWriter",
+    "roles/storage.admin",
   ])
   project    = var.project
   role       = each.value
@@ -148,7 +153,10 @@ resource "google_service_account_iam_member" "terraform_wif" {
 }
 
 # Plans a pull request: reads everything ../ declares and the state it keeps, and can change
-# none of it. -lock=false in the plan is what lets it do without write on the bucket.
+# none of it. -lock=false in the plan is what lets it do without write on the bucket. Once the
+# chat's module has made its reports bucket and its policies, a plan refreshes them, which the
+# viewer alone does not read: the bucket viewer reads the bucket, the security reviewer reads
+# the policies on it and on the analyst's account.
 resource "google_service_account" "plan" {
   account_id   = "terraform-plan"
   display_name = "Terraform plan, run by GitHub Actions on a pull request"
@@ -162,6 +170,8 @@ resource "google_project_iam_member" "plan" {
     "roles/firebase.viewer",
     "roles/firebasehosting.viewer",
     "roles/serviceusage.serviceUsageConsumer",
+    "roles/storage.bucketViewer",
+    "roles/iam.securityReviewer",
   ])
   project    = var.project
   role       = each.value
