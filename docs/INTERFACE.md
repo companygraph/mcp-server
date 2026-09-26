@@ -125,6 +125,17 @@ No arguments. `types` holds every type the schemas declare, with its `owner` typ
       ],
       "referencedBy": [
         {
+          "from": "decision",
+          "via": "Bears on.Entity",
+          "form": "ref",
+          "by": "Type",
+          "in": "Owner",
+          "array": false,
+          "required": true,
+          "min": 0,
+          "max": null
+        },
+        {
           "from": "experience",
           "via": "skills",
           "form": "ref",
@@ -132,17 +143,6 @@ No arguments. `types` holds every type the schemas declare, with its `owner` typ
           "in": null,
           "array": true,
           "required": false,
-          "min": 0,
-          "max": null
-        },
-        {
-          "from": "profile",
-          "via": "Skills.Skill",
-          "form": "ref",
-          "by": null,
-          "in": null,
-          "array": false,
-          "required": true,
           "min": 0,
           "max": null
         }
@@ -175,6 +175,18 @@ Optional `type`, `direction` (`declares`, `declared-to` or `both`; needs `type`)
   "answer": {
     "relations": [
       {
+        "from": "decision",
+        "via": "Bears on.Entity",
+        "to": null,
+        "form": "ref",
+        "by": "Type",
+        "in": "Owner",
+        "array": false,
+        "required": true,
+        "min": 0,
+        "max": null
+      },
+      {
         "from": "experience",
         "via": "skills",
         "to": "skill",
@@ -183,18 +195,6 @@ Optional `type`, `direction` (`declares`, `declared-to` or `both`; needs `type`)
         "in": null,
         "array": true,
         "required": false,
-        "min": 0,
-        "max": null
-      },
-      {
-        "from": "profile",
-        "via": "Skills.Skill",
-        "to": "skill",
-        "form": "ref",
-        "by": null,
-        "in": null,
-        "array": false,
-        "required": true,
         "min": 0,
         "max": null
       }

@@ -114,7 +114,9 @@ test("Deciding well finds the value Decide well over build fast and the profile 
 test("validated in the open finds the experience whose bullets hold validation, open and ideas, and not the one short of ideas", () => {
   const r = search(withHeadlines(), "validated in the open ideas", { match: "words" });
   assert.deepEqual(r.words.map((w) => [w.word, w.stem]), [["validated", "valid"], ["in", "in"], ["the", "the"], ["open", "open"], ["ideas", "idea"]]);
-  assert.deepEqual(r.words.map((w) => w.common), [false, false, true, false, false]);
+  // "in" is common since core 0.43.0's example entities tipped it past half of them; a common
+  // word is reported and not required, so the results below are the same as before it was.
+  assert.deepEqual(r.words.map((w) => w.common), [false, true, true, false, false]);
   assert.deepEqual(r.results.map((x) => x.id), ["profiles/nils-aker/experiences/2024-open-review"]);
   assert.deepEqual(r.results[0].matched, [{ where: "name", key: null }, { where: "section", key: "Achievements" }], "open in the name, the rest in the bullets");
 });
