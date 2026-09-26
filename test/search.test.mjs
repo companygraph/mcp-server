@@ -45,7 +45,7 @@ test("match name is the exact canonical name, case-insensitive, across types", (
   const r = search(shared, "beacon systems", { match: "name" });
   assert.deepEqual(r.results.map((x) => x.type), ["identity", "profile"]);
   assert.ok(r.results.every((x) => x.matched.length === 1 && x.matched[0].where === "name"));
-  assert.equal(search(shared, "beacon", { match: "name" }).page.total, 0, "a part of a name is no exact match");
+  assert.equal(search(shared, "systems", { match: "name" }).page.total, 0, "a part of a name is no exact match");
   assert.deepEqual(search(shared, "Beacon Systems", { match: "name", type: "profile" }).results.map((x) => x.type), ["profile"]);
 });
 

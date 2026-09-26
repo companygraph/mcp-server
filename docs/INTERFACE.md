@@ -45,11 +45,11 @@ No arguments. `types` holds every type the schemas declare, with its `owner` typ
         "count": 4
       },
       {
-        "type": "concept",
-        "name": "Concept Schema",
-        "tagline": "Required structure for concept files.",
+        "type": "brand",
+        "name": "Brand Schema",
+        "tagline": "Required structure for the brand file — what the company looks and sounds like.",
         "owner": null,
-        "count": 8
+        "count": 1
       }
     ],
     "model": {
