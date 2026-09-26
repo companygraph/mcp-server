@@ -73,6 +73,16 @@ test("a question's edge resolves the type and owner its own row names, and carri
   ]);
 });
 
+// core 0.45.0 adds question-kind as a declared type and a required kind on every question; the
+// type is served like any other, and the field is a reference like source, resolved by name.
+test("list_types serves question-kind, and a question's kind is an edge to it", () => {
+  const types = listTypes(s).types.map((t) => t.type);
+  assert.ok(types.includes("question-kind"), "list_types includes question-kind");
+  const r = getEntity(s, "question", "Who split billing out of the monolith?");
+  const kind = r.entity.references.find((x) => x.via === "kind");
+  assert.deepEqual([kind.to.type, kind.to.name], ["question-kind", "Product"]);
+});
+
 test("get_entity takes an id, and the tool's entry takes either and refuses neither", () => {
   assert.deepEqual(getEntityById(s, "skills/domain-driven-design"), getEntity(s, "skill", "Domain-Driven Design"));
   assert.equal(entityBy(s, { id: "identity" }).entity.id, "identity");
