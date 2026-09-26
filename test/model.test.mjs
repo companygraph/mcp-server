@@ -60,9 +60,17 @@ test("get_entity resolves within the type and returns references both ways, as e
 // resolved qualifier.
 test("a question's edge resolves the type and owner its own row names, and carries them as attrs", () => {
   const r = getEntity(s, "question", "Who split billing out of the monolith?");
-  const rests = r.entity.references.find((x) => x.via === "Rests on.Entity");
-  assert.deepEqual(rests.to, { id: "profiles/mira-halvorsen/experiences/2022-beacon-systems", type: "experience", name: "Splitting the billing domain" });
-  assert.deepEqual(rests.attrs, { Type: "experience", Owner: "Mira Halvorsen", For: "the period" });
+  const rests = r.entity.references.filter((x) => x.via === "Rests on.Entity");
+  // Two rows since core 0.43.0, one owned and one not, sorted by the id they reach; the
+  // unowned row's Owner cell is blank and arrives as the empty string it is.
+  assert.deepEqual(rests.map((x) => x.to), [
+    { id: "decisions/2022-billing-leaves-the-monolith", type: "decision", name: "Billing leaves the monolith" },
+    { id: "profiles/mira-halvorsen/experiences/2022-beacon-systems", type: "experience", name: "Splitting the billing domain" },
+  ]);
+  assert.deepEqual(rests.map((x) => x.attrs), [
+    { Type: "decision", Owner: "", For: "why" },
+    { Type: "experience", Owner: "Mira Halvorsen", For: "the period" },
+  ]);
 });
 
 test("get_entity takes an id, and the tool's entry takes either and refuses neither", () => {
