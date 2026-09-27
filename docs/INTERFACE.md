@@ -1056,7 +1056,7 @@ The same tool in its third mode. Beside `query` and `match` the answer carries `
 
 A picture of part of the model as Mermaid source, built from its edges and never from prose. `shape` is `concepts`, `process` or `neighborhood`. `concepts` is a class diagram of every concept and the associations their Relations tables draw, each labeled with its Cardinality and its As; `domain`, a domain's id, narrows it to that domain's concepts and any concept outside it they reach, labeled with its own domain's name after its title. `process` takes the `id` of a process and draws its phases in the order of its Phases table, each with who executes it, and an arrow for each `gate-to`, labeled with the gate's approvers. `neighborhood` takes any `id` and draws that entity with everything one hop from it, one arrow for each `via` and far entity, labeled with the `via` and, where several edges stand behind it, how many.
 
-`nodes` says which entity each node of the source is, `n0` and on in the order drawn, so a client links a node without reading the source back; `title` is the name of what is drawn, null for every concept; `edges` counts the edges drawn and `omitted` those left out. A picture holds fifty nodes besides a neighborhood's middle. A neighborhood takes its groups of arrows smallest first, leaves out whole any group that does not fit, and names those on a last node, `more`, which is not in `nodes`. A concepts or process diagram that would hold more is refused as `cannot_draw` with `reason: "too_large"`, and one with nothing to draw with `reason: "empty"`.
+`nodes` says which entity each node of the source is, `n0` and on in the order drawn, so a client links a node without reading the source back; `links` says the same for each arrow, `from`, `to` and its `label` unescaped, one entry per arrow in the order drawn, so a client states a relation without decoding Mermaid; `title` is the name of what is drawn, null for every concept; `edges` counts the edges drawn and `omitted` those left out. A picture holds fifty nodes besides a neighborhood's middle. A neighborhood takes its groups of arrows smallest first, leaves out whole any group that does not fit, and names those on a last node, `more`, which is not in `nodes`. A concepts or process diagram that would hold more is refused as `cannot_draw` with `reason: "too_large"`, and one with nothing to draw with `reason: "empty"`.
 
 ```json
 {
@@ -1081,6 +1081,18 @@ A picture of part of the model as Mermaid source, built from its edges and never
         "id": "processes/delivery/phases/build",
         "title": "Build",
         "type": "phase"
+      }
+    ],
+    "links": [
+      {
+        "from": "n0",
+        "to": "n1",
+        "label": "Reviewer"
+      },
+      {
+        "from": "n1",
+        "to": "n2",
+        "label": "Reviewer"
       }
     ],
     "edges": 2,
