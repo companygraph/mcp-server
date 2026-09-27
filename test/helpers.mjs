@@ -58,3 +58,31 @@ export function withOwnedNameTwice() {
   const snapshot = buildSnapshot({ files, schemas, sub: "example/model/", commit: COMMIT, repo: "companygraph/meta-model", parserTag: PARSER });
   return { snapshot, title, owners: [`profiles/${first}`, `profiles/${second}`] };
 }
+
+// Concepts made for the diagram tests, in the example's own form: a page, a tagline, and a
+// Relations table naming other concepts by title. The example holds no concept with more than a
+// handful of edges, none that names itself, and no title with Mermaid's own syntax in it.
+const concept = (name, related) => `---\nsource: Local\n---\n\n# ${name}\n\n> A concept made for a test.\n`
+  + (related.length ? `\n## Relations\n\n| Concept | Cardinality | As |\n| --- | --- | --- |\n${related.map((r) => `| ${r} | one | |`).join("\n")}\n` : "");
+
+const built = (files, schemas) => buildSnapshot({ files, schemas, sub: "example/model/", core: "core/", commit: COMMIT, repo: "companygraph/meta-model", parserTag: PARSER });
+
+// A concept, Hub, that names `out` leaves and is named by `into` feeders: past the cap when
+// `out` is large, and exactly at it when the leaves, the feeders and its source make fifty.
+export function withHub({ out = 60, into = 5 } = {}) {
+  const { files, schemas } = exampleFiles();
+  const leaves = Array.from({ length: out }, (_, i) => `Leaf ${String(i).padStart(2, "0")}`);
+  files.set("concepts/hub.md", concept("Hub", leaves));
+  leaves.forEach((name, i) => files.set(`concepts/leaf-${String(i).padStart(2, "0")}.md`, concept(name, [])));
+  for (let i = 0; i < into; i++) files.set(`concepts/feeder-${i}.md`, concept(`Feeder ${i}`, ["Hub"]));
+  return built(files, schemas);
+}
+
+// Loop names itself and Partner; Partner names Loop back, under a title full of Mermaid syntax.
+export const ODD = 'Partner "A" <B> #1 --> C';
+export function withLoops() {
+  const { files, schemas } = exampleFiles();
+  files.set("concepts/loop.md", concept("Loop", ["Loop", ODD]));
+  files.set("concepts/partner.md", concept(ODD, ["Loop"]));
+  return built(files, schemas);
+}
