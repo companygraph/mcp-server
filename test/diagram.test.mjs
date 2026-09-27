@@ -86,7 +86,7 @@ test("a process draws its phases in its table's order, who executes each, and ea
   assert.deepEqual([d.title, d.edges, d.omitted], ["Delivery", 2, 0]);
   assert.deepEqual(lines(d), [
     "flowchart LR",
-    '  n0["<b>Specify</b><br/>Backend Engineer"]', '  n1["<b>Build</b><br/>Backend Engineer, Reviewer"]', '  n2["<b>Release</b><br/>Reviewer"]',
+    '  n0["<b>Specify</b><br/><small>Backend Engineer</small>"]', '  n1["<b>Build</b><br/><small>Backend Engineer, Reviewer</small>"]', '  n2["<b>Release</b><br/><small>Reviewer</small>"]',
     '  n0 -->|"Reviewer"| n1', '  n1 -->|"Reviewer"| n2',
   ]);
   assert.deepEqual(ids(d), [["n0", "processes/delivery/phases/specify"], ["n1", "processes/delivery/phases/build"], ["n2", "processes/delivery/phases/release"]]);
@@ -98,9 +98,9 @@ test("a neighborhood draws one hop both ways, the smallest groups first", () => 
   assert.deepEqual([d.title, d.edges, d.omitted], ["Invoice", 8, 0]);
   assert.deepEqual(lines(d), [
     "flowchart LR",
-    '  n0["«concept»<br/><b>Invoice</b>"]', '  n1["«domain»<br/>Invoicing"]', '  n2["«source»<br/>Local"]',
-    '  n3["«concept»<br/>Credit note"]', '  n4["«feature»<br/>Billing run"]', '  n5["«feature»<br/>Credit notes"]',
-    '  n6["«concept»<br/>Billing period"]', '  n7["«concept»<br/>Customer"]', '  n8["«concept»<br/>Invoice line"]',
+    '  n0["<small>«concept»</small><br/><b>Invoice</b>"]', '  n1["<small>«domain»</small><br/>Invoicing"]', '  n2["<small>«source»</small><br/>Local"]',
+    '  n3["<small>«concept»</small><br/>Credit note"]', '  n4["<small>«feature»</small><br/>Billing run"]', '  n5["<small>«feature»</small><br/>Credit notes"]',
+    '  n6["<small>«concept»</small><br/>Billing period"]', '  n7["<small>«concept»</small><br/>Customer"]', '  n8["<small>«concept»</small><br/>Invoice line"]',
     '  n0 -->|"domain"| n1', '  n0 -->|"source"| n2', '  n3 -->|"Relations.Concept"| n0', '  n4 -->|"concepts"| n0',
     '  n5 -->|"concepts"| n0', '  n0 -->|"Relations.Concept"| n6', '  n0 -->|"Relations.Concept"| n7', '  n0 -->|"Relations.Concept"| n8',
   ]);
@@ -150,7 +150,7 @@ test("a self-reference is not drawn, an entity reached both ways is one node, an
   const odd = label(ODD);
   assert.equal(odd, "Partner #quot;A#quot; #lt;B#gt; #35;1 --#gt; C");
   assert.deepEqual(lines(d), [
-    "flowchart LR", '  n0["«concept»<br/><b>Loop</b>"]', `  n1["«concept»<br/>${odd}"]`, '  n2["«source»<br/>Local"]',
+    "flowchart LR", '  n0["<small>«concept»</small><br/><b>Loop</b>"]', `  n1["<small>«concept»</small><br/>${odd}"]`, '  n2["<small>«source»</small><br/>Local"]',
     '  n0 -->|"Relations.Concept"| n1', '  n0 -->|"source"| n2', '  n1 -->|"Relations.Concept"| n0',
   ]);
   assert.equal(d.nodes[1].title, ODD, "nodes carry the title as written, not escaped");
