@@ -164,10 +164,12 @@ test("every link's ends are drawn nodes, and the link count matches the arrow li
     diagram(s, { shape: "concepts" }),
     diagram(s, { shape: "process", id: "processes/delivery" }),
     diagram(s, { shape: "neighborhood", id: "concepts/invoice" }),
+    diagram(s, { shape: "schema" }),
+    diagram(s, { shape: "schema", type: "profile" }),
   ]) {
     const known = new Set(d.nodes.map((n) => n.node));
     for (const l of d.links) { assert.ok(known.has(l.from), l.from); assert.ok(known.has(l.to), l.to); }
-    assert.equal(d.links.length, lines(d).filter((line) => line.includes("-->")).length);
+    assert.equal(d.links.length, lines(d).filter((line) => /-->|\.\.>|--\*/.test(line)).length);
     // A concepts or process diagram holds one type throughout, which its caption already says,
     // so only a neighborhood's nodes carry a stereotype.
     if (d.shape !== "neighborhood") assert.ok(!d.mermaid.includes("«"), d.mermaid);
@@ -175,7 +177,11 @@ test("every link's ends are drawn nodes, and the link count matches the arrow li
 });
 
 test("the arguments each shape does not take, needs or cannot use are refused by name", () => {
-  refused(() => diagram(s, { shape: "graph" }), "invalid_argument", { argument: "shape", reason: "one of concepts, process, neighborhood" });
+  refused(() => diagram(s, { shape: "graph" }), "invalid_argument", { argument: "shape", reason: "one of concepts, process, neighborhood, schema" });
+  refused(() => diagram(s, { shape: "schema", id: "core/phase" }), "invalid_argument", { argument: "id", reason: "not taken by schema" });
+  refused(() => diagram(s, { shape: "concepts", type: "phase" }), "invalid_argument", { argument: "type", reason: "not taken by concepts" });
+  refused(() => diagram(s, { shape: "schema", domain: "domains/pricing" }), "invalid_argument", { argument: "domain", reason: "not taken by schema" });
+  refused(() => diagram(s, { shape: "schema", type: "nothing" }), "unknown_type");
   refused(() => diagram(s, { shape: "concepts", id: "concepts/invoice" }), "invalid_argument", { argument: "id", reason: "not taken by concepts" });
   refused(() => diagram(s, { shape: "process", id: "processes/delivery", domain: "domains/pricing" }), "invalid_argument", { argument: "domain", reason: "not taken by process" });
   refused(() => diagram(s, { shape: "neighborhood" }), "invalid_argument", { argument: "id", reason: "needed by neighborhood" });
@@ -208,4 +214,57 @@ test("a concept outside the domain that belongs to no domain is drawn by its tit
   const d = diagram(withNothingToDraw(), { shape: "concepts", domain: "domains/pricing" });
   const stray = d.nodes.find((n) => n.id === "concepts/stray");
   assert.ok(d.mermaid.split("\n").includes(`  class ${stray.node}["Stray"]`), d.mermaid);
+});
+
+test("the schemas draw every type, each declared reference with its multiplicity and each nesting, and leave out what every type declares", () => {
+  const d = diagram(s, { shape: "schema" });
+  assert.equal(d.title, null);
+  assert.deepEqual(d.nodes.map((n) => n.title), s.schemas.map((x) => x.id.slice("core/".length)).sort());
+  assert.deepEqual(d.nodes[0], { node: "n0", id: "core/achievement-kind", title: "achievement-kind", type: "schema",
+    url: `https://github.com/companygraph/meta-model/blob/${COMMIT}/core/achievement-kind-schema.md` });
+  // Every type but the source's own declares `source`, so it is said once and drawn by none,
+  // though the source type is still a class.
+  assert.deepEqual(d.everyType, [{ via: "source", to: "source", multiplicity: "1" }]);
+  assert.ok(!d.links.some((l) => l.label.startsWith("source ")), d.mermaid);
+  assert.ok(d.nodes.some((n) => n.title === "source"));
+  const at = (t) => d.nodes.find((n) => n.title === t).node;
+  // Solid where the reference must resolve, dashed where it may stay a fact or only qualifies.
+  assert.ok(lines(d).includes(`  ${at("experience")} --> "0..*" ${at("skill")} : skills`), d.mermaid);
+  assert.ok(lines(d).includes(`  ${at("experience")} ..> "0..1" ${at("identity")} : organization`), d.mermaid);
+  assert.ok(lines(d).includes(`  ${at("profile")} ..> "0..*" ${at("proficiency-level")} : Skills.Level`), d.mermaid);
+  assert.ok(lines(d).includes(`  ${at("feature")} --> "1..*" ${at("product")} : products`), d.mermaid);
+  assert.ok(lines(d).includes(`  ${at("experience")} --* ${at("profile")} : nested-in`), d.mermaid);
+  assert.deepEqual(d.links.find((l) => l.label === "nested-in"), { from: at("experience"), to: at("profile"), label: "nested-in" });
+  assert.equal(d.edges, d.links.length);
+  assert.ok(d.omitted >= s.schemas.length - 1, "every left-out source declaration is counted");
+  assert.ok(!d.mermaid.includes("«"), d.mermaid);
+});
+
+test("a type narrows the schemas to itself, what it declares, what declares it and what it nests with", () => {
+  const d = diagram(s, { shape: "schema", type: "phase" });
+  assert.deepEqual([d.title, d.edges, d.omitted], ["phase", 9, 1]);
+  assert.deepEqual(lines(d), [
+    "classDiagram",
+    '  class n0["phase"]', '  class n1["process"]', '  class n2["role"]', '  class n3["track"]',
+    '  n0 --> "0..*" n3 : Activities.Track', '  n0 --> "1" n2 : escalation-authority', '  n0 --> "1..*" n2 : executed-by',
+    '  n0 --> "1..*" n2 : gate-approvers', '  n0 --> "0..1" n0 : gate-to', '  n0 --> "1" n2 : owner',
+    '  n0 --> "0..*" n2 : supported-by', '  n1 --> "0..*" n0 : Phases.Phase', "  n0 --* n1 : nested-in",
+  ]);
+  assert.deepEqual(d.links.at(0), { from: "n0", to: "n3", label: "Activities.Track 0..*" });
+  assert.deepEqual(d.links.at(-1), { from: "n0", to: "n1", label: "nested-in" });
+});
+
+test("the source type narrowed draws itself alone and counts every declaration to it as left out", () => {
+  const d = diagram(s, { shape: "schema", type: "source" });
+  assert.deepEqual([d.nodes.length, d.edges, d.omitted], [1, 0, s.schemas.length - 1]);
+});
+
+test("a schema node links nowhere where the repository or the commit is not known", () => {
+  const d = diagram({ ...s, commit: null }, { shape: "schema", type: "phase" });
+  assert.ok(d.nodes.every((n) => n.url === null));
+});
+
+test("the too-large hint for the schemas is to name a type, said only when none was given", () => {
+  assert.match(cannot("schema", "too_large", 60).message, /name a type to draw part of it/);
+  assert.doesNotMatch(cannot("schema", "too_large", 60, "phase").message, /name a type/);
 });
