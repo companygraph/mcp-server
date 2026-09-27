@@ -35,6 +35,13 @@ export function instanceSnapshot() {
     sub: "model/", core: "meta/core/", commit: INSTANCE_COMMIT, repo: "robertblust/mental-model", parserTag: PARSER });
 }
 
+// The reference instance read from a root other than the vendored fixture, such as a local
+// checkout on another branch, for a preview run before that branch's own commit is pinned here.
+export function instanceSnapshotAt(root) {
+  return buildSnapshot({ files: readDir(path.join(root, "model")), schemas: readDir(path.join(root, "meta", "core")),
+    sub: "model/", core: "meta/core/", commit: INSTANCE_COMMIT, repo: "robertblust/mental-model", parserTag: PARSER });
+}
+
 // The company of one: an identity and a profile with the same name. The example has no such
 // pair, so one is added — a profile page carries only what the parser needs to read it.
 export function withSharedName() {
@@ -88,6 +95,27 @@ export function withLoops() {
   files.set("concepts/loop.md", concept("Loop", ["Loop", ODD]));
   files.set("concepts/partner.md", concept(ODD, ["Loop"]));
   return built(files, schemas);
+}
+
+// The example's Delivery, with Build's table rewritten to two rows leading back to Specify, one
+// of them with Mermaid's own characters in its outcome, and Release's stop row made a stay, so
+// Delivery holds merged back arrows and, with Specify's stop removed too, no stop at all.
+export function withBackFlows() {
+  const s = structuredClone(exampleSnapshot());
+  const id = (p) => `processes/delivery/phases/${p}`;
+  const table = (e) => e.sections.find((x) => x.heading === "If not met").tables[0];
+  const byId = new Map(s.entities.map((e) => [e.id, e]));
+  table(byId.get(id("specify"))).rows = [["reshaped", "Specify"]];
+  table(byId.get(id("build"))).rows = [["respecified", "Specify"], ['held "for now" <#1>', "Specify"]];
+  table(byId.get(id("release"))).rows = [["held", "Release"]];
+  s.edges = s.edges.filter((x) => x.via !== "If not met.Leads to");
+  s.edges.push(
+    { from: id("specify"), via: "If not met.Leads to", to: id("specify"), attrs: { Outcome: "reshaped" } },
+    { from: id("build"), via: "If not met.Leads to", to: id("specify"), attrs: { Outcome: "respecified" } },
+    { from: id("build"), via: "If not met.Leads to", to: id("specify"), attrs: { Outcome: 'held "for now" <#1>' } },
+    { from: id("release"), via: "If not met.Leads to", to: id("release"), attrs: { Outcome: "held" } },
+  );
+  return s;
 }
 
 // Bond names Glue with an As cell holding both a colon and a semicolon, the two characters an

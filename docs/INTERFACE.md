@@ -1095,7 +1095,7 @@ A picture of part of the model as Mermaid source, built from its edges and never
         "label": "Reviewer"
       }
     ],
-    "edges": 2,
+    "edges": 4,
     "omitted": 0,
     "model": {
       "commit": "0123456789abcdef0123456789abcdef01234567",
