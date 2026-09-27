@@ -5,7 +5,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { diagram, label, plain, cannot, DIAGRAM_CAP } from "../lib/diagram.mjs";
 import { ModelError } from "../lib/errors.mjs";
-import { exampleSnapshot, instanceSnapshot, withHub, withLoops, withPunctuation, withNothingToDraw, ODD, COMMIT } from "./helpers.mjs";
+import { exampleSnapshot, instanceSnapshot, withHub, withLoops, withPunctuation, withNothingToDraw, withBackFlows, ODD, COMMIT } from "./helpers.mjs";
 
 const s = exampleSnapshot();
 const lines = (d) => d.mermaid.split("\n");
@@ -83,14 +83,60 @@ test("plain() folds a line break and its surrounding spaces to one space, the fo
 
 test("a process draws its phases in its table's order, who executes each, and each gate with its approvers", () => {
   const d = diagram(s, { shape: "process", id: "processes/delivery" });
-  assert.deepEqual([d.title, d.edges, d.omitted], ["Delivery", 2, 0]);
+  assert.deepEqual([d.title, d.edges, d.omitted], ["Delivery", 4, 0]);
+  assert.deepEqual(lines(d), [
+    "flowchart LR",
+    '  n0["<b>Specify</b><br/><small>Backend Engineer</small>"]', '  n1["<b>Build</b><br/><small>Backend Engineer, Reviewer</small>"]', '  n2["<b>Release</b><br/><small>Reviewer</small>"]',
+    '  n0 -->|"Reviewer"| n1', '  n1 -->|"Reviewer"| n2',
+    '  n0 -.->|"Reviewer: reshaped"| n0',
+    '  n1 -.->|"Reviewer: reworked"| n1',
+    "  stop((Stop))",
+    '  n0 -.->|"Reviewer: dropped"| stop',
+    '  n1 -.->|"Reviewer: abandoned"| stop',
+    '  n2 -.->|"Reviewer: rolled back"| stop',
+    "  classDef stop fill:none,stroke-dasharray:3 3",
+    "  class stop stop",
+  ]);
+  assert.deepEqual(ids(d), [["n0", "processes/delivery/phases/specify"], ["n1", "processes/delivery/phases/build"], ["n2", "processes/delivery/phases/release"]]);
+  assert.deepEqual(d.links, [
+    { from: "n0", to: "n1", label: "Reviewer" }, { from: "n1", to: "n2", label: "Reviewer" },
+    { from: "n0", to: "n0", label: "Reviewer: reshaped" }, { from: "n1", to: "n1", label: "Reviewer: reworked" },
+  ]);
+});
+
+test("rows to one phase merge into one arrow, in table order, escaped in the picture and raw in links; no stop row, no Stop node", () => {
+  const d = diagram(withBackFlows(), { shape: "process", id: "processes/delivery" });
+  assert.deepEqual(lines(d).slice(6), [
+    '  n0 -.->|"Reviewer: reshaped"| n0',
+    '  n1 -.->|"Reviewer: respecified, held #quot;for now#quot; #lt;#35;1#gt;"| n0',
+    '  n2 -.->|"Reviewer: held"| n2',
+  ]);
+  assert.ok(!d.mermaid.includes("stop"), d.mermaid);
+  assert.deepEqual(d.links.slice(2), [
+    { from: "n0", to: "n0", label: "Reviewer: reshaped" },
+    { from: "n1", to: "n0", label: 'Reviewer: respecified, held "for now" <#1>' },
+    { from: "n2", to: "n2", label: "Reviewer: held" },
+  ]);
+  assert.equal(d.edges, 6);
+});
+
+test("the Stop node is never a node a client links, and its arrows are never links", () => {
+  const d = diagram(s, { shape: "process", id: "processes/delivery" });
+  assert.ok(d.nodes.every((n) => n.node !== "stop"));
+  assert.ok(d.links.every((l) => l.to !== "stop" && l.from !== "stop"));
+});
+
+test("a phase with no If not met section, as on an older core, draws exactly today's picture", () => {
+  const old = structuredClone(exampleSnapshot());
+  for (const e of old.entities) if (e.type === "phase") e.sections = e.sections.filter((x) => x.heading !== "If not met");
+  old.edges = old.edges.filter((x) => x.via !== "If not met.Leads to");
+  const d = diagram(old, { shape: "process", id: "processes/delivery" });
   assert.deepEqual(lines(d), [
     "flowchart LR",
     '  n0["<b>Specify</b><br/><small>Backend Engineer</small>"]', '  n1["<b>Build</b><br/><small>Backend Engineer, Reviewer</small>"]', '  n2["<b>Release</b><br/><small>Reviewer</small>"]',
     '  n0 -->|"Reviewer"| n1', '  n1 -->|"Reviewer"| n2',
   ]);
-  assert.deepEqual(ids(d), [["n0", "processes/delivery/phases/specify"], ["n1", "processes/delivery/phases/build"], ["n2", "processes/delivery/phases/release"]]);
-  assert.deepEqual(d.links, [{ from: "n0", to: "n1", label: "Reviewer" }, { from: "n1", to: "n2", label: "Reviewer" }]);
+  assert.equal(d.edges, 2);
 });
 
 test("a neighborhood draws one hop both ways, the smallest groups first", () => {
@@ -169,7 +215,9 @@ test("every link's ends are drawn nodes, and the link count matches the arrow li
   ]) {
     const known = new Set(d.nodes.map((n) => n.node));
     for (const l of d.links) { assert.ok(known.has(l.from), l.from); assert.ok(known.has(l.to), l.to); }
-    assert.equal(d.links.length, lines(d).filter((line) => /-->|\.\.>|--\*/.test(line)).length);
+    // A process's dashed arrow into the Stop node is an arrow line but never a link, since the
+    // Stop node is no entity; every other arrow line, solid or dashed, is exactly one link.
+    assert.equal(d.links.length, lines(d).filter((line) => /-->|\.\.>|--\*|-\.->/.test(line) && !line.endsWith(" stop")).length);
     // A concepts or process diagram holds one type throughout, which its caption already says,
     // so only a neighborhood's nodes carry a stereotype.
     if (d.shape !== "neighborhood") assert.ok(!d.mermaid.includes("«"), d.mermaid);
@@ -242,11 +290,11 @@ test("the schemas draw every type, each declared reference with its multiplicity
 
 test("a type narrows the schemas to itself, what it declares, what declares it and what it nests with", () => {
   const d = diagram(s, { shape: "schema", type: "phase" });
-  assert.deepEqual([d.title, d.edges, d.omitted], ["phase", 9, 1]);
+  assert.deepEqual([d.title, d.edges, d.omitted], ["phase", 10, 1]);
   assert.deepEqual(lines(d), [
     "classDiagram",
     '  class n0["phase"]', '  class n1["process"]', '  class n2["role"]', '  class n3["track"]',
-    '  n0 --> "0..*" n3 : Activities.Track', '  n0 --> "1" n2 : escalation-authority', '  n0 --> "1..*" n2 : executed-by',
+    '  n0 --> "0..*" n3 : Activities.Track', '  n0 --> "0..*" n0 : If not met.Leads to', '  n0 --> "1" n2 : escalation-authority', '  n0 --> "1..*" n2 : executed-by',
     '  n0 --> "1..*" n2 : gate-approvers', '  n0 --> "0..1" n0 : gate-to', '  n0 --> "1" n2 : owner',
     '  n0 --> "0..*" n2 : supported-by', '  n1 --> "0..*" n0 : Phases.Phase', "  n0 --* n1 : nested-in",
   ]);
