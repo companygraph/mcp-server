@@ -98,8 +98,9 @@ test("a neighborhood draws one hop both ways, the smallest groups first", () => 
   assert.deepEqual([d.title, d.edges, d.omitted], ["Invoice", 8, 0]);
   assert.deepEqual(lines(d), [
     "flowchart LR",
-    '  n0["<b>Invoice</b>"]', '  n1["Invoicing"]', '  n2["Local"]', '  n3["Credit note"]', '  n4["Billing run"]',
-    '  n5["Credit notes"]', '  n6["Billing period"]', '  n7["Customer"]', '  n8["Invoice line"]',
+    '  n0["«concept»<br/><b>Invoice</b>"]', '  n1["«domain»<br/>Invoicing"]', '  n2["«source»<br/>Local"]',
+    '  n3["«concept»<br/>Credit note"]', '  n4["«feature»<br/>Billing run"]', '  n5["«feature»<br/>Credit notes"]',
+    '  n6["«concept»<br/>Billing period"]', '  n7["«concept»<br/>Customer"]', '  n8["«concept»<br/>Invoice line"]',
     '  n0 -->|"domain"| n1', '  n0 -->|"source"| n2', '  n3 -->|"Relations.Concept"| n0', '  n4 -->|"concepts"| n0',
     '  n5 -->|"concepts"| n0', '  n0 -->|"Relations.Concept"| n6', '  n0 -->|"Relations.Concept"| n7', '  n0 -->|"Relations.Concept"| n8',
   ]);
@@ -149,7 +150,7 @@ test("a self-reference is not drawn, an entity reached both ways is one node, an
   const odd = label(ODD);
   assert.equal(odd, "Partner #quot;A#quot; #lt;B#gt; #35;1 --#gt; C");
   assert.deepEqual(lines(d), [
-    "flowchart LR", '  n0["<b>Loop</b>"]', `  n1["${odd}"]`, '  n2["Local"]',
+    "flowchart LR", '  n0["«concept»<br/><b>Loop</b>"]', `  n1["«concept»<br/>${odd}"]`, '  n2["«source»<br/>Local"]',
     '  n0 -->|"Relations.Concept"| n1', '  n0 -->|"source"| n2', '  n1 -->|"Relations.Concept"| n0',
   ]);
   assert.equal(d.nodes[1].title, ODD, "nodes carry the title as written, not escaped");
@@ -167,6 +168,9 @@ test("every link's ends are drawn nodes, and the link count matches the arrow li
     const known = new Set(d.nodes.map((n) => n.node));
     for (const l of d.links) { assert.ok(known.has(l.from), l.from); assert.ok(known.has(l.to), l.to); }
     assert.equal(d.links.length, lines(d).filter((line) => line.includes("-->")).length);
+    // A concepts or process diagram holds one type throughout, which its caption already says,
+    // so only a neighborhood's nodes carry a stereotype.
+    if (d.shape !== "neighborhood") assert.ok(!d.mermaid.includes("«"), d.mermaid);
   }
 });
 
