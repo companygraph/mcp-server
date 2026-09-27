@@ -3,9 +3,9 @@
 // is sent and a line out of place is a different picture.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { diagram, label, DIAGRAM_CAP } from "../lib/diagram.mjs";
+import { diagram, label, cannot, DIAGRAM_CAP } from "../lib/diagram.mjs";
 import { ModelError } from "../lib/errors.mjs";
-import { exampleSnapshot, instanceSnapshot, withHub, withLoops, withNothingToDraw, ODD, COMMIT } from "./helpers.mjs";
+import { exampleSnapshot, instanceSnapshot, withHub, withLoops, withPunctuation, withNothingToDraw, ODD, COMMIT } from "./helpers.mjs";
 
 const s = exampleSnapshot();
 const lines = (d) => d.mermaid.split("\n");
@@ -20,6 +20,7 @@ const refused = (fn, code, details) => assert.throws(fn, (e) => {
 test("a label escapes Mermaid's own characters, the hash first", () => {
   assert.equal(label('A "b" <c> #d\n  e'), "A #quot;b#quot; #lt;c#gt; #35;d e");
   assert.equal(label("x --> y"), "x --#gt; y");
+  assert.equal(label("`bold`"), "#96;bold#96;");
 });
 
 test("every concept, with each Relations row an association labeled with its cardinality and role", () => {
@@ -48,6 +49,13 @@ test("a domain draws its concepts, and one outside it that they reach carries it
     "  n2 --> n4 : one, billed customer", "  n2 --> n3 : one to many, lines", "  n3 --> n5 : one, rule", "  n3 --> n6 : many, usage read",
   ]);
   assert.deepEqual(d.nodes[4], { node: "n4", id: "concepts/customer", title: "Customer", type: "concept" });
+});
+
+test("an As cell's own colon and semicolon are escaped, since Mermaid ends an unquoted association label at either", () => {
+  const d = diagram(withPunctuation(), { shape: "concepts" });
+  const bond = d.nodes.find((n) => n.title === "Bond").node;
+  const glue = d.nodes.find((n) => n.title === "Glue").node;
+  assert.ok(lines(d).includes(`  ${bond} --> ${glue} : one, a#58; b#59; c`), d.mermaid);
 });
 
 test("a process draws its phases in its table's order, who executes each, and each gate with its approvers", () => {
@@ -129,6 +137,18 @@ test("a diagram with nothing to draw, or more than it holds, is refused rather t
   refused(() => diagram(n, { shape: "concepts", domain: "domains/support" }), "cannot_draw", { shape: "concepts", reason: "empty", nodes: 0, limit: DIAGRAM_CAP });
   refused(() => diagram(n, { shape: "process", id: "processes/intake" }), "cannot_draw", { shape: "process", reason: "empty", nodes: 0, limit: DIAGRAM_CAP });
   refused(() => diagram(withHub({ out: 60, into: 5 }), { shape: "concepts" }), "cannot_draw", { shape: "concepts", reason: "too_large", nodes: 74, limit: DIAGRAM_CAP });
+});
+
+test("the too-large hint to name a domain is said only when none was given", () => {
+  let whole;
+  try { diagram(withHub({ out: 60, into: 5 }), { shape: "concepts" }); assert.fail("expected a refusal"); } catch (e) { whole = e; }
+  assert.match(whole.message, /name a domain/);
+
+  // A too-large fixture that is already domain-filtered is costly to build, so the message
+  // builder is asserted on directly here, with the same shape, reason and node count as above.
+  const filtered = cannot("concepts", "too_large", 74, { id: "domains/pricing", name: "Pricing" });
+  assert.doesNotMatch(filtered.message, /name a domain/);
+  assert.deepEqual(filtered.details, { shape: "concepts", reason: "too_large", nodes: 74, limit: DIAGRAM_CAP });
 });
 
 test("a concept outside the domain that belongs to no domain is drawn by its title alone", () => {

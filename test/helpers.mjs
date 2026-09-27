@@ -60,10 +60,13 @@ export function withOwnedNameTwice() {
 }
 
 // Concepts made for the diagram tests, in the example's own form: a page, a tagline, and a
-// Relations table naming other concepts by title. The example holds no concept with more than a
-// handful of edges, none that names itself, and no title with Mermaid's own syntax in it.
+// Relations table naming other concepts by title. A row of `related` is a name, or a `[name, as]`
+// pair when the row's own As cell matters to the test, and is empty otherwise. The example holds
+// no concept with more than a handful of edges, none that names itself, and no title with
+// Mermaid's own syntax in it.
 const concept = (name, related) => `---\nsource: Local\n---\n\n# ${name}\n\n> A concept made for a test.\n`
-  + (related.length ? `\n## Relations\n\n| Concept | Cardinality | As |\n| --- | --- | --- |\n${related.map((r) => `| ${r} | one | |`).join("\n")}\n` : "");
+  + (related.length ? `\n## Relations\n\n| Concept | Cardinality | As |\n| --- | --- | --- |\n${related
+      .map((r) => (Array.isArray(r) ? r : [r, ""])).map(([rel, as]) => `| ${rel} | one | ${as} |`).join("\n")}\n` : "");
 
 const built = (files, schemas) => buildSnapshot({ files, schemas, sub: "example/model/", core: "core/", commit: COMMIT, repo: "companygraph/meta-model", parserTag: PARSER });
 
@@ -84,6 +87,15 @@ export function withLoops() {
   const { files, schemas } = exampleFiles();
   files.set("concepts/loop.md", concept("Loop", ["Loop", ODD]));
   files.set("concepts/partner.md", concept(ODD, ["Loop"]));
+  return built(files, schemas);
+}
+
+// Bond names Glue with an As cell holding both a colon and a semicolon, the two characters an
+// association's unquoted text must escape that a quoted label does not.
+export function withPunctuation() {
+  const { files, schemas } = exampleFiles();
+  files.set("concepts/bond.md", concept("Bond", [["Glue", "a: b; c"]]));
+  files.set("concepts/glue.md", concept("Glue", []));
   return built(files, schemas);
 }
 
