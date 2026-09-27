@@ -3,7 +3,7 @@
 // is sent and a line out of place is a different picture.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { diagram, label, cannot, DIAGRAM_CAP } from "../lib/diagram.mjs";
+import { diagram, label, plain, cannot, DIAGRAM_CAP } from "../lib/diagram.mjs";
 import { ModelError } from "../lib/errors.mjs";
 import { exampleSnapshot, instanceSnapshot, withHub, withLoops, withPunctuation, withNothingToDraw, ODD, COMMIT } from "./helpers.mjs";
 
@@ -70,6 +70,17 @@ test("an As cell's own colon and semicolon are escaped, since Mermaid ends an un
   assert.deepEqual(d.links.find((l) => l.from === bond && l.to === glue), { from: bond, to: glue, label: "one, a: b; c" });
 });
 
+// The model's own parser reads every field one line at a time, so a raw value can never carry a
+// line break through it; `plain()` is the fold a raw link label would still need if one ever did,
+// the same fold `label()` applies before its own escaping, tested directly since a fixture holding
+// a real line break cannot reach a link through the parser to prove it end to end.
+test("plain() folds a line break and its surrounding spaces to one space, the fold a raw link label keeps", () => {
+  assert.equal(plain("Reviewer\nSecond"), "Reviewer Second");
+  assert.equal(plain("Reviewer \r\n  Second"), "Reviewer Second");
+  assert.equal(plain("Reviewer, Second"), "Reviewer, Second");
+  assert.equal(label("a\nb"), plain(label("a\nb")), "label()'s own fold matches plain()'s");
+});
+
 test("a process draws its phases in its table's order, who executes each, and each gate with its approvers", () => {
   const d = diagram(s, { shape: "process", id: "processes/delivery" });
   assert.deepEqual([d.title, d.edges, d.omitted], ["Delivery", 2, 0]);
@@ -99,7 +110,7 @@ test("a neighborhood draws one hop both ways, the smallest groups first", () => 
     { from: "n5", to: "n0", label: "concepts" }, { from: "n0", to: "n6", label: "Relations.Concept" },
     { from: "n0", to: "n7", label: "Relations.Concept" }, { from: "n0", to: "n8", label: "Relations.Concept" },
   ]);
-  assert.ok(d.links.filter((l) => l.to === "n0").every((l) => l.to === "n0"), "incoming arrows point to the middle");
+  assert.ok(d.links.every((l) => l.from === "n0" || l.to === "n0"), "every link of the neighborhood touches the middle");
 });
 
 test("two rows drawing one edge are one arrow that says how many", () => {
@@ -142,7 +153,8 @@ test("a self-reference is not drawn, an entity reached both ways is one node, an
     '  n0 -->|"Relations.Concept"| n1', '  n0 -->|"source"| n2', '  n1 -->|"Relations.Concept"| n0',
   ]);
   assert.equal(d.nodes[1].title, ODD, "nodes carry the title as written, not escaped");
-  assert.ok(!d.links.some((l) => l.label.includes(odd)), "the escaped odd title never appears in a label");
+  const escapes = ["#quot;", "#lt;", "#gt;", "#35;", "#58;", "#59;", "#96;"];
+  assert.ok(d.links.every((l) => escapes.every((esc) => !l.label.includes(esc))), "no link label carries a Mermaid escape");
   assert.equal(d.links.length, lines(d).filter((l) => l.includes("-->")).length);
 });
 
