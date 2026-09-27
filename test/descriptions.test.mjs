@@ -32,6 +32,7 @@ test("a paged tool says how to continue, and a tool with a sibling names it", ()
   assert.match(of("describe_relations"), /\bdescribe_schema\b/);
   assert.match(of("describe_schema"), /\bdescribe_relations\b/);
   assert.match(of("list_rules"), /\bdescribe_rule\b/);
+  assert.match(of("diagram"), /\blist_references\b/);
 });
 
 test("describe_relations names direction as one side of relations, not a narrower it shares with every list", () => {

@@ -29,6 +29,7 @@ export const EXAMPLES = {
   "`search`": { name: "search", arguments: { query: "bounded context", limit: 2 } },
   "`search` with `words`": { name: "search", arguments: { query: "decided the billing contexts", match: "words", limit: 2 } },
   "`fetch`": { name: "fetch", arguments: { id: DDD } },
+  "`diagram`": { name: "diagram", arguments: { shape: "process", id: "processes/delivery" } },
   "A refusal": { name: "get_entity", ambiguous: true },
 };
 

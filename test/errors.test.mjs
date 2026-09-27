@@ -14,7 +14,7 @@ const thrown = (fn) => {
 
 test("the model exports the one ModelError, and the codes are a closed list", () => {
   assert.equal(model.ModelError, ModelError);
-  assert.deepEqual(CODES, ["unknown_type", "unknown_entity", "ambiguous_name", "unknown_rule", "invalid_argument", "invalid_cursor", "unsupported_snapshot"]);
+  assert.deepEqual(CODES, ["unknown_type", "unknown_entity", "ambiguous_name", "unknown_rule", "invalid_argument", "invalid_cursor", "unsupported_snapshot", "cannot_draw"]);
   const e = new ModelError("unknown_type", "a sentence");
   assert.ok(e instanceof Error);
   assert.deepEqual([e.code, e.message, e.rule, e.details], ["unknown_type", "a sentence", null, {}]);
