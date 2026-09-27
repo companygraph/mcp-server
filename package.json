@@ -39,7 +39,7 @@
   "dependencies": {
     "@modelcontextprotocol/node": "^2.1.0",
     "@modelcontextprotocol/server": "^2.0.0",
-    "companygraph-meta-model": "github:companygraph/meta-model#154b09ed1dcec98fbd70427999338d9c2023635c",
+    "companygraph-meta-model": "github:companygraph/meta-model#9e65cc0f554b779bd1272857e3a89156f2112c06",
     "zod": "^4.2.0"
   },
   "devDependencies": {
