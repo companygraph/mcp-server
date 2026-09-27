@@ -60,8 +60,9 @@ test("a title two owners hold is found under each, and owner keeps one", () => {
 test("search pages in a fixed order, and nothing found is an empty page", () => {
   const all = search(s, "a", { limit: 200 });
   // Compared part by part: joined into one string, "Foo" and "Foo Bar" would sort by the comma.
+  // A name that matched is the first part, since those entities stand first.
   const byParts = (a, b) => { for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return a[i] < b[i] ? -1 : 1; return 0; };
-  const keys = all.results.map((x) => [x.type, x.title, x.id]);
+  const keys = all.results.map((x) => [x.matched[0].where === "name" ? 0 : 1, x.type, x.title, x.id]);
   assert.deepEqual(keys, [...keys].sort(byParts));
   const first = search(s, "a", { limit: 5 });
   assert.deepEqual(first.page, { total: all.page.total, returned: 5, hasMore: true, nextCursor: first.page.nextCursor });
@@ -175,4 +176,18 @@ test("a possessive asks for its noun, so the apostrophe narrows nothing", () => 
   assert.deepEqual(owned.words.map((w) => w.word), ["the", "company", "billing"]);
   assert.deepEqual(owned.results.map((x) => x.id), plain.results.map((x) => x.id));
   assert.ok(owned.page.total > 0);
+});
+
+test("an entity whose name matched stands first, before every entity that only mentions it, and the rest keep their order", () => {
+  for (const match of ["words", "text"]) {
+    const r = search(s, "Reviewer", { match });
+    assert.equal(r.results[0].id, "roles/reviewer", match);
+    assert.equal(r.results[0].matched[0].where, "name");
+    const rest = r.results.slice(1);
+    assert.ok(rest.length > 1 && rest.every((x) => x.matched[0].where !== "name"), match);
+    const order = (a, b) => (a.type < b.type ? -1 : a.type > b.type ? 1 : a.title < b.title ? -1 : a.title > b.title ? 1 : a.id < b.id ? -1 : 1);
+    assert.deepEqual(rest.map((x) => x.id), [...rest].sort(order).map((x) => x.id), `${match}: past the name tier, type then name then id`);
+    // Without the tier the role would stand among the roles, after the phases and the processes.
+    assert.ok([...r.results].sort(order).findIndex((x) => x.id === "roles/reviewer") > 0);
+  }
 });

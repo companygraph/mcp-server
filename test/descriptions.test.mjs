@@ -42,6 +42,9 @@ test("describe_relations names direction as one side of relations, not a narrowe
 
 test("the terms are defined once, in the instructions, before the sentence on provenance", () => {
   for (const term of ["id", "canonical name", "owner", "`via`", "reference", "qualifier"]) assert.ok(GLOSSARY.includes(term), term);
+  // The tools' word owner is theirs alone: a question about what an owner is, is about the model.
+  assert.match(GLOSSARY, /the word is the tools' own/);
+  assert.match(GLOSSARY, /what an owner is asks about the model/);
   const text = instructionsFor(exampleSnapshot());
   assert.ok(text.indexOf(GLOSSARY) > 0);
   assert.ok(text.indexOf(GLOSSARY) < text.indexOf("This server reports"));
