@@ -19,6 +19,7 @@
 - **Shapes:** exactly `concepts`, `process`, `neighborhood`, American spelling, declared once as `SHAPES` in `lib/schemas.mjs`.
 - **The cap:** `DIAGRAM_CAP = 50` nodes besides a neighborhood's middle. A `concepts` or `process` diagram over it is refused as `cannot_draw` with `reason: "too_large"`; one with nothing to draw as `cannot_draw` with `reason: "empty"`; a neighborhood leaves out whole `via` groups, smallest first kept, and names them on a last node `more`.
 - **The answer:** `{ shape, title, mermaid, nodes, edges, omitted, model }`, `nodes` each `{ node, id, title, type }` with `node` = `n0`, `n1`, … in the order drawn. `title` is the process's, entity's or domain's name, and null for every concept. No `click` line in any source.
+- **A process node** is `<b>` + the phase's escaped title + `</b>`, then `<br/>` and who executes it: the only two tags the source ever writes, and strict mode draws them (seen in the preview of 2026-09-27). Every other label is text.
 - **Labels** go through `label()`: `#` → `#35;` first, then `"` → `#quot;`, `<` → `#lt;`, `>` → `#gt;`, a line break → a space. A concept outside the drawn domain is labeled `<its name> · <its domain's name>`; a class annotation (`<<…>>`) is never written, because Mermaid 12 refuses an escaped character inside one (found by rendering, see Task 3).
 - **The tool description stays within sixty words** and contains `Returns `; `test/descriptions.test.mjs` holds it.
 - **Commit messages** in the git register of `conventions/WRITING.md`: a sentence subject under seventy characters with no prefix and no trailing period, one to three prose paragraphs with no headers, no bullets and no plan task numbers, a `Verified:` line naming what ran, then `Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>`. After every commit, `git log -1 --format='[%s]'` shows the subject alone. The pull request body the same register, ending `🤖 Generated with [Claude Code](https://claude.com/claude-code)`.
@@ -186,7 +187,7 @@ test("a process draws its phases in its table's order, who executes each, and ea
   assert.deepEqual([d.title, d.edges, d.omitted], ["Delivery", 2, 0]);
   assert.deepEqual(lines(d), [
     "flowchart LR",
-    '  n0["Specify<br/>Backend Engineer"]', '  n1["Build<br/>Backend Engineer, Reviewer"]', '  n2["Release<br/>Reviewer"]',
+    '  n0["<b>Specify</b><br/>Backend Engineer"]', '  n1["<b>Build</b><br/>Backend Engineer, Reviewer"]', '  n2["<b>Release</b><br/>Reviewer"]',
     '  n0 -->|"Reviewer"| n1', '  n1 -->|"Reviewer"| n2',
   ]);
   assert.deepEqual(ids(d), [["n0", "processes/delivery/phases/specify"], ["n1", "processes/delivery/phases/build"], ["n2", "processes/delivery/phases/release"]]);
@@ -351,7 +352,9 @@ function process(s, id) {
   const lines = ["flowchart LR"];
   for (const e of phases) {
     const who = names(e.fields["executed-by"]).map(label).join(", ");
-    lines.push(`  ${of(e)}["${label(e.name)}${who ? `<br/>${who}` : ""}"]`);
+    // The phase's name is the node's heading and who executes it the line under it; `<b>` and
+    // `<br/>` are the two tags written here, and a title is escaped, so no title makes one.
+    lines.push(`  ${of(e)}["<b>${label(e.name)}</b>${who ? `<br/>${who}` : ""}"]`);
   }
   const drawnIds = new Set(phases.map((e) => e.id));
   const order = (x) => phases.findIndex((e) => e.id === x.from.id);
