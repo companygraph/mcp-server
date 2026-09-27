@@ -19,7 +19,7 @@
 - **Shapes:** exactly `concepts`, `process`, `neighborhood`, American spelling, declared once as `SHAPES` in `lib/schemas.mjs`.
 - **The cap:** `DIAGRAM_CAP = 50` nodes besides a neighborhood's middle. A `concepts` or `process` diagram over it is refused as `cannot_draw` with `reason: "too_large"`; one with nothing to draw as `cannot_draw` with `reason: "empty"`; a neighborhood leaves out whole `via` groups, smallest first kept, and names them on a last node `more`.
 - **The answer:** `{ shape, title, mermaid, nodes, edges, omitted, model }`, `nodes` each `{ node, id, title, type }` with `node` = `n0`, `n1`, … in the order drawn. `title` is the process's, entity's or domain's name, and null for every concept. No `click` line in any source.
-- **A process node** is `<b>` + the phase's escaped title + `</b>`, then `<br/>` and who executes it: the only two tags the source ever writes, and strict mode draws them (seen in the preview of 2026-09-27). Every other label is text.
+- **A process node** is `<b>` + the phase's escaped title + `</b>`, then `<br/>` and who executes it; **a neighborhood's middle** is `<b>` + its escaped title + `</b>`. These are the only tags the source ever writes, and strict mode draws them (seen in the preview of 2026-09-27). Every other label is text.
 - **Labels** go through `label()`: `#` → `#35;` first, then `"` → `#quot;`, `<` → `#lt;`, `>` → `#gt;`, a line break → a space. A concept outside the drawn domain is labeled `<its name> · <its domain's name>`; a class annotation (`<<…>>`) is never written, because Mermaid 12 refuses an escaped character inside one (found by rendering, see Task 3).
 - **The tool description stays within sixty words** and contains `Returns `; `test/descriptions.test.mjs` holds it.
 - **Commit messages** in the git register of `conventions/WRITING.md`: a sentence subject under seventy characters with no prefix and no trailing period, one to three prose paragraphs with no headers, no bullets and no plan task numbers, a `Verified:` line naming what ran, then `Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>`. After every commit, `git log -1 --format='[%s]'` shows the subject alone. The pull request body the same register, ending `🤖 Generated with [Claude Code](https://claude.com/claude-code)`.
@@ -198,7 +198,7 @@ test("a neighborhood draws one hop both ways, the smallest groups first", () => 
   assert.deepEqual([d.title, d.edges, d.omitted], ["Invoice", 8, 0]);
   assert.deepEqual(lines(d), [
     "flowchart LR",
-    '  n0["Invoice"]', '  n1["Invoicing"]', '  n2["Local"]', '  n3["Credit note"]', '  n4["Billing run"]',
+    '  n0["<b>Invoice</b>"]', '  n1["Invoicing"]', '  n2["Local"]', '  n3["Credit note"]', '  n4["Billing run"]',
     '  n5["Credit notes"]', '  n6["Billing period"]', '  n7["Customer"]', '  n8["Invoice line"]',
     '  n0 -->|"domain"| n1', '  n0 -->|"source"| n2', '  n3 -->|"Relations.Concept"| n0', '  n4 -->|"concepts"| n0',
     '  n5 -->|"concepts"| n0', '  n0 -->|"Relations.Concept"| n6', '  n0 -->|"Relations.Concept"| n7', '  n0 -->|"Relations.Concept"| n8',
@@ -239,7 +239,7 @@ test("a self-reference is not drawn, an entity reached both ways is one node, an
   const odd = label(ODD);
   assert.equal(odd, "Partner #quot;A#quot; #lt;B#gt; #35;1 --#gt; C");
   assert.deepEqual(lines(d), [
-    "flowchart LR", '  n0["Loop"]', `  n1["${odd}"]`, '  n2["Local"]',
+    "flowchart LR", '  n0["<b>Loop</b>"]', `  n1["${odd}"]`, '  n2["Local"]',
     '  n0 -->|"Relations.Concept"| n1', '  n0 -->|"source"| n2', '  n1 -->|"Relations.Concept"| n0',
   ]);
   assert.equal(d.nodes[1].title, ODD, "nodes carry the title as written, not escaped");
@@ -397,7 +397,8 @@ function neighborhood(s, id) {
     else left.push(g);
   }
   const { nodes, of } = namer();
-  const lines = ["flowchart LR", `  ${of(e)}["${label(e.name)}"]`];
+  // The middle is the one the picture is of, so its name is set in bold, as a phase's is.
+  const lines = ["flowchart LR", `  ${of(e)}["<b>${label(e.name)}</b>"]`];
   const sorted = (g) => [...g.arrows].sort((x, y) => byName(x.far, y.far));
   // An entity both referenced and referencing is one node with two arrows, declared once.
   const declared = new Set([e.id]);
