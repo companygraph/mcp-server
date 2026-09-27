@@ -24,6 +24,8 @@ It serves a snapshot parsed at build time with the meta-model's own parser, so a
 
 [`docs/INTERFACE.md`](docs/INTERFACE.md) is the contract: every tool's arguments and answer with a real response, the codes of every refusal, how a list is paged, and what counts as a break. Every answer carries the model commit, the core version and the parser's tag. A name resolves within a type, and a name of an owned type within its owner, so two owners may each hold one name; a lookup that meets two refuses with every candidate's id, and an id reaches each.
 
+The process picture is also a function a site can call at build time: `processDiagram(model, id)` from `companygraph-mcp-server/diagram` draws it from the parser's entities and edges alone, such as a site's `model.json`, so a page shows the chat's own picture at the commit the site pins.
+
 ## Running it
 
 From an instance's root, over stdio:

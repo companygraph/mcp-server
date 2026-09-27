@@ -23,6 +23,7 @@
     "./model": "./lib/model.mjs",
     "./schemas": "./lib/schemas.mjs",
     "./errors": "./lib/errors.mjs",
+    "./diagram": "./lib/diagram.mjs",
     "./contract": "./lib/contract.mjs",
     "./snapshot": "./lib/snapshot.mjs",
     "./read": "./lib/read.mjs",
