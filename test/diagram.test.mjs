@@ -3,7 +3,7 @@
 // is sent and a line out of place is a different picture.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { diagram, label, plain, cannot, DIAGRAM_CAP } from "../lib/diagram.mjs";
+import { diagram, processDiagram, label, plain, cannot, DIAGRAM_CAP } from "../lib/diagram.mjs";
 import { ModelError } from "../lib/errors.mjs";
 import { exampleSnapshot, instanceSnapshot, withHub, withLoops, withPunctuation, withNothingToDraw, withBackFlows, ODD, COMMIT } from "./helpers.mjs";
 
@@ -118,6 +118,12 @@ test("rows to one phase merge into one arrow, in table order, escaped in the pic
     { from: "n2", to: "n2", label: "Reviewer: held" },
   ]);
   assert.equal(d.edges, 6);
+});
+
+test("a site's model.json, the parser's entities and edges with no schemas, draws the tool's own process picture", () => {
+  const { entities, edges, commit, repo } = withBackFlows();
+  const { model, shape, ...drawn } = diagram(withBackFlows(), { shape: "process", id: "processes/delivery" });
+  assert.deepEqual(processDiagram(structuredClone({ entities, edges, commit, repo }), "processes/delivery"), drawn);
 });
 
 test("the Stop node is never a node a client links, and its arrows are never links", () => {
