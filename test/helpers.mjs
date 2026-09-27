@@ -86,3 +86,14 @@ export function withLoops() {
   files.set("concepts/partner.md", concept(ODD, ["Loop"]));
   return built(files, schemas);
 }
+
+// A domain no concept names, a process with no phases yet, and a concept in Pricing that names
+// a concept of no domain at all.
+export function withNothingToDraw() {
+  const { files, schemas } = exampleFiles();
+  files.set("domains/support.md", "---\nsource: Local\n---\n\n# Support\n\n> A domain made for a test, which no concept names.\n");
+  files.set("processes/intake/intake.md", "---\nsource: Local\n---\n\n# Intake\n\n> A process made for a test, which has no phases yet.\n");
+  files.set("concepts/stray.md", concept("Stray", []));
+  files.set("concepts/priced.md", concept("Priced", ["Stray"]).replace("source: Local\n", "source: Local\ndomain: Pricing\n"));
+  return built(files, schemas);
+}

@@ -10,7 +10,7 @@ import { OUTPUTS, ErrorResult } from "../lib/schemas.mjs";
 import { CODES } from "../lib/errors.mjs";
 import { sampleCalls, checkAnswer } from "../lib/contract.mjs";
 import { words } from "../lib/words.mjs";
-import { exampleSnapshot, instanceSnapshot, withOwnedNameTwice } from "./helpers.mjs";
+import { exampleSnapshot, instanceSnapshot, withOwnedNameTwice, withNothingToDraw } from "./helpers.mjs";
 
 async function connect(s) {
   const [a, b] = InMemoryTransport.createLinkedPair();
@@ -120,6 +120,9 @@ for (const [label, s] of FIXTURES) {
       ["fetch", { id: "nothing/here" }, "unknown_entity", (d) => d.id === "nothing/here"],
       ["list_references", { entity: "nothing/here" }, "unknown_entity", (d) => d.id === "nothing/here"],
       ["find_evidence", { skill: "Knitting" }, "unknown_entity", (d) => d.name === "Knitting"],
+      ["diagram", { shape: "process", id: "nothing/here" }, "unknown_entity", (d) => d.id === "nothing/here"],
+      ["diagram", { shape: "neighborhood" }, "invalid_argument", (d) => d.argument === "id"],
+      ["diagram", { shape: "graph" }, "invalid_argument", (d) => d.argument === "shape"],
       ["describe_rule", { rule: "R999" }, "unknown_rule", (d) => d.rule === "R999" && d.rules.includes("R4")],
       ["get_entity", {}, "invalid_argument", (d) => d.argument === "id"],
       ["search", { query: "   " }, "invalid_argument", (d) => d.argument === "query"],
@@ -158,6 +161,14 @@ test("an ambiguous name is refused with every candidate's id, and each id then a
     const one = checkAnswer("get_entity", await client.callTool({ name: "get_entity", arguments: { id: c.id } }));
     assert.deepEqual([one.entity.id, one.entity.owner], [c.id, c.owner]);
   }
+  await client.close();
+});
+
+test("a diagram with nothing to draw is refused by code, with what it would have drawn", async () => {
+  const client = await connect(withNothingToDraw());
+  const { error } = checkAnswer("diagram", await client.callTool({ name: "diagram", arguments: { shape: "process", id: "processes/intake" } }));
+  assert.deepEqual([error.code, error.details], ["cannot_draw", { shape: "process", reason: "empty", nodes: 0, limit: 50 }]);
+  reached.add(error.code);
   await client.close();
 });
 

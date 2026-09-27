@@ -21,7 +21,7 @@ A shape this package builds is closed, and a field it does not declare fails the
 
 ## Which tool
 
-`get_entity` is an entity as structured data, for a client that reasons over the model. `fetch` is the same entity's page as written, the Markdown source, for a client that quotes or displays it, and carries no structured copy. `search` with `match: "name"` answers a name with every entity that carries it, which is the way from a name to an id. `list_entities` browses one type, `list_references` the edges, and `describe_schema` and `describe_relations` what the schemas declare, for one type and for all of them.
+`get_entity` is an entity as structured data, for a client that reasons over the model. `fetch` is the same entity's page as written, the Markdown source, for a client that quotes or displays it, and carries no structured copy. `search` with `match: "name"` answers a name with every entity that carries it, which is the way from a name to an id. `list_entities` browses one type, `list_references` the edges, and `describe_schema` and `describe_relations` what the schemas declare, for one type and for all of them. `diagram` draws part of the model as Mermaid, for a client that shows a picture rather than lists the edges.
 
 ## The tools
 
@@ -1052,6 +1052,49 @@ The same tool in its third mode. Beside `query` and `match` the answer carries `
 }
 ```
 
+### `diagram`
+
+A picture of part of the model as Mermaid source, built from its edges and never from prose. `shape` is `concepts`, `process` or `neighborhood`. `concepts` is a class diagram of every concept and the associations their Relations tables draw, each labeled with its Cardinality and its As; `domain`, a domain's id, narrows it to that domain's concepts and any concept outside it they reach, labeled with its own domain's name after its title. `process` takes the `id` of a process and draws its phases in the order of its Phases table, each with who executes it, and an arrow for each `gate-to`, labeled with the gate's approvers. `neighborhood` takes any `id` and draws that entity with everything one hop from it, one arrow for each `via` and far entity, labeled with the `via` and, where several edges stand behind it, how many.
+
+`nodes` says which entity each node of the source is, `n0` and on in the order drawn, so a client links a node without reading the source back; `title` is the name of what is drawn, null for every concept; `edges` counts the edges drawn and `omitted` those left out. A picture holds fifty nodes besides a neighborhood's middle. A neighborhood takes its groups of arrows smallest first, leaves out whole any group that does not fit, and names those on a last node, `more`, which is not in `nodes`. A concepts or process diagram that would hold more is refused as `cannot_draw` with `reason: "too_large"`, and one with nothing to draw with `reason: "empty"`.
+
+```json
+{
+  "tool": "diagram",
+  "arguments": {
+    "shape": "process",
+    "id": "processes/delivery"
+  },
+  "answer": {
+    "shape": "process",
+    "title": "Delivery",
+    "mermaid": "flowchart LR\n  n0[\"<b>Specify</b><br/>Backend Engineer\"]\n  n1[\"<b>Build</b><br/>Backend Engineer, Reviewer\"]\n  n2[\"<b>Release</b><br/>Reviewer\"]\n  n0 -->|\"Reviewer\"| n1\n  n1 -->|\"Reviewer\"| n2",
+    "nodes": [
+      {
+        "node": "n0",
+        "id": "processes/delivery/phases/specify",
+        "title": "Specify",
+        "type": "phase"
+      },
+      {
+        "node": "n1",
+        "id": "processes/delivery/phases/build",
+        "title": "Build",
+        "type": "phase"
+      }
+    ],
+    "edges": 2,
+    "omitted": 0,
+    "model": {
+      "commit": "0123456789abcdef0123456789abcdef01234567",
+      "repo": "companygraph/meta-model",
+      "core": "0.0.0",
+      "parser": "v0.0.0"
+    }
+  }
+}
+```
+
 ## Paging
 
 `list_entities`, `list_references`, `find_evidence` and `search` take `limit`, 50 by default, at least 1 and 200 at most, and `cursor`. A limit outside the range is served at the nearest bound and not refused, so `limit: 0` returns one entry and `limit: 1000` returns 200; `page.returned` says how many came back. Both arguments say so themselves in every paged tool's input schema. Follow `page.nextCursor` while `page.hasMore`. The order of each list is fixed and a served model never changes, so a walk neither repeats nor skips.
@@ -1071,6 +1114,7 @@ A refused call is a tool error. Its text is a sentence for a reader, and its str
 | `invalid_argument` | an argument missing, of the wrong type or outside its enumeration; an empty query, neither id nor type and name, a direction with nothing to be relative to | `argument`, `reason` |
 | `invalid_cursor` | a cursor this server did not write, or one from another commit | `reason`: `malformed` or `other_commit` |
 | `unsupported_snapshot` | the snapshot predates what the tool reads | `missing` |
+| `cannot_draw` | a diagram would draw nothing, or more nodes than it holds | `shape`, `reason`: `too_large` or `empty`, `nodes`, `limit` |
 
 Arguments that fail a tool's input schema, a missing one, a number where a string belongs or a value outside an enumeration, are refused like any other: `invalid_argument`, with the `argument` at fault and the `reason`. Where several are at fault the sentence names each and `details` holds the first. An argument no schema names is ignored and not refused. What carries no code is what never reaches a tool: a tool name nobody registered and a request that is not the protocol's are answered by the MCP SDK as JSON-RPC errors, not as tool results.
 

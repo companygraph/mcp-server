@@ -5,7 +5,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { diagram, label, DIAGRAM_CAP } from "../lib/diagram.mjs";
 import { ModelError } from "../lib/errors.mjs";
-import { exampleSnapshot, instanceSnapshot, withHub, withLoops, ODD, COMMIT } from "./helpers.mjs";
+import { exampleSnapshot, instanceSnapshot, withHub, withLoops, withNothingToDraw, ODD, COMMIT } from "./helpers.mjs";
 
 const s = exampleSnapshot();
 const lines = (d) => d.mermaid.split("\n");
@@ -122,4 +122,17 @@ test("the arguments each shape does not take, needs or cannot use are refused by
   refused(() => diagram(s, { shape: "concepts", domain: "concepts/invoice" }), "invalid_argument", { argument: "domain", reason: "not a domain" });
   refused(() => diagram(s, { shape: "process", id: "nothing/here" }), "unknown_entity", { id: "nothing/here" });
   refused(() => diagram(instanceSnapshot(), { shape: "concepts" }), "unknown_type");
+});
+
+test("a diagram with nothing to draw, or more than it holds, is refused rather than cut", () => {
+  const n = withNothingToDraw();
+  refused(() => diagram(n, { shape: "concepts", domain: "domains/support" }), "cannot_draw", { shape: "concepts", reason: "empty", nodes: 0, limit: DIAGRAM_CAP });
+  refused(() => diagram(n, { shape: "process", id: "processes/intake" }), "cannot_draw", { shape: "process", reason: "empty", nodes: 0, limit: DIAGRAM_CAP });
+  refused(() => diagram(withHub({ out: 60, into: 5 }), { shape: "concepts" }), "cannot_draw", { shape: "concepts", reason: "too_large", nodes: 74, limit: DIAGRAM_CAP });
+});
+
+test("a concept outside the domain that belongs to no domain is drawn by its title alone", () => {
+  const d = diagram(withNothingToDraw(), { shape: "concepts", domain: "domains/pricing" });
+  const stray = d.nodes.find((n) => n.id === "concepts/stray");
+  assert.ok(d.mermaid.split("\n").includes(`  class ${stray.node}["Stray"]`), d.mermaid);
 });

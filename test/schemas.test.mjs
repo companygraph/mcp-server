@@ -5,6 +5,7 @@ import assert from "node:assert/strict";
 import { OUTPUTS, ErrorResult, Edge, Page, Stamp } from "../lib/schemas.mjs";
 import { TOOLS } from "../lib/tools.mjs";
 import * as model from "../lib/model.mjs";
+import { diagram } from "../lib/diagram.mjs";
 import { exampleSnapshot, instanceSnapshot } from "./helpers.mjs";
 
 test("every tool has an output schema, and no schema is left without a tool", () => {
@@ -20,6 +21,7 @@ test("the queries' own answers satisfy their schemas, on both fixtures", () => {
       list_entities: model.listEntities(s, "experience"), get_entity: model.getEntityById(s, s.entities.find((e) => e.type === "experience").id),
       list_references: model.listReferences(s, {}), find_evidence: model.findEvidence(s, s.entities.find((e) => e.type === "skill").id),
       search: model.search(s, "a"), fetch: model.fetchEntity(s, "identity"),
+      diagram: diagram(s, { shape: "neighborhood", id: s.rootId }),
     };
     assert.deepEqual(Object.keys(answers).sort(), Object.keys(OUTPUTS).sort());
     for (const [name, answer] of Object.entries(answers)) {
