@@ -23,9 +23,9 @@ function deployment({ commit, tag, register }) {
   fs.writeFileSync(path.join(dir, "source.json"), JSON.stringify({ repo: "companygraph/meta-model", commit }));
   fs.writeFileSync(path.join(dir, "package.json"), JSON.stringify({ dependencies: { "companygraph-mcp-server": `github:companygraph/mcp-server#${tag}` } }));
   fs.mkdirSync(path.join(dir, ".github", "workflows"), { recursive: true });
-  fs.writeFileSync(path.join(dir, ".github", "workflows", "deployment.yml"), `jobs:\n  deploy:\n    uses: companygraph/mcp-server/.github/workflows/deployment.yml@${tag}\n`);
+  fs.writeFileSync(path.join(dir, ".github", "workflows", "deploy.yml"), `jobs:\n  deploy:\n    uses: companygraph/mcp-server/.github/workflows/deploy-google.yml@${tag}\n`);
   fs.mkdirSync(path.join(dir, "infra"));
-  fs.writeFileSync(path.join(dir, "infra", "main.tf"), `module "mcp" {\n  source = "github.com/companygraph/mcp-server//deploy/terraform?ref=${tag}"\n}\n`);
+  fs.writeFileSync(path.join(dir, "infra", "main.tf"), `module "mcp" {\n  source = "github.com/companygraph/mcp-server//deploy/google/terraform?ref=${tag}"\n}\n`);
   fs.mkdirSync(path.join(dir, "dist"));
   fs.writeFileSync(path.join(dir, "dist", "snapshot.json"), JSON.stringify(exampleSnapshot()));
   fs.mkdirSync(path.join(dir, "node_modules"));
