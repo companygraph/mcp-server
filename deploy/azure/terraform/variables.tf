@@ -4,7 +4,8 @@ variable "registry_name" { type = string }
 variable "domain" { type = string }
 variable "budget_chf" { type = number }
 # The first of the month the budget starts counting from. Azure replaces a budget whose start
-# changes, so the date is written down once rather than taken from the clock.
+# changes, so the date is written down once rather than taken from the clock, and Azure refuses
+# a budget whose start month has already passed, so it is the month of the first apply or later.
 variable "budget_start" {
   type = string
   validation {
