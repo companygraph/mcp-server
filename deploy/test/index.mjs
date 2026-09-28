@@ -2,11 +2,13 @@
 // deployment to run over its own snapshot and page, registered on `node:test` when the caller
 // imports this module and calls the function — not before, so a deployment controls when its
 // suite runs them rather than inheriting them at import time.
+import { registerConfigTests } from "./config.mjs";
 import { registerPinTests } from "./pin.mjs";
 import { registerToolsTests } from "./tools.mjs";
 import { registerPageTests } from "./page.mjs";
 
 export function registerDeploymentTests() {
+  registerConfigTests();
   registerPinTests();
   registerToolsTests();
   registerPageTests();
