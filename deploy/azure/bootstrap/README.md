@@ -28,4 +28,6 @@ A module cannot configure its own provider and still be called for more than one
       owner_id            = local.d.owner_id
     }
 
-where `local.d = jsondecode(file("${path.module}/../../deployment.json"))`. The outputs `tenant_id`, `terraform_client_id`, `plan_client_id` and `deploy_client_id` go into `deployment.json`. None of them is a secret: only a token GitHub signs for this repository passes a credential.
+where `local.d = jsondecode(file("${path.module}/../../deployment.json"))`. The outputs `tenant_id`, `terraform_client_id`, `plan_client_id` and `deploy_client_id` go into `deployment.json`. None of them is a secret: only a token GitHub signs for this repository passes a credential. Only this root, applied by the owner, registers resource providers: the roots CI applies keep `resource_provider_registrations = "none"` and name no list, since their identities hold rights on the resource group and none at the subscription.
+
+`terraform-plan` holds Reader on the resource group and nothing more, so a pull request can change nothing. Whether Reader alone can refresh every resource the modules make is settled by the first deployment's first pull-request plan: if the refresh asks for an action Reader lacks, such as a container app's `listSecrets`, the bootstrap gives `terraform-plan` a custom role of Reader plus exactly the actions the refresh names, and no more.
