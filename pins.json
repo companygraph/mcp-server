@@ -1,7 +1,7 @@
 {
   "pins": [
     { "kind": "conventions", "file": "conventions.json", "repo": "robertblust/conventions" },
-    { "kind": "npm-tag", "file": "package.json", "repo": "companygraph/meta-model", "after": ["npm run interface"] }
+    { "kind": "npm-tag", "file": "package.json", "repo": "companygraph/meta-model", "after": ["npm run fixtures", "npm run interface"] }
   ],
   "verify": ["npm test"],
   "release": ["npm version {version} --no-git-tag-version"]
