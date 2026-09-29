@@ -8,8 +8,11 @@
 //
 // Four blocks and no more. Tokens carries the color ramp and both themes; the prose reset is
 // what every prose page in the family declares first; the title contract is the two-part
-// headline; the footer credit is the mark. The header, the nav and the stage are deliberately
-// absent — this is one screen of prose and a table, with nowhere to navigate to.
+// headline; the header contract is the row the family's pages open with, kept on screen as the
+// page scrolls. The page's header holds only the mark, with nowhere to navigate to, so most of
+// that block's rules — the nav, the menu button, the language control — match nothing here; it
+// is taken whole because the row's height, its band and its stickiness are the block's, and a
+// copy of three of its rules is a copy that drifts. The stage is absent: there is no graph here.
 //
 // What follows them is the deployment's own layout, written against the tokens and against the
 // class names `companygraph-mcp-server` documents as its markup contract. Those names are the
@@ -75,6 +78,7 @@ const faces = FONTS.map(({ family, file, weight }) => {
 const tokens = blockFor("design tokens", "page");
 const reset = blockFor("prose reset", null);
 const title = blockFor("title contract", null);
+const header = blockFor("header contract", null);
 
 // The deployment's own layout, in a file that is actually CSS. It lived in a template literal
 // here once and a backtick in it — in a comment, naming a class — ended the literal and broke
@@ -84,5 +88,5 @@ const own = fs.readFileSync(path.join(ROOT, "own.css"), "utf8");
 
 fs.mkdirSync(DIST, { recursive: true });
 const out = path.join(DIST, "page.css");
-fs.writeFileSync(out, [licenses, faces, tokens, reset, title, own].join("\n\n") + "\n");
+fs.writeFileSync(out, [licenses, faces, tokens, reset, title, header, own].join("\n\n") + "\n");
 console.log(`wrote ${out}: ${fs.statSync(out).size} bytes from the design package's own blocks`);
