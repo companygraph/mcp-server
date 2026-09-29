@@ -96,6 +96,10 @@ test("the header links the identity's own url, and is absent when it has none", 
   assert.ok(home, "the fixture identity has a url to link");
   assert.ok(html.includes(`<a class="brand" href="${home}"`), "the brand links the identity's url");
   assert.ok(html.includes(">Robert Blust</a>") || html.includes(`>${s.root}</a>`), "with no brand supplied the name stands in, escaped");
+  // The header's shell ends with it and comes before `main`, so a design can make that box
+  // sticky: inside `main` it would stick for the length of the page and then scroll away.
+  assert.match(html, /<div class="shell"><header><div class="bar">[\s\S]*?<\/header><\/div>\s*<main class="shell">/,
+    "the header sits in a shell of its own, ahead of main");
 
   const lockup = '<svg viewBox="0 0 32 32"><rect class="plate"/></svg><b>A <span>B</span></b>';
   const branded = await listen({ pageBrand: lockup });
