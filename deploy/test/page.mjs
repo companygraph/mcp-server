@@ -125,20 +125,31 @@ export function registerPageTests() {
       await page.close();
     });
 
-    // Where the mark sits, in the numbers a sibling page puts it at: 2rem of header padding
-    // above it, and the shell's own gutter to its left.
-    test("the mark sits where every sibling puts it", async () => {
+    // Where the mark sits, in the numbers a sibling page puts it at: the header contract's
+    // sticky bar, 59px tall with the mark centered in it, and the shell's own gutter to its left.
+    // Measured on blust.ch, companygraph.io and guestgraph.io at design v0.124.0: 190, 16, 28, 59.
+    // Scrolled, the bar is still at the top of the window with the mark in it.
+    test("the mark sits where every sibling puts it, and stays there as the page scrolls", async () => {
       const page = await browser.newPage({ viewport: { width: 1400, height: 900 } });
       await page.goto(base, { waitUntil: "networkidle" });
-      const mark = await page.evaluate(() => {
+      const measure = () => page.evaluate(() => {
         const r = document.querySelector(".brand svg").getBoundingClientRect();
-        return { left: Math.round(r.left), top: Math.round(r.top), size: Math.round(r.height) };
+        const shell = document.querySelector(".shell:has(> header > .bar)");
+        return { left: Math.round(r.left), top: Math.round(r.top), size: Math.round(r.height),
+                 bar: shell ? Math.round(shell.getBoundingClientRect().height) : null,
+                 position: shell ? getComputedStyle(shell).position : null };
       });
+      const mark = await measure();
       // (1400 − 1180) / 2 centers the shell, and 80 is its gutter.
       assert.equal(mark.left, 190, "the mark starts at the shell's gutter");
       assert.equal(mark.size, 28, "the mark is the family's 28px");
-      // 2rem above, and the mark centered in a row no taller than itself.
-      assert.ok(mark.top >= 30 && mark.top <= 34, `the mark sits under 2rem of header, at ${mark.top}px`);
+      assert.equal(mark.position, "sticky", "the header's own shell is the sticky box");
+      assert.equal(mark.bar, 59, "the bar is the family's one height");
+      assert.ok(mark.top >= 14 && mark.top <= 18, `the mark sits centered in the bar, at ${mark.top}px`);
+      await page.mouse.wheel(0, 1200);
+      await page.waitForFunction(() => window.scrollY > 0);
+      const scrolled = await measure();
+      assert.equal(scrolled.top, mark.top, "scrolled, the mark has not moved");
       await page.close();
     });
 
