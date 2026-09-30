@@ -19,7 +19,10 @@ test("the snapshot is the parser's graph plus provenance, schemas and source tex
   assert.deepEqual(s.edges, graph.edges);
   assert.deepEqual(s.types, graph.types);
   assert.equal(s.schemas.length, EXAMPLE_TYPES);
-  assert.ok(s.schemas.every((x) => x.id.startsWith("core/")));
+  // core 0.66.0: a schema's id is the UUID its frontmatter carries, never `core/<type>`, but
+  // its address still names the type, exactly as its id used to.
+  assert.ok(s.schemas.every((x) => x.address.startsWith("core/")));
+  assert.ok(s.schemas.every((x) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(x.id)), "a schema's id is a UUID");
   for (const e of s.entities) {
     assert.equal(e.markdown, files.get(e.path.slice("example/model/".length)));
     assert.match(e.markdown, /^(---|# )/);

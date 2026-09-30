@@ -22,7 +22,7 @@ for (const [label, s, root, base] of FIXTURES) {
     const types = listTypes(s).types;
     assert.ok(types.length > 0);
     for (const { type } of types) {
-      const file = s.schemas.find((x) => x.id === `core/${type}`).path;
+      const file = s.schemas.find((x) => x.address === `core/${type}`).path;
       assert.equal(describeSchema(s, type).url, `${base}${file}`, type);
       // The address names a real file: the one on disk the fixture's core was read from.
       assert.ok(fs.existsSync(path.join(root, s.core.path, file)), file);
