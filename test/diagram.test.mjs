@@ -286,7 +286,7 @@ test("a concept outside the domain that belongs to no domain is drawn by its tit
 test("the schemas draw every type, each declared reference with its multiplicity and each nesting, and leave out what every type declares", () => {
   const d = diagram(s, { shape: "schema" });
   assert.equal(d.title, null);
-  assert.deepEqual(d.nodes.map((n) => n.title), s.schemas.map((x) => x.id.slice("core/".length)).sort());
+  assert.deepEqual(d.nodes.map((n) => n.title), s.schemas.map((x) => x.address.slice("core/".length)).sort());
   assert.deepEqual(d.nodes[0], { node: "n0", id: "core/achievement-kind", title: "achievement-kind", type: "schema",
     url: `https://github.com/companygraph/meta-model/blob/${COMMIT}/core/achievement-kind-schema.md` });
   // Every type but the source's own declares `source`, so it is said once and drawn by none,

@@ -63,7 +63,7 @@ test("describe_schema carries the type's relations both ways, read from the decl
 test("every relation names declared types, in the instance's own core too", () => {
   for (const snapshot of [s, instanceSnapshot()]) {
     const r = describeRelations(snapshot);
-    const types = new Set(snapshot.schemas.map((x) => x.id.slice("core/".length)));
+    const types = new Set(snapshot.schemas.map((x) => x.address.slice("core/".length)));
     assert.ok(r.relations.length > 0);
     for (const x of r.relations) {
       assert.ok(types.has(x.from), `${x.from}.${x.via} → ${x.to}`);
