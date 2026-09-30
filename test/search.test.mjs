@@ -5,10 +5,10 @@ import assert from "node:assert/strict";
 import { ModelError, listEntities, search } from "../lib/model.mjs";
 import { OUTPUTS } from "../lib/schemas.mjs";
 import { buildSnapshot } from "../lib/snapshot.mjs";
-import { exampleSnapshot, exampleFiles, withSharedName, withOwnedNameTwice, COMMIT, PARSER } from "./helpers.mjs";
+import { exampleSnapshot, exampleFiles, withSharedName, withOwnedNameTwice, COMMIT, PARSER, idAt } from "./helpers.mjs";
 
 const s = exampleSnapshot();
-const MIRA = "profiles/mira-halvorsen";
+const MIRA = idAt(s, "profiles/mira-halvorsen");
 
 test("list_entities pages, names each entry's type and keeps one owner's entities", () => {
   const all = listEntities(s, "skill");
@@ -30,7 +30,7 @@ test("matched says where a query hit, in one form", () => {
   const mira = r.results.find((x) => x.id === MIRA);
   assert.ok(mira.matched.some((m) => m.where === "table" && m.key === "Evidence"));
   assert.deepEqual([mira.title, mira.type, mira.owner], ["Mira Halvorsen", "profile", null]);
-  const byName = search(s, "domain-driven").results.find((x) => x.id === "skills/domain-driven-design");
+  const byName = search(s, "domain-driven").results.find((x) => x.id === idAt(s, "skills/domain-driven-design"));
   assert.deepEqual(byName.matched.find((m) => m.where === "name"), { where: "name", key: null });
   for (const x of r.results) for (const m of x.matched) {
     assert.ok(["name", "tagline", "field", "section", "table"].includes(m.where));
@@ -105,6 +105,7 @@ test("Deciding well finds the value Decide well over build fast and the profile 
   const r = search(withHeadlines(), "Deciding well", { match: "words" });
   assert.equal(r.match, "words");
   assert.deepEqual(r.words, [{ word: "deciding", stem: "decid", common: false }, { word: "well", stem: "well", common: false }]);
+  // withHeadlines() adds pages with no `id:`, so each one's id is its address.
   const value = r.results.find((x) => x.id === "values/decide-well-over-build-fast");
   const profile = r.results.find((x) => x.id === "profiles/nils-aker");
   assert.deepEqual(value.matched, [{ where: "name", key: null }]);
@@ -117,9 +118,11 @@ test("validated in the open finds the experience whose bullets hold validation, 
   assert.deepEqual(r.words.map((w) => [w.word, w.stem]), [["validated", "valid"], ["in", "in"], ["the", "the"], ["open", "open"], ["ideas", "idea"]]);
   // "in" was common while core 0.43.0's example entities held it past half of them; core 0.45.0's
   // question-kind and fourth question grow the example past that boundary again, and "in" falls
-  // back to required. A common or required word is reported the same way, so the results below
-  // are unmoved either way.
-  assert.deepEqual(r.words.map((w) => w.common), [false, false, true, false, false]);
+  // back to required; meta-model 0.65.0's example adds the entity-id format, whose tagline says
+  // "written in", and "in" stands in more than half again. A common or required word is reported
+  // the same way, so the results below are unmoved either way.
+  assert.deepEqual(r.words.map((w) => w.common), [false, true, true, false, false]);
+  // withHeadlines() adds pages with no `id:`, so each one's id is its address.
   assert.deepEqual(r.results.map((x) => x.id), ["profiles/nils-aker/experiences/2024-open-review"]);
   assert.deepEqual(r.results[0].matched, [{ where: "name", key: null }, { where: "section", key: "Achievements" }], "open in the name, the rest in the bullets");
 });
@@ -179,15 +182,16 @@ test("a possessive asks for its noun, so the apostrophe narrows nothing", () => 
 });
 
 test("an entity whose name matched stands first, before every entity that only mentions it, and the rest keep their order", () => {
+  const REVIEWER = idAt(s, "roles/reviewer");
   for (const match of ["words", "text"]) {
     const r = search(s, "Reviewer", { match });
-    assert.equal(r.results[0].id, "roles/reviewer", match);
+    assert.equal(r.results[0].id, REVIEWER, match);
     assert.equal(r.results[0].matched[0].where, "name");
     const rest = r.results.slice(1);
     assert.ok(rest.length > 1 && rest.every((x) => x.matched[0].where !== "name"), match);
     const order = (a, b) => (a.type < b.type ? -1 : a.type > b.type ? 1 : a.title < b.title ? -1 : a.title > b.title ? 1 : a.id < b.id ? -1 : 1);
     assert.deepEqual(rest.map((x) => x.id), [...rest].sort(order).map((x) => x.id), `${match}: past the name tier, type then name then id`);
     // Without the tier the role would stand among the roles, after the phases and the processes.
-    assert.ok([...r.results].sort(order).findIndex((x) => x.id === "roles/reviewer") > 0);
+    assert.ok([...r.results].sort(order).findIndex((x) => x.id === REVIEWER) > 0);
   }
 });

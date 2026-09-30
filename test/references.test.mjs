@@ -4,11 +4,11 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { ModelError, listReferences, describeRelations } from "../lib/model.mjs";
-import { exampleSnapshot, instanceSnapshot, COMMIT, EXAMPLE_CORE, PARSER } from "./helpers.mjs";
+import { exampleSnapshot, instanceSnapshot, COMMIT, EXAMPLE_CORE, PARSER, idAt } from "./helpers.mjs";
 
 const s = exampleSnapshot();
-const DDD = "skills/domain-driven-design";
-const MIRA = "profiles/mira-halvorsen";
+const DDD = idAt(s, "skills/domain-driven-design");
+const MIRA = idAt(s, "profiles/mira-halvorsen");
 
 test("an edge names both ends, the field that drew it and the row's other columns", () => {
   const r = listReferences(s, { entity: DDD, direction: "in", via: "Skills.Skill" });
@@ -17,7 +17,7 @@ test("an edge names both ends, the field that drew it and the row's other column
   assert.deepEqual(Object.keys(claim), ["from", "via", "to", "attrs"]);
   assert.deepEqual(claim.from, { id: MIRA, type: "profile", name: "Mira Halvorsen" });
   assert.deepEqual(claim.to, { id: DDD, type: "skill", name: "Domain-Driven Design" });
-  assert.deepEqual(claim.attrs.Level, { id: "proficiency-levels/competent", type: "proficiency-level", name: "Competent" });
+  assert.deepEqual(claim.attrs.Level, { id: idAt(s, "proficiency-levels/competent"), type: "proficiency-level", name: "Competent" });
   assert.ok(r.edges.every((x) => x.via === "Skills.Skill" && x.to.id === DDD));
   assert.equal(r.page.total, r.edges.length);
 });
@@ -67,8 +67,13 @@ test("with no argument it pages through every edge, in one fixed order", () => {
   // Compared part by part: joined into one string, a name that is the start of another would
   // sort by whatever character the join put between them.
   const byParts = (a, b) => { for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return a[i] < b[i] ? -1 : 1; return 0; };
-  const all = listReferences(s, { limit: 200 }).edges.map((x) => [x.from.id, x.via, x.to.id]);
+  // By where each end's page sits, not by the ids the edge carries, which were minted in no
+  // order a reader could follow.
+  const addressOf = new Map(s.entities.map((e) => [e.id, e.address]));
+  const all = listReferences(s, { limit: 200 }).edges.map((x) => [addressOf.get(x.from.id), x.via, addressOf.get(x.to.id)]);
   assert.deepEqual(all, [...all].sort(byParts), "sorted by from, via, to");
+  const ids = listReferences(s, { limit: 200 }).edges.map((x) => [x.from.id, x.via, x.to.id]);
+  assert.notDeepEqual(ids, [...ids].sort(byParts), "the example's ids alone would order them otherwise");
   const second = listReferences(s, { limit: 40, cursor: first.page.nextCursor });
   assert.deepEqual(second.edges[0], listReferences(s, { limit: 200 }).edges[40]);
 });
@@ -100,6 +105,7 @@ test("nested-in names no declared field or column, over both fixtures", () => {
 
 test("the reference instance's profile holds more edges than one page, and they walk", () => {
   const i = instanceSnapshot();
+  // Named by address, which reaches the profile whether or not the instance carries ids.
   const first = listReferences(i, { entity: "profiles/robert-blust", direction: "out" });
   assert.ok(first.page.hasMore);
   assert.equal(first.edges.length, 50);

@@ -6,10 +6,13 @@ import { createServer } from "../lib/server.mjs";
 import { instanceSnapshot, INSTANCE_COMMIT, INSTANCE_CORE, PARSER } from "./helpers.mjs";
 
 const s = instanceSnapshot();
+// Where an entity's page sits. The instance is pinned at a commit that may or may not carry ids,
+// so a test that means a place compares addresses, which hold either way.
+const addressOf = (id) => s.entities.find((e) => e.id === id).address;
 
 test("the instance parses to what its site publishes", () => {
   assert.equal(s.root, "Robert Blust");
-  assert.equal(s.rootId, "identity");
+  assert.equal(addressOf(s.rootId), "identity");
   assert.equal(s.entities.length, 155);
   assert.equal(s.edges.length, 964);
   assert.equal(listTypes(s).types.length, 16);
@@ -17,9 +20,9 @@ test("the instance parses to what its site publishes", () => {
 });
 
 test("the company of one: the identity and the profile share a name, and each is reached by type or by id", () => {
-  assert.equal(getEntity(s, "identity", "Robert Blust").entity.id, "identity");
-  assert.equal(getEntity(s, "profile", "Robert Blust").entity.id, "profiles/robert-blust");
-  assert.deepEqual(search(s, "Robert Blust", { match: "name" }).results.map((x) => x.id), ["identity", "profiles/robert-blust"]);
+  assert.equal(getEntity(s, "identity", "Robert Blust").entity.id, s.rootId);
+  assert.equal(addressOf(getEntity(s, "profile", "Robert Blust").entity.id), "profiles/robert-blust");
+  assert.deepEqual(search(s, "Robert Blust", { match: "name" }).results.map((x) => addressOf(x.id)), ["identity", "profiles/robert-blust"]);
   assert.throws(() => fetchEntity(s, "Robert Blust"), (e) => e instanceof ModelError && e.code === "unknown_entity");
   assert.equal(fetchEntity(s, "profiles/robert-blust").title, "Robert Blust");
 });
@@ -36,7 +39,7 @@ test("which skills are Expert, and on what evidence", () => {
   assert.equal(expert.length, 24);
   assert.ok(expert.some((r) => r.to.name === "Agentic AI development"));
   const ev = findEvidence(s, "Agentic AI development");
-  const claim = ev.evidence.profile.find((x) => x.from.id === "profiles/robert-blust" && x.via === "Skills.Skill");
+  const claim = ev.evidence.profile.find((x) => addressOf(x.from.id) === "profiles/robert-blust" && x.via === "Skills.Skill");
   assert.equal(claim.attrs.Level.name, "Expert");
   const row = ev.evidence.profile.find((x) => x.via === "Evidence.Skill" && x.attrs["What it shows"].startsWith("Built LIKE MAGIC's internal AI marketplace on Claude"));
   assert.equal(row.attrs.Experience.name, "Co-Founder & Head of Technology");
@@ -45,9 +48,9 @@ test("which skills are Expert, and on what evidence", () => {
 
 test("what was built at LIKE MAGIC", () => {
   const hits = search(s, "LIKE MAGIC").results;
-  assert.ok(hits.some((r) => r.id === "profiles/robert-blust/experiences/2022-likemagic"));
+  assert.ok(hits.some((r) => addressOf(r.id) === "profiles/robert-blust/experiences/2022-likemagic"));
   const e = getEntity(s, "experience", "Co-Founder & Head of Technology").entity;
-  assert.equal(e.id, "profiles/robert-blust/experiences/2022-likemagic");
+  assert.equal(addressOf(e.id), "profiles/robert-blust/experiences/2022-likemagic");
   assert.equal(e.fields.organization, "LIKE MAGIC AG");
   assert.deepEqual(e.stamp, { kind: "Role", start: "2022-04", end: "2026-05" });
   assert.ok(e.sections.some((x) => x.heading === "Achievements"));

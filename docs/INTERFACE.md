@@ -4,7 +4,7 @@ What a client of this server may rely on: the tools, their arguments, the fields
 
 ## Terms
 
-An **id** identifies one entity across the whole model, such as `skills/domain-driven-design`, and every tool that takes an entity takes its id. A **canonical name** is an entity's title, unique within its type and, for an owned type, within its owner, so a name alone can be ambiguous where an id cannot. An **owner** is the entity another is nested under; the word is the tools' own, for their `owner` argument and field, and a question about what an owner is asks about the model, which may hold an entity of that name. A **reference** is an edge from one entity to another, and **`via`** names the field or `Section.Column` that drew it, or `nested-in` for nesting. A **qualifier** is a value on a table row that describes that row's edge and draws none of its own.
+An **id** identifies one entity across the whole model, such as `01a02f53-2408-7255-a610-b931d033c1d4`, and stays with it when its page moves. An **address** is where the page sits now, its folder and slug, such as `skills/domain-driven-design`. Every tool that takes an entity takes its id or its address and tries the id first, and every answer gives the id; a page that carries no id has its address as its id. A **canonical name** is an entity's title, unique within its type and, for an owned type, within its owner, so a name alone can be ambiguous where an id cannot. An **owner** is the entity another is nested under; the word is the tools' own, for their `owner` argument and field, and a question about what an owner is asks about the model, which may hold an entity of that name. A **reference** is an edge from one entity to another, and **`via`** names the field or `Section.Column` that drew it, or `nested-in` for nesting. A **qualifier** is a value on a table row that describes that row's edge and draws none of its own.
 
 Nesting on disk is served as an edge from the owned entity to its owner, under `nested-in`. The name is this server's own and no schema declares it, so it never collides with a field: a schema's own `owner` field, a process's owner for one, draws an edge via `owner` like any other reference.
 
@@ -95,12 +95,12 @@ No arguments. `types` holds every type the schemas declare, with its `owner` typ
             ],
             "rows": [
               [
-                "`source`",
+                "`id`",
                 "Yes"
               ],
               [
-                "`source-id`",
-                "No"
+                "`source`",
+                "Yes"
               ]
             ]
           }
@@ -540,7 +540,7 @@ No argument. What a refused call looks like, for a client that reads only the pr
 
 ### `list_entities`
 
-`type`; optional `owner`, an id, to keep one owner's entities; `limit` and `cursor`. `entities` in id order, and `page`.
+`type`; optional `owner`, an id or an address, to keep one owner's entities; `limit` and `cursor`. `entities` in the order of their addresses, where their pages sit, and `page`; each still carries its id.
 
 ```json
 {
@@ -553,14 +553,14 @@ No argument. What a refused call looks like, for a client that reads only the pr
     "type": "skill",
     "entities": [
       {
-        "id": "skills/domain-driven-design",
+        "id": "01a02f53-2408-7255-a610-b931d033c1d4",
         "type": "skill",
         "name": "Domain-Driven Design",
         "tagline": "Modeling software around the language the business already speaks.",
         "owner": null
       },
       {
-        "id": "skills/java-programming",
+        "id": "01a02f53-2408-76c1-aee5-cc97a65fcc78",
         "type": "skill",
         "name": "Java Programming",
         "tagline": "Building and maintaining server-side systems on the JVM.",
@@ -585,21 +585,22 @@ No argument. What a refused call looks like, for a client that reads only the pr
 
 ### `get_entity`
 
-`id`, or `type` and `name`; given both, the id wins. The entity's `fields`, `sections` and tables, and its edges both ways. An entity whose schema declares an `image` field and that names a picture carries `image_url`, where the site the identity names serves it, at `images/<id>.<extension>`; an entity without one carries no such key. `references` and `referencedBy` hold at most 50 edges each, in the order `list_references` gives them; `referenceCounts` holds the true totals, and `list_references` pages the rest. An entity's own content is never cut.
+`id`, which is an id or an address, or `type` and `name`; given both, the id wins. The entity's `fields`, `sections` and tables, and its edges both ways. An entity whose schema declares an `image` field and that names a picture carries `image_url`, where the site the identity names serves it, at `images/<address>.<extension>`, where `<address>` is the folder and slug the page sits at; an entity without one carries no such key. `references` and `referencedBy` hold at most 50 edges each, in the order `list_references` gives them; `referenceCounts` holds the true totals, and `list_references` pages the rest. An entity's own content is never cut.
 
 ```json
 {
   "tool": "get_entity",
   "arguments": {
-    "id": "skills/domain-driven-design"
+    "id": "01a02f53-2408-7255-a610-b931d033c1d4"
   },
   "answer": {
     "entity": {
-      "id": "skills/domain-driven-design",
+      "id": "01a02f53-2408-7255-a610-b931d033c1d4",
       "type": "skill",
       "name": "Domain-Driven Design",
       "tagline": "Modeling software around the language the business already speaks.",
       "fields": {
+        "id": "01a02f53-2408-7255-a610-b931d033c1d4",
         "source": "Local",
         "group": "Software Design"
       },
@@ -616,13 +617,13 @@ No argument. What a refused call looks like, for a client that reads only the pr
       "references": [
         {
           "from": {
-            "id": "skills/domain-driven-design",
+            "id": "01a02f53-2408-7255-a610-b931d033c1d4",
             "type": "skill",
             "name": "Domain-Driven Design"
           },
           "via": "source",
           "to": {
-            "id": "sources/local",
+            "id": "01a03a3a-5eb8-7ba4-a6bd-79f024667d98",
             "type": "source",
             "name": "Local"
           },
@@ -632,20 +633,20 @@ No argument. What a refused call looks like, for a client that reads only the pr
       "referencedBy": [
         {
           "from": {
-            "id": "profiles/mira-halvorsen",
+            "id": "01a02f53-2408-7291-ac16-087fcdee4d71",
             "type": "profile",
             "name": "Mira Halvorsen"
           },
           "via": "Evidence.Skill",
           "to": {
-            "id": "skills/domain-driven-design",
+            "id": "01a02f53-2408-7255-a610-b931d033c1d4",
             "type": "skill",
             "name": "Domain-Driven Design"
           },
           "attrs": {
             "What it shows": "Split the billing domain into two bounded contexts; the seams have held under two years of change.",
             "Experience": {
-              "id": "profiles/mira-halvorsen/experiences/2022-beacon-systems",
+              "id": "01a02f53-2408-7b1e-bad3-c39aa223228c",
               "type": "experience",
               "name": "Splitting the billing domain"
             }
@@ -653,19 +654,19 @@ No argument. What a refused call looks like, for a client that reads only the pr
         },
         {
           "from": {
-            "id": "profiles/mira-halvorsen",
+            "id": "01a02f53-2408-7291-ac16-087fcdee4d71",
             "type": "profile",
             "name": "Mira Halvorsen"
           },
           "via": "Skills.Skill",
           "to": {
-            "id": "skills/domain-driven-design",
+            "id": "01a02f53-2408-7255-a610-b931d033c1d4",
             "type": "skill",
             "name": "Domain-Driven Design"
           },
           "attrs": {
             "Level": {
-              "id": "proficiency-levels/competent",
+              "id": "01a02f8b-db90-7f26-8c18-79e44090fddb",
               "type": "proficiency-level",
               "name": "Competent"
             }
@@ -689,13 +690,13 @@ No argument. What a refused call looks like, for a client that reads only the pr
 
 ### `list_references`
 
-Optional `entity`, an id; `direction` (`out`, `in` or `both`, relative to the entity, which it needs); `via`, matched exactly; `type`, the far end's type with an entity and either end's without; `limit` and `cursor`. With no argument it pages through every edge of the model. Edges are ordered by `from.id`, then `via`, then `to.id`.
+Optional `entity`, an id or an address; `direction` (`out`, `in` or `both`, relative to the entity, which it needs); `via`, matched exactly; `type`, the far end's type with an entity and either end's without; `limit` and `cursor`. With no argument it pages through every edge of the model. Edges are ordered by the address of `from`, where its page sits, then `via`, then the address of `to`; each end still carries its id.
 
 ```json
 {
   "tool": "list_references",
   "arguments": {
-    "entity": "profiles/mira-halvorsen",
+    "entity": "01a02f53-2408-7291-ac16-087fcdee4d71",
     "direction": "in",
     "via": "nested-in"
   },
@@ -703,13 +704,13 @@ Optional `entity`, an id; `direction` (`out`, `in` or `both`, relative to the en
     "edges": [
       {
         "from": {
-          "id": "profiles/mira-halvorsen/experiences/2018-northwind-atelier",
+          "id": "01a02f53-2408-729e-aa93-95bce1b59a93",
           "type": "experience",
           "name": "Rebuilding the order pipeline"
         },
         "via": "nested-in",
         "to": {
-          "id": "profiles/mira-halvorsen",
+          "id": "01a02f53-2408-7291-ac16-087fcdee4d71",
           "type": "profile",
           "name": "Mira Halvorsen"
         },
@@ -717,13 +718,13 @@ Optional `entity`, an id; `direction` (`out`, `in` or `both`, relative to the en
       },
       {
         "from": {
-          "id": "profiles/mira-halvorsen/experiences/2022-beacon-systems",
+          "id": "01a02f53-2408-7b1e-bad3-c39aa223228c",
           "type": "experience",
           "name": "Splitting the billing domain"
         },
         "via": "nested-in",
         "to": {
-          "id": "profiles/mira-halvorsen",
+          "id": "01a02f53-2408-7291-ac16-087fcdee4d71",
           "type": "profile",
           "name": "Mira Halvorsen"
         },
@@ -748,17 +749,17 @@ Optional `entity`, an id; `direction` (`out`, `in` or `both`, relative to the en
 
 ### `find_evidence`
 
-`skill`, an id or a canonical name, and optionally `limit` and `cursor`. Every edge into the skill, under `evidence`, keyed by the type of the page that drew it; each entry is an edge with that page's `owner` and, where it has one, its `stamp`. The edges are paged in one order, the drawing page's type and then the order `list_references` gives, so `page` counts edges and not groups, and a group the end of a page cuts goes on at the top of the next under the same key.
+`skill`, an id, a canonical name or an address, and optionally `limit` and `cursor`. Every edge into the skill, under `evidence`, keyed by the type of the page that drew it; each entry is an edge with that page's `owner` and, where it has one, its `stamp`. The edges are paged in one order, the drawing page's type and then the order `list_references` gives, so `page` counts edges and not groups, and a group the end of a page cuts goes on at the top of the next under the same key.
 
 ```json
 {
   "tool": "find_evidence",
   "arguments": {
-    "skill": "skills/domain-driven-design"
+    "skill": "01a02f53-2408-7255-a610-b931d033c1d4"
   },
   "answer": {
     "skill": {
-      "id": "skills/domain-driven-design",
+      "id": "01a02f53-2408-7255-a610-b931d033c1d4",
       "type": "skill",
       "name": "Domain-Driven Design",
       "tagline": "Modeling software around the language the business already speaks."
@@ -767,18 +768,18 @@ Optional `entity`, an id; `direction` (`out`, `in` or `both`, relative to the en
       "experience": [
         {
           "from": {
-            "id": "profiles/mira-halvorsen/experiences/2022-beacon-systems",
+            "id": "01a02f53-2408-7b1e-bad3-c39aa223228c",
             "type": "experience",
             "name": "Splitting the billing domain"
           },
           "via": "skills",
           "to": {
-            "id": "skills/domain-driven-design",
+            "id": "01a02f53-2408-7255-a610-b931d033c1d4",
             "type": "skill",
             "name": "Domain-Driven Design"
           },
           "attrs": {},
-          "owner": "profiles/mira-halvorsen",
+          "owner": "01a02f53-2408-7291-ac16-087fcdee4d71",
           "stamp": {
             "kind": "Role",
             "start": "2022-02",
@@ -787,18 +788,18 @@ Optional `entity`, an id; `direction` (`out`, `in` or `both`, relative to the en
         },
         {
           "from": {
-            "id": "profiles/tomas-reyes/experiences/2022-beacon-systems",
+            "id": "01a03a2c-2de8-7b8e-bec7-3618c8fbf2de",
             "type": "experience",
             "name": "Deciding which billing goes first"
           },
           "via": "skills",
           "to": {
-            "id": "skills/domain-driven-design",
+            "id": "01a02f53-2408-7255-a610-b931d033c1d4",
             "type": "skill",
             "name": "Domain-Driven Design"
           },
           "attrs": {},
-          "owner": "profiles/tomas-reyes",
+          "owner": "01a03a2c-2de8-73b4-9058-8664caea919a",
           "stamp": {
             "kind": "Role",
             "start": "2022-02",
@@ -809,20 +810,20 @@ Optional `entity`, an id; `direction` (`out`, `in` or `both`, relative to the en
       "profile": [
         {
           "from": {
-            "id": "profiles/mira-halvorsen",
+            "id": "01a02f53-2408-7291-ac16-087fcdee4d71",
             "type": "profile",
             "name": "Mira Halvorsen"
           },
           "via": "Evidence.Skill",
           "to": {
-            "id": "skills/domain-driven-design",
+            "id": "01a02f53-2408-7255-a610-b931d033c1d4",
             "type": "skill",
             "name": "Domain-Driven Design"
           },
           "attrs": {
             "What it shows": "Split the billing domain into two bounded contexts; the seams have held under two years of change.",
             "Experience": {
-              "id": "profiles/mira-halvorsen/experiences/2022-beacon-systems",
+              "id": "01a02f53-2408-7b1e-bad3-c39aa223228c",
               "type": "experience",
               "name": "Splitting the billing domain"
             }
@@ -831,19 +832,19 @@ Optional `entity`, an id; `direction` (`out`, `in` or `both`, relative to the en
         },
         {
           "from": {
-            "id": "profiles/mira-halvorsen",
+            "id": "01a02f53-2408-7291-ac16-087fcdee4d71",
             "type": "profile",
             "name": "Mira Halvorsen"
           },
           "via": "Skills.Skill",
           "to": {
-            "id": "skills/domain-driven-design",
+            "id": "01a02f53-2408-7255-a610-b931d033c1d4",
             "type": "skill",
             "name": "Domain-Driven Design"
           },
           "attrs": {
             "Level": {
-              "id": "proficiency-levels/competent",
+              "id": "01a02f8b-db90-7f26-8c18-79e44090fddb",
               "type": "proficiency-level",
               "name": "Competent"
             }
@@ -854,13 +855,13 @@ Optional `entity`, an id; `direction` (`out`, `in` or `both`, relative to the en
       "role": [
         {
           "from": {
-            "id": "roles/reviewer",
+            "id": "01a0a6b8-7e80-74e2-8c05-e4518d7679c9",
             "type": "role",
             "name": "Reviewer"
           },
           "via": "requires",
           "to": {
-            "id": "skills/domain-driven-design",
+            "id": "01a02f53-2408-7255-a610-b931d033c1d4",
             "type": "skill",
             "name": "Domain-Driven Design"
           },
@@ -887,7 +888,7 @@ Optional `entity`, an id; `direction` (`out`, `in` or `both`, relative to the en
 
 ### `search`
 
-`query`; optional `match`; `type`, to keep one type's entities; `owner`, an id, to keep one owner's; `limit` and `cursor`. `match: "text"`, the default, is a case-insensitive substring over name, tagline, fields, section text and table cells. `match: "name"` is the exact canonical name, case-insensitive, across types. `match: "words"` cuts the query into words, reduces each to its stem and keeps every entity whose name, tagline, fields, section text or table cells hold every required stem, anywhere: the words need not stand together or in one place. A word is a run of letters and digits, lowered, with diacritics folded and a possessive's apostrophe-s dropped, so "the owner's" asks for owner. The stemmer is Porter's algorithm for English, which joins the inflections of one word and not its relatives, so deciding meets decide and decided, and decision meets neither. A stem that occurs in more than half of the model's entities is common: it is reported and not required, and a query of common stems alone is held to all of them. A function word outside that set is required like any other, so a client sends the words that carry the meaning and leaves the rest out. A query with no words is refused as `invalid_argument` on `query`. `matched` says where each result hit: `where` is one of `name`, `tagline`, `field`, `section` or `table`, and `key` the field or section heading, null for the first two; in words mode it names each place where a required stem occurs. Results whose name matched come first, then all are ordered by type, name and id: past that one tier a listing, not a ranking, so an entity named by a common word stands before everything that merely mentions it. A result's name is under `title`, as it is for `fetch`, because some clients call only these two tools and require that field.
+`query`; optional `match`; `type`, to keep one type's entities; `owner`, an id or an address, to keep one owner's; `limit` and `cursor`. `match: "text"`, the default, is a case-insensitive substring over name, tagline, fields, section text and table cells. `match: "name"` is the exact canonical name, case-insensitive, across types. `match: "words"` cuts the query into words, reduces each to its stem and keeps every entity whose name, tagline, fields, section text or table cells hold every required stem, anywhere: the words need not stand together or in one place. A word is a run of letters and digits, lowered, with diacritics folded and a possessive's apostrophe-s dropped, so "the owner's" asks for owner. The stemmer is Porter's algorithm for English, which joins the inflections of one word and not its relatives, so deciding meets decide and decided, and decision meets neither. A stem that occurs in more than half of the model's entities is common: it is reported and not required, and a query of common stems alone is held to all of them. A function word outside that set is required like any other, so a client sends the words that carry the meaning and leaves the rest out. A query with no words is refused as `invalid_argument` on `query`. `matched` says where each result hit: `where` is one of `name`, `tagline`, `field`, `section` or `table`, and `key` the field or section heading, null for the first two; in words mode it names each place where a required stem occurs. Results whose name matched come first, then all are ordered by type, name and address: past that one tier a listing, not a ranking, so an entity named by a common word stands before everything that merely mentions it. A result's name is under `title`, as it is for `fetch`, because some clients call only these two tools and require that field.
 
 ```json
 {
@@ -901,7 +902,7 @@ Optional `entity`, an id; `direction` (`out`, `in` or `both`, relative to the en
     "match": "text",
     "results": [
       {
-        "id": "profiles/mira-halvorsen",
+        "id": "01a02f53-2408-7291-ac16-087fcdee4d71",
         "title": "Mira Halvorsen",
         "type": "profile",
         "owner": null,
@@ -915,7 +916,7 @@ Optional `entity`, an id; `direction` (`out`, `in` or `both`, relative to the en
         ]
       },
       {
-        "id": "roles/backend-engineer",
+        "id": "01a0a6b8-7e80-7c97-aab2-32e4469383db",
         "title": "Backend Engineer",
         "type": "role",
         "owner": null,
@@ -974,10 +975,10 @@ The same tool in its third mode. Beside `query` and `match` the answer carries `
     ],
     "results": [
       {
-        "id": "profiles/tomas-reyes/experiences/2022-beacon-systems",
+        "id": "01a03a2c-2de8-7b8e-bec7-3618c8fbf2de",
         "title": "Deciding which billing goes first",
         "type": "experience",
-        "owner": "profiles/tomas-reyes",
+        "owner": "01a03a2c-2de8-73b4-9058-8664caea919a",
         "tagline": "Ongoing. Choosing which of the two billing contexts serves customers first, and saying why.",
         "url": "https://github.com/companygraph/meta-model/blob/0123456789abcdef0123456789abcdef01234567/example/model/profiles/tomas-reyes/experiences/2022-beacon-systems.md",
         "matched": [
@@ -992,7 +993,7 @@ The same tool in its third mode. Beside `query` and `match` the answer carries `
         ]
       },
       {
-        "id": "profiles/tomas-reyes",
+        "id": "01a03a2c-2de8-73b4-9058-8664caea919a",
         "title": "Tomas Reyes",
         "type": "profile",
         "owner": null,
@@ -1034,14 +1035,14 @@ The same tool in its third mode. Beside `query` and `match` the answer carries `
 {
   "tool": "fetch",
   "arguments": {
-    "id": "skills/domain-driven-design"
+    "id": "01a02f53-2408-7255-a610-b931d033c1d4"
   },
   "answer": {
-    "id": "skills/domain-driven-design",
+    "id": "01a02f53-2408-7255-a610-b931d033c1d4",
     "title": "Domain-Driven Design",
     "type": "skill",
     "url": "https://github.com/companygraph/meta-model/blob/0123456789abcdef0123456789abcdef01234567/example/model/skills/domain-driven-design.md",
-    "text": "---\nsource: Local\ngroup: Software Design\n---\n\n# Domain-Driven Design\n\n> Modeling software around the language the business already speaks.\n\n## In practice\n\nName things as the business names them, and …",
+    "text": "---\nid: 01a02f53-2408-7255-a610-b931d033c1d4\nsource: Local\ngroup: Software Design\n---\n\n# Domain-Driven Design\n\n> Modeling software around the language the business already speaks.\n\n## In practice\n\nNam…",
     "model": {
       "commit": "0123456789abcdef0123456789abcdef01234567",
       "repo": "companygraph/meta-model",
@@ -1054,7 +1055,7 @@ The same tool in its third mode. Beside `query` and `match` the answer carries `
 
 ### `diagram`
 
-A picture of part of the model as Mermaid source, built from its edges and never from prose, or of the schemas it is written in. `shape` is `concepts`, `process`, `neighborhood` or `schema`. `concepts` is a class diagram of every concept and the associations their Relations tables draw, each labeled with its Cardinality and its As; `domain`, a domain's id, narrows it to that domain's concepts and any concept outside it they reach, labeled with its own domain's name after its title. `process` takes the `id` of a process and draws its phases in the order of its Phases table, each with who executes it, and an arrow for each `gate-to`, labeled with the gate's approvers, then, where a phase's page holds an If not met table, one dashed arrow per target after it, labeled with the escalation authority and the outcomes that lead there, in table order; a row that leads nowhere is drawn into one Stop node instead, shared by every phase. `neighborhood` takes any `id` and draws that entity with everything one hop from it, one arrow for each `via` and far entity, labeled with the `via` and, where several edges stand behind it, how many; since its nodes mix types a title alone cannot tell apart, each one's first line names its type, `«type»`, set in `<small>` above the title. `schema` is a class diagram of the types the instance's core declares, each named by its slug, with an association for each reference a schema declares to one type, from the type declaring it, labeled with its field or `Section.Column` and with its multiplicity at the far end, `1`, `0..1`, `0..*` or `1..*`, solid for `ref` and dashed for `ref?` and `qualifier`, and a composition from each owned type to its owner labeled `nested-in`; `type` narrows it to that type and every type it declares, is declared to or nests with, and to those declarations only. A reference whose type its row names is declared to no one type and is not drawn, and a field every other type declares to one type, as `source` is, would bury the rest, so it is drawn by none and named once in `everyType`, with its `via`, `to` and `multiplicity`; both are counted in `omitted`.
+A picture of part of the model as Mermaid source, built from its edges and never from prose, or of the schemas it is written in. `shape` is `concepts`, `process`, `neighborhood` or `schema`. `concepts` is a class diagram of every concept and the associations their Relations tables draw, each labeled with its Cardinality and its As; `domain`, a domain's id or address, narrows it to that domain's concepts and any concept outside it they reach, labeled with its own domain's name after its title. `process` takes the `id` of a process and draws its phases in the order of its Phases table, each with who executes it, and an arrow for each `gate-to`, labeled with the gate's approvers, then, where a phase's page holds an If not met table, one dashed arrow per target after it, labeled with the escalation authority and the outcomes that lead there, in table order; a row that leads nowhere is drawn into one Stop node instead, shared by every phase. `neighborhood` takes any `id` and draws that entity with everything one hop from it, one arrow for each `via` and far entity, labeled with the `via` and, where several edges stand behind it, how many; since its nodes mix types a title alone cannot tell apart, each one's first line names its type, `«type»`, set in `<small>` above the title. `schema` is a class diagram of the types the instance's core declares, each named by its slug, with an association for each reference a schema declares to one type, from the type declaring it, labeled with its field or `Section.Column` and with its multiplicity at the far end, `1`, `0..1`, `0..*` or `1..*`, solid for `ref` and dashed for `ref?` and `qualifier`, and a composition from each owned type to its owner labeled `nested-in`; `type` narrows it to that type and every type it declares, is declared to or nests with, and to those declarations only. A reference whose type its row names is declared to no one type and is not drawn, and a field every other type declares to one type, as `source` is, would bury the rest, so it is drawn by none and named once in `everyType`, with its `via`, `to` and `multiplicity`; both are counted in `omitted`.
 
 `nodes` says which entity each node of the source is, `n0` and on in the order drawn, so a client links a node without reading the source back; a node of `schema` is a type, with `id` its schema's, `core/` and the type, `type` `schema`, and `url` the schema's file at the served commit, null where that is not known; `links` says the same for each arrow, `from`, `to` and its `label` unescaped, one entry per arrow in the order drawn, so a client states a relation without decoding Mermaid; `title` is the name of what is drawn, null for every concept and for every type; `edges` counts the edges drawn and `omitted` those left out. A process's dashed arrow to a phase is an edge like the ones `gate-to` draws and is counted the same way, in `links` and in `edges`; its dashed arrow into the Stop node is not, since the Stop node is no entity and is never in `nodes`, so neither it nor an arrow into it is ever in `links` or counted in `edges`. A picture holds fifty nodes besides a neighborhood's middle. A neighborhood takes its groups of arrows smallest first, leaves out whole any group that does not fit, and names those on a last node, `more`, which is not in `nodes`. A concepts, process or schema diagram that would hold more is refused as `cannot_draw` with `reason: "too_large"`, and one with nothing to draw with `reason: "empty"`.
 
@@ -1063,7 +1064,7 @@ A picture of part of the model as Mermaid source, built from its edges and never
   "tool": "diagram",
   "arguments": {
     "shape": "process",
-    "id": "processes/delivery"
+    "id": "01a0a8c7-74d8-7c00-b7dd-6a8118ddc0d3"
   },
   "answer": {
     "shape": "process",
@@ -1072,13 +1073,13 @@ A picture of part of the model as Mermaid source, built from its edges and never
     "nodes": [
       {
         "node": "n0",
-        "id": "processes/delivery/phases/specify",
+        "id": "01a0a8c7-74d8-7c8a-9e3a-0d72ef94fce1",
         "title": "Specify",
         "type": "phase"
       },
       {
         "node": "n1",
-        "id": "processes/delivery/phases/build",
+        "id": "01a0a8c7-74d8-774b-ad7c-383aad1f52ec",
         "title": "Build",
         "type": "phase"
       }
@@ -1144,23 +1145,23 @@ The worked example holds no ambiguous name, so this refusal is answered over a c
   "answer": {
     "error": {
       "code": "ambiguous_name",
-      "message": "R2: \"Rebuilding the order pipeline\" is the name of 2 experience entities, one in each of their owners (profiles/mira-halvorsen/experiences/2018-northwind-atelier, profiles/tomas-reyes/experiences/2018…",
+      "message": "R2: \"Rebuilding the order pipeline\" is the name of 2 experience entities, one in each of their owners (01a02f53-2408-729e-aa93-95bce1b59a93, 01a0ffff-0000-7000-8000-000000000001); ask for the one mean…",
       "rule": "R2",
       "details": {
         "type": "experience",
         "name": "Rebuilding the order pipeline",
         "candidates": [
           {
-            "id": "profiles/mira-halvorsen/experiences/2018-northwind-atelier",
+            "id": "01a02f53-2408-729e-aa93-95bce1b59a93",
             "type": "experience",
             "name": "Rebuilding the order pipeline",
-            "owner": "profiles/mira-halvorsen"
+            "owner": "01a02f53-2408-7291-ac16-087fcdee4d71"
           },
           {
-            "id": "profiles/tomas-reyes/experiences/2018-northwind-atelier",
+            "id": "01a0ffff-0000-7000-8000-000000000001",
             "type": "experience",
             "name": "Rebuilding the order pipeline",
-            "owner": "profiles/tomas-reyes"
+            "owner": "01a03a2c-2de8-73b4-9058-8664caea919a"
           }
         ]
       }

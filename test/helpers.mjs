@@ -52,18 +52,35 @@ export function withSharedName() {
   return buildSnapshot({ files, schemas, sub: "example/model/", commit: COMMIT, repo: "companygraph/meta-model", parserTag: PARSER });
 }
 
+// An id made up for a page a fixture adds, in the form the example's own ids take, so that a
+// test of a stable id meets one on every page and never the page's address standing in for it.
+export const FRESH_ID = "01a0ffff-0000-7000-8000-000000000001";
+
+// The entity a snapshot holds at an address, the folder and slug where its page sits. A test
+// names an entity the way a person writing it would, by where its page is, and takes the id the
+// snapshot gives it from here, since a stable id is read off the page and never derived.
+export const at = (s, address) => {
+  const e = s.entities.find((x) => x.address === address);
+  if (!e) throw new Error(`nothing sits at ${address}`);
+  return e;
+};
+export const idAt = (s, address) => at(s, address).id;
+
 // Core 0.31.0: a name of an owned type is unique within its owner, so two profiles may each own a
 // period of one title. The example's first profile's first experience is copied, title and all,
-// under the second profile, which is valid and parses.
+// under the second profile, which is valid and parses. The copy is another entity, so it carries
+// an id of its own and not the original's. `owners` are the two profiles' ids, `addresses` where
+// their pages sit.
 export function withOwnedNameTwice() {
   const { files, schemas } = exampleFiles();
   const periods = [...files.keys()].filter((k) => /^profiles\/[^/]+\/experiences\/[^/]+\.md$/.test(k) && !k.endsWith("/README.md"));
   const [first, second] = [...new Set(periods.map((k) => k.split("/")[1]))].sort();
   const source = periods.filter((k) => k.startsWith(`profiles/${first}/experiences/`)).sort()[0];
-  files.set(source.replace(`profiles/${first}/`, `profiles/${second}/`), files.get(source));
+  files.set(source.replace(`profiles/${first}/`, `profiles/${second}/`), files.get(source).replace(/^id: .+$/m, `id: ${FRESH_ID}`));
   const title = files.get(source).match(/^# (.+)$/m)[1];
   const snapshot = buildSnapshot({ files, schemas, sub: "example/model/", commit: COMMIT, repo: "companygraph/meta-model", parserTag: PARSER });
-  return { snapshot, title, owners: [`profiles/${first}`, `profiles/${second}`] };
+  const addresses = [`profiles/${first}`, `profiles/${second}`];
+  return { snapshot, title, owners: addresses.map((a) => idAt(snapshot, a)), addresses };
 }
 
 // Concepts made for the diagram tests, in the example's own form: a page, a tagline, and a
@@ -102,7 +119,7 @@ export function withLoops() {
 // Delivery holds merged back arrows and, with Specify's stop removed too, no stop at all.
 export function withBackFlows() {
   const s = structuredClone(exampleSnapshot());
-  const id = (p) => `processes/delivery/phases/${p}`;
+  const id = (p) => idAt(s, `processes/delivery/phases/${p}`);
   const table = (e) => e.sections.find((x) => x.heading === "If not met").tables[0];
   const byId = new Map(s.entities.map((e) => [e.id, e]));
   table(byId.get(id("specify"))).rows = [["reshaped", "Specify"]];

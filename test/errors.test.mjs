@@ -45,7 +45,9 @@ test("a name two owners hold is R2, with every candidate as data", () => {
   assert.deepEqual([e.code, e.rule, e.details.type, e.details.name], ["ambiguous_name", "R2", "experience", title]);
   assert.deepEqual(e.details.candidates.map((c) => c.id).sort(), ids);
   for (const c of e.details.candidates) assert.deepEqual(Object.keys(c), ["id", "type", "name", "owner"]);
-  assert.ok(e.details.candidates.every((c) => ids.some((id) => id.startsWith(`${c.owner}/`))));
+  // Each candidate's owner is the entity its page is nested under, read off where both pages sit.
+  const byId = new Map(snapshot.entities.map((x) => [x.id, x]));
+  assert.ok(e.details.candidates.every((c) => byId.get(c.id).address.startsWith(`${byId.get(c.owner).address}/`)));
 });
 
 test("an unknown rule names the known ones, and an empty query names its argument", () => {
