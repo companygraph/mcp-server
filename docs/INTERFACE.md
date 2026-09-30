@@ -540,7 +540,7 @@ No argument. What a refused call looks like, for a client that reads only the pr
 
 ### `list_entities`
 
-`type`; optional `owner`, an id or an address, to keep one owner's entities; `limit` and `cursor`. `entities` in id order, and `page`.
+`type`; optional `owner`, an id or an address, to keep one owner's entities; `limit` and `cursor`. `entities` in the order of their addresses, where their pages sit, and `page`; each still carries its id.
 
 ```json
 {
@@ -690,7 +690,7 @@ No argument. What a refused call looks like, for a client that reads only the pr
 
 ### `list_references`
 
-Optional `entity`, an id or an address; `direction` (`out`, `in` or `both`, relative to the entity, which it needs); `via`, matched exactly; `type`, the far end's type with an entity and either end's without; `limit` and `cursor`. With no argument it pages through every edge of the model. Edges are ordered by `from.id`, then `via`, then `to.id`.
+Optional `entity`, an id or an address; `direction` (`out`, `in` or `both`, relative to the entity, which it needs); `via`, matched exactly; `type`, the far end's type with an entity and either end's without; `limit` and `cursor`. With no argument it pages through every edge of the model. Edges are ordered by the address of `from`, where its page sits, then `via`, then the address of `to`; each end still carries its id.
 
 ```json
 {
@@ -888,7 +888,7 @@ Optional `entity`, an id or an address; `direction` (`out`, `in` or `both`, rela
 
 ### `search`
 
-`query`; optional `match`; `type`, to keep one type's entities; `owner`, an id or an address, to keep one owner's; `limit` and `cursor`. `match: "text"`, the default, is a case-insensitive substring over name, tagline, fields, section text and table cells. `match: "name"` is the exact canonical name, case-insensitive, across types. `match: "words"` cuts the query into words, reduces each to its stem and keeps every entity whose name, tagline, fields, section text or table cells hold every required stem, anywhere: the words need not stand together or in one place. A word is a run of letters and digits, lowered, with diacritics folded and a possessive's apostrophe-s dropped, so "the owner's" asks for owner. The stemmer is Porter's algorithm for English, which joins the inflections of one word and not its relatives, so deciding meets decide and decided, and decision meets neither. A stem that occurs in more than half of the model's entities is common: it is reported and not required, and a query of common stems alone is held to all of them. A function word outside that set is required like any other, so a client sends the words that carry the meaning and leaves the rest out. A query with no words is refused as `invalid_argument` on `query`. `matched` says where each result hit: `where` is one of `name`, `tagline`, `field`, `section` or `table`, and `key` the field or section heading, null for the first two; in words mode it names each place where a required stem occurs. Results whose name matched come first, then all are ordered by type, name and id: past that one tier a listing, not a ranking, so an entity named by a common word stands before everything that merely mentions it. A result's name is under `title`, as it is for `fetch`, because some clients call only these two tools and require that field.
+`query`; optional `match`; `type`, to keep one type's entities; `owner`, an id or an address, to keep one owner's; `limit` and `cursor`. `match: "text"`, the default, is a case-insensitive substring over name, tagline, fields, section text and table cells. `match: "name"` is the exact canonical name, case-insensitive, across types. `match: "words"` cuts the query into words, reduces each to its stem and keeps every entity whose name, tagline, fields, section text or table cells hold every required stem, anywhere: the words need not stand together or in one place. A word is a run of letters and digits, lowered, with diacritics folded and a possessive's apostrophe-s dropped, so "the owner's" asks for owner. The stemmer is Porter's algorithm for English, which joins the inflections of one word and not its relatives, so deciding meets decide and decided, and decision meets neither. A stem that occurs in more than half of the model's entities is common: it is reported and not required, and a query of common stems alone is held to all of them. A function word outside that set is required like any other, so a client sends the words that carry the meaning and leaves the rest out. A query with no words is refused as `invalid_argument` on `query`. `matched` says where each result hit: `where` is one of `name`, `tagline`, `field`, `section` or `table`, and `key` the field or section heading, null for the first two; in words mode it names each place where a required stem occurs. Results whose name matched come first, then all are ordered by type, name and address: past that one tier a listing, not a ranking, so an entity named by a common word stands before everything that merely mentions it. A result's name is under `title`, as it is for `fetch`, because some clients call only these two tools and require that field.
 
 ```json
 {

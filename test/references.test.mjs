@@ -67,8 +67,13 @@ test("with no argument it pages through every edge, in one fixed order", () => {
   // Compared part by part: joined into one string, a name that is the start of another would
   // sort by whatever character the join put between them.
   const byParts = (a, b) => { for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return a[i] < b[i] ? -1 : 1; return 0; };
-  const all = listReferences(s, { limit: 200 }).edges.map((x) => [x.from.id, x.via, x.to.id]);
+  // By where each end's page sits, not by the ids the edge carries, which were minted in no
+  // order a reader could follow.
+  const addressOf = new Map(s.entities.map((e) => [e.id, e.address]));
+  const all = listReferences(s, { limit: 200 }).edges.map((x) => [addressOf.get(x.from.id), x.via, addressOf.get(x.to.id)]);
   assert.deepEqual(all, [...all].sort(byParts), "sorted by from, via, to");
+  const ids = listReferences(s, { limit: 200 }).edges.map((x) => [x.from.id, x.via, x.to.id]);
+  assert.notDeepEqual(ids, [...ids].sort(byParts), "the example's ids alone would order them otherwise");
   const second = listReferences(s, { limit: 40, cursor: first.page.nextCursor });
   assert.deepEqual(second.edges[0], listReferences(s, { limit: 200 }).edges[40]);
 });

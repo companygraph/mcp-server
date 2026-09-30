@@ -26,27 +26,21 @@ test("a label escapes Mermaid's own characters, the hash first", () => {
   assert.equal(label("`bold`"), "#96;bold#96;");
 });
 
-// The associations of a concepts picture stand in the order every list of edges has: by the id
-// of the concept drawing each, then the id of the one it reaches, and rows to one concept in their
-// table's order. The ids are the model's own, so the order is read off the drawn nodes and not
-// written here; each arrow is `[from, to, label]`, by node.
-const inEdgeOrder = (d, arrows) => {
-  const id = (node) => d.nodes.find((n) => n.node === node).id;
-  const cmp = (a, b) => (a < b ? -1 : a > b ? 1 : 0);
-  return arrows.toSorted((a, b) => cmp(id(a[0]), id(b[0])) || cmp(id(a[1]), id(b[1])));
-};
+// The associations of a concepts picture stand in the order every list of edges has: by where
+// the page of the concept drawing each sits, then where the one it reaches sits, and rows to one
+// concept in their table's order. Each arrow is `[from, to, label]`, by node.
 const associations = (arrows) => arrows.map(([from, to, said]) => `  ${from} --> ${to} : ${said}`);
 const linksOf = (arrows) => arrows.map(([from, to, label]) => ({ from, to, label }));
 
 test("every concept, with each Relations row an association labeled with its cardinality and role", () => {
   const d = diagram(s, { shape: "concepts" });
   assert.deepEqual([d.shape, d.title, d.edges, d.omitted, d.model.commit], ["concepts", null, 11, 0, COMMIT]);
-  const arrows = inEdgeOrder(d, [
+  const arrows = [
     ["n1", "n3", "one, signing customer"], ["n1", "n3", "maybe one, paying customer"], ["n1", "n6", "one to many, terms"],
     ["n2", "n4", "one, corrected invoice"], ["n2", "n5", "one to many, lines"], ["n4", "n0", "one"],
     ["n4", "n3", "one, billed customer"], ["n4", "n5", "one to many, lines"], ["n5", "n6", "one, rule"],
     ["n5", "n7", "many, usage read"], ["n7", "n1", "one"],
-  ]);
+  ];
   assert.deepEqual(lines(d), [
     "classDiagram",
     '  class n0["Billing period"]', '  class n1["Contract"]', '  class n2["Credit note"]', '  class n3["Customer"]',
@@ -61,10 +55,10 @@ test("every concept, with each Relations row an association labeled with its car
 test("a domain draws its concepts, and one outside it that they reach carries its own domain's name", () => {
   const d = diagram(s, { shape: "concepts", domain: I("domains/invoicing") });
   assert.deepEqual([d.title, d.edges], ["Invoicing", 7]);
-  const arrows = inEdgeOrder(d, [
+  const arrows = [
     ["n1", "n2", "one, corrected invoice"], ["n1", "n3", "one to many, lines"], ["n2", "n0", "one"],
     ["n2", "n4", "one, billed customer"], ["n2", "n3", "one to many, lines"], ["n3", "n5", "one, rule"], ["n3", "n6", "many, usage read"],
-  ]);
+  ];
   assert.deepEqual(lines(d), [
     "classDiagram",
     '  class n0["Billing period"]', '  class n1["Credit note"]', '  class n2["Invoice"]', '  class n3["Invoice line"]',

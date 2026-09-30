@@ -55,12 +55,12 @@ export async function render(text) {
   const twice = withOwnedNameTwice();
   const ambiguous = await connect(twice.snapshot);
   let out = text;
-  for (const [heading, example] of Object.entries(EXAMPLES)) {
-    const args = example.ambiguous ? { type: "experience", name: twice.title } : example.arguments;
-    const r = await (example.ambiguous ? ambiguous : plain).callTool({ name: example.name, arguments: args });
+  for (const [heading, call] of Object.entries(EXAMPLES)) {
+    const args = call.ambiguous ? { type: "experience", name: twice.title } : call.arguments;
+    const r = await (call.ambiguous ? ambiguous : plain).callTool({ name: call.name, arguments: args });
     const answer = abbreviate(r.structuredContent);
     answer.model = { ...answer.model, core: "0.0.0", parser: "v0.0.0" };
-    const block = JSON.stringify({ tool: example.name, arguments: args, answer }, null, 2);
+    const block = JSON.stringify({ tool: call.name, arguments: args, answer }, null, 2);
     const at = out.indexOf(`### ${heading}\n`);
     if (at < 0) throw new Error(`docs/INTERFACE.md has no heading "### ${heading}"`);
     const open = out.indexOf("```json\n", at);

@@ -31,10 +31,10 @@ test("describe_schema returns the schema's sections and refuses an undeclared ty
   assert.throws(() => describeSchema(s, "person"), (e) => e instanceof ModelError && /no schema declares "person"/.test(e.message) && /skill/.test(e.message));
 });
 
-test("list_entities lists one type, sorted by id", () => {
+test("list_entities lists one type, in the order of where their pages sit", () => {
   const r = listEntities(s, "skill");
   assert.equal(r.type, "skill");
-  assert.deepEqual(r.entities.map((e) => e.id), ["skills/domain-driven-design", "skills/java-programming", "skills/product-discovery"].map((a) => idAt(s, a)).sort());
+  assert.deepEqual(r.entities.map((e) => e.id), ["skills/domain-driven-design", "skills/java-programming", "skills/product-discovery"].map((a) => idAt(s, a)));
   assert.deepEqual(Object.keys(r.entities[0]), ["id", "type", "name", "tagline", "owner"]);
   assert.throws(() => listEntities(s, "person"), ModelError);
 });
@@ -65,14 +65,16 @@ test("get_entity resolves within the type and returns references both ways, as e
 test("a question's edge resolves the type and owner its own row names, and carries them as attrs", () => {
   const r = getEntity(s, "question", "Who split billing out of the monolith?");
   const rests = r.entity.references.filter((x) => x.via === "Rests on.Entity");
-  // Two rows since core 0.43.0, one owned and one not, sorted by the id they reach; the
-  // unowned row's Owner cell is blank and arrives as the empty string it is.
-  const rows = [
-    { to: { id: idAt(s, "decisions/2022-billing-leaves-the-monolith"), type: "decision", name: "Billing leaves the monolith" }, attrs: { Type: "decision", Owner: "", For: "why" } },
-    { to: { id: idAt(s, "profiles/mira-halvorsen/experiences/2022-beacon-systems"), type: "experience", name: "Splitting the billing domain" }, attrs: { Type: "experience", Owner: "Mira Halvorsen", For: "the period" } },
-  ].sort((a, b) => (a.to.id < b.to.id ? -1 : 1));
-  assert.deepEqual(rests.map((x) => x.to), rows.map((x) => x.to));
-  assert.deepEqual(rests.map((x) => x.attrs), rows.map((x) => x.attrs));
+  // Two rows since core 0.43.0, one owned and one not, sorted by where the page they reach sits;
+  // the unowned row's Owner cell is blank and arrives as the empty string it is.
+  assert.deepEqual(rests.map((x) => x.to), [
+    { id: idAt(s, "decisions/2022-billing-leaves-the-monolith"), type: "decision", name: "Billing leaves the monolith" },
+    { id: idAt(s, "profiles/mira-halvorsen/experiences/2022-beacon-systems"), type: "experience", name: "Splitting the billing domain" },
+  ]);
+  assert.deepEqual(rests.map((x) => x.attrs), [
+    { Type: "decision", Owner: "", For: "why" },
+    { Type: "experience", Owner: "Mira Halvorsen", For: "the period" },
+  ]);
 });
 
 // core 0.45.0 adds question-kind as a declared type and a required kind on every question; the

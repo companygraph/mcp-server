@@ -100,3 +100,17 @@ test("the tools take an address over the wire and answer with the id", async () 
   assert.equal(got.structuredContent.entity.id, DDD.id);
   await client.close();
 });
+
+// An id is minted, and the example's were minted in batches that share their leading digits, so a
+// list in id order reads as shuffled; chat-server builds a capped prompt line in this order. Lists
+// keep the order of where their pages sit, the order readers had before pages carried ids.
+test("list_entities is in the order of the entities' addresses, and still answers with their ids", () => {
+  for (const type of new Set(s.entities.map((e) => e.type))) {
+    const listed = listEntities(s, type, { limit: 200 }).entities;
+    const expected = s.entities.filter((e) => e.type === type).map((e) => e.address).sort();
+    assert.deepEqual(listed.map((e) => s.entities.find((x) => x.id === e.id).address), expected, type);
+  }
+  const questions = listEntities(s, "question", { limit: 200 }).entities.map((e) => e.id);
+  assert.ok(questions.length > 1);
+  assert.notDeepEqual(questions, [...questions].sort(), "the question ids alone would order them otherwise");
+});

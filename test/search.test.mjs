@@ -105,6 +105,7 @@ test("Deciding well finds the value Decide well over build fast and the profile 
   const r = search(withHeadlines(), "Deciding well", { match: "words" });
   assert.equal(r.match, "words");
   assert.deepEqual(r.words, [{ word: "deciding", stem: "decid", common: false }, { word: "well", stem: "well", common: false }]);
+  // withHeadlines() adds pages with no `id:`, so each one's id is its address.
   const value = r.results.find((x) => x.id === "values/decide-well-over-build-fast");
   const profile = r.results.find((x) => x.id === "profiles/nils-aker");
   assert.deepEqual(value.matched, [{ where: "name", key: null }]);
@@ -121,6 +122,7 @@ test("validated in the open finds the experience whose bullets hold validation, 
   // "written in", and "in" stands in more than half again. A common or required word is reported
   // the same way, so the results below are unmoved either way.
   assert.deepEqual(r.words.map((w) => w.common), [false, true, true, false, false]);
+  // withHeadlines() adds pages with no `id:`, so each one's id is its address.
   assert.deepEqual(r.results.map((x) => x.id), ["profiles/nils-aker/experiences/2024-open-review"]);
   assert.deepEqual(r.results[0].matched, [{ where: "name", key: null }, { where: "section", key: "Achievements" }], "open in the name, the rest in the bullets");
 });
