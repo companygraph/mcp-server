@@ -4,11 +4,11 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { ModelError, listReferences, describeRelations } from "../lib/model.mjs";
-import { exampleSnapshot, instanceSnapshot, COMMIT, EXAMPLE_CORE, PARSER } from "./helpers.mjs";
+import { exampleSnapshot, instanceSnapshot, COMMIT, EXAMPLE_CORE, PARSER, idAt } from "./helpers.mjs";
 
 const s = exampleSnapshot();
-const DDD = "skills/domain-driven-design";
-const MIRA = "profiles/mira-halvorsen";
+const DDD = idAt(s, "skills/domain-driven-design");
+const MIRA = idAt(s, "profiles/mira-halvorsen");
 
 test("an edge names both ends, the field that drew it and the row's other columns", () => {
   const r = listReferences(s, { entity: DDD, direction: "in", via: "Skills.Skill" });
@@ -17,7 +17,7 @@ test("an edge names both ends, the field that drew it and the row's other column
   assert.deepEqual(Object.keys(claim), ["from", "via", "to", "attrs"]);
   assert.deepEqual(claim.from, { id: MIRA, type: "profile", name: "Mira Halvorsen" });
   assert.deepEqual(claim.to, { id: DDD, type: "skill", name: "Domain-Driven Design" });
-  assert.deepEqual(claim.attrs.Level, { id: "proficiency-levels/competent", type: "proficiency-level", name: "Competent" });
+  assert.deepEqual(claim.attrs.Level, { id: idAt(s, "proficiency-levels/competent"), type: "proficiency-level", name: "Competent" });
   assert.ok(r.edges.every((x) => x.via === "Skills.Skill" && x.to.id === DDD));
   assert.equal(r.page.total, r.edges.length);
 });
@@ -100,6 +100,7 @@ test("nested-in names no declared field or column, over both fixtures", () => {
 
 test("the reference instance's profile holds more edges than one page, and they walk", () => {
   const i = instanceSnapshot();
+  // Named by address, which reaches the profile whether or not the instance carries ids.
   const first = listReferences(i, { entity: "profiles/robert-blust", direction: "out" });
   assert.ok(first.page.hasMore);
   assert.equal(first.edges.length, 50);

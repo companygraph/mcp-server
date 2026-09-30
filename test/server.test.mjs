@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import { Client, InMemoryTransport } from "@modelcontextprotocol/client";
 import { createServer, GLOSSARY } from "../lib/server.mjs";
-import { exampleSnapshot, COMMIT, EXAMPLE_CORE, PARSER } from "./helpers.mjs";
+import { exampleSnapshot, COMMIT, EXAMPLE_CORE, PARSER, idAt } from "./helpers.mjs";
 
 const pkg = JSON.parse(fs.readFileSync(new URL("../package.json", import.meta.url), "utf8"));
 const s = exampleSnapshot();
@@ -20,7 +20,7 @@ async function connect(snapshot = s) {
 test("the server names itself from the package and the model", async () => {
   const client = await connect();
   assert.deepEqual(client.getServerVersion(), { name: pkg.name, version: pkg.version, title: "Beacon Systems" });
-  const identity = s.entities.find((e) => e.id === "identity");
+  const identity = s.entities.find((e) => e.id === s.rootId);
   const vision = s.entities.find((e) => e.type === "vision");
   assert.equal(client.getInstructions(), `${vision.tagline}\n\n${identity.tagline}\n\n${GLOSSARY}\n\nThis server reports what the model says at one commit, which every answer names under \`model\`, and adds nothing.`);
 });
@@ -48,10 +48,10 @@ test("every tool returns structured content carrying the model", async () => {
   const calls = [
     ["list_types", {}], ["describe_schema", { type: "skill" }], ["describe_relations", {}], ["list_rules", {}],
     ["describe_rule", { rule: "R4" }], ["list_checks", {}], ["describe_errors", {}], ["list_entities", { type: "skill" }],
-    ["get_entity", { type: "skill", name: "Domain-Driven Design" }], ["list_references", { entity: "skills/domain-driven-design" }],
+    ["get_entity", { type: "skill", name: "Domain-Driven Design" }], ["list_references", { entity: idAt(s, "skills/domain-driven-design") }],
     ["find_evidence", { skill: "Domain-Driven Design" }],
-    ["search", { query: "billing" }], ["fetch", { id: "skills/domain-driven-design" }],
-    ["diagram", { shape: "process", id: "processes/delivery" }],
+    ["search", { query: "billing" }], ["fetch", { id: idAt(s, "skills/domain-driven-design") }],
+    ["diagram", { shape: "process", id: idAt(s, "processes/delivery") }],
   ];
   // Every tool the server lists is called here, so one it gains cannot go without.
   const { tools } = await client.listTools();
@@ -82,7 +82,9 @@ test("the listing carries each tool's own output schema", async () => {
 });
 
 test("a model without a vision still has instructions", async () => {
-  const bare = { ...s, entities: s.entities.filter((e) => e.type !== "vision"), edges: s.edges.filter((e) => !e.from.startsWith("vision") && !e.to.startsWith("vision")) };
+  const visions = new Set(s.entities.filter((e) => e.type === "vision").map((e) => e.id));
+  assert.ok(visions.size > 0, "the example holds a vision to take away");
+  const bare = { ...s, entities: s.entities.filter((e) => !visions.has(e.id)), edges: s.edges.filter((e) => !visions.has(e.from) && !visions.has(e.to)) };
   const client = await connect(bare);
-  assert.ok(client.getInstructions().startsWith(s.entities.find((e) => e.id === "identity").tagline));
+  assert.ok(client.getInstructions().startsWith(s.entities.find((e) => e.id === s.rootId).tagline));
 });

@@ -10,7 +10,7 @@ import { OUTPUTS, ErrorResult } from "../lib/schemas.mjs";
 import { CODES } from "../lib/errors.mjs";
 import { sampleCalls, checkAnswer } from "../lib/contract.mjs";
 import { words } from "../lib/words.mjs";
-import { exampleSnapshot, instanceSnapshot, withOwnedNameTwice, withNothingToDraw } from "./helpers.mjs";
+import { exampleSnapshot, instanceSnapshot, withOwnedNameTwice, withNothingToDraw, idAt } from "./helpers.mjs";
 
 async function connect(s) {
   const [a, b] = InMemoryTransport.createLinkedPair();
@@ -165,8 +165,9 @@ test("an ambiguous name is refused with every candidate's id, and each id then a
 });
 
 test("a diagram with nothing to draw is refused by code, with what it would have drawn", async () => {
-  const client = await connect(withNothingToDraw());
-  const { error } = checkAnswer("diagram", await client.callTool({ name: "diagram", arguments: { shape: "process", id: "processes/intake" } }));
+  const n = withNothingToDraw();
+  const client = await connect(n);
+  const { error } = checkAnswer("diagram", await client.callTool({ name: "diagram", arguments: { shape: "process", id: idAt(n, "processes/intake") } }));
   assert.deepEqual([error.code, error.details], ["cannot_draw", { shape: "process", reason: "empty", nodes: 0, limit: 50 }]);
   reached.add(error.code);
   await client.close();

@@ -5,9 +5,12 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { diagram, processDiagram, label, plain, cannot, DIAGRAM_CAP } from "../lib/diagram.mjs";
 import { ModelError } from "../lib/errors.mjs";
-import { exampleSnapshot, instanceSnapshot, withHub, withLoops, withPunctuation, withNothingToDraw, withBackFlows, ODD, COMMIT } from "./helpers.mjs";
+import { exampleSnapshot, instanceSnapshot, withHub, withLoops, withPunctuation, withNothingToDraw, withBackFlows, ODD, COMMIT, idAt } from "./helpers.mjs";
 
 const s = exampleSnapshot();
+// The example's entities by where their pages sit, and the ids the snapshot gives them. A fixture
+// built from the example holds the same pages, so the same ids.
+const I = (address) => idAt(s, address);
 const lines = (d) => d.mermaid.split("\n");
 const ids = (d) => d.nodes.map((n) => [n.node, n.id]);
 const refused = (fn, code, details) => assert.throws(fn, (e) => {
@@ -23,43 +26,54 @@ test("a label escapes Mermaid's own characters, the hash first", () => {
   assert.equal(label("`bold`"), "#96;bold#96;");
 });
 
+// The associations of a concepts picture stand in the order every list of edges has: by the id
+// of the concept drawing each, then the id of the one it reaches, and rows to one concept in their
+// table's order. The ids are the model's own, so the order is read off the drawn nodes and not
+// written here; each arrow is `[from, to, label]`, by node.
+const inEdgeOrder = (d, arrows) => {
+  const id = (node) => d.nodes.find((n) => n.node === node).id;
+  const cmp = (a, b) => (a < b ? -1 : a > b ? 1 : 0);
+  return arrows.toSorted((a, b) => cmp(id(a[0]), id(b[0])) || cmp(id(a[1]), id(b[1])));
+};
+const associations = (arrows) => arrows.map(([from, to, said]) => `  ${from} --> ${to} : ${said}`);
+const linksOf = (arrows) => arrows.map(([from, to, label]) => ({ from, to, label }));
+
 test("every concept, with each Relations row an association labeled with its cardinality and role", () => {
   const d = diagram(s, { shape: "concepts" });
   assert.deepEqual([d.shape, d.title, d.edges, d.omitted, d.model.commit], ["concepts", null, 11, 0, COMMIT]);
+  const arrows = inEdgeOrder(d, [
+    ["n1", "n3", "one, signing customer"], ["n1", "n3", "maybe one, paying customer"], ["n1", "n6", "one to many, terms"],
+    ["n2", "n4", "one, corrected invoice"], ["n2", "n5", "one to many, lines"], ["n4", "n0", "one"],
+    ["n4", "n3", "one, billed customer"], ["n4", "n5", "one to many, lines"], ["n5", "n6", "one, rule"],
+    ["n5", "n7", "many, usage read"], ["n7", "n1", "one"],
+  ]);
   assert.deepEqual(lines(d), [
     "classDiagram",
     '  class n0["Billing period"]', '  class n1["Contract"]', '  class n2["Credit note"]', '  class n3["Customer"]',
     '  class n4["Invoice"]', '  class n5["Invoice line"]', '  class n6["Pricing rule"]', '  class n7["Usage record"]',
-    "  n1 --> n3 : one, signing customer", "  n1 --> n3 : maybe one, paying customer", "  n1 --> n6 : one to many, terms",
-    "  n2 --> n4 : one, corrected invoice", "  n2 --> n5 : one to many, lines", "  n4 --> n0 : one",
-    "  n4 --> n3 : one, billed customer", "  n4 --> n5 : one to many, lines", "  n5 --> n6 : one, rule",
-    "  n5 --> n7 : many, usage read", "  n7 --> n1 : one",
+    ...associations(arrows),
   ]);
-  assert.deepEqual(d.nodes[4], { node: "n4", id: "concepts/invoice", title: "Invoice", type: "concept" });
+  assert.deepEqual(d.nodes[4], { node: "n4", id: I("concepts/invoice"), title: "Invoice", type: "concept" });
   assert.equal(d.links.length, 11);
-  assert.deepEqual(d.links[0], { from: "n1", to: "n3", label: "one, signing customer" });
-  assert.deepEqual(d.links, [
-    { from: "n1", to: "n3", label: "one, signing customer" }, { from: "n1", to: "n3", label: "maybe one, paying customer" },
-    { from: "n1", to: "n6", label: "one to many, terms" }, { from: "n2", to: "n4", label: "one, corrected invoice" },
-    { from: "n2", to: "n5", label: "one to many, lines" }, { from: "n4", to: "n0", label: "one" },
-    { from: "n4", to: "n3", label: "one, billed customer" }, { from: "n4", to: "n5", label: "one to many, lines" },
-    { from: "n5", to: "n6", label: "one, rule" }, { from: "n5", to: "n7", label: "many, usage read" },
-    { from: "n7", to: "n1", label: "one" },
-  ]);
+  assert.deepEqual(d.links, linksOf(arrows));
 });
 
 test("a domain draws its concepts, and one outside it that they reach carries its own domain's name", () => {
-  const d = diagram(s, { shape: "concepts", domain: "domains/invoicing" });
+  const d = diagram(s, { shape: "concepts", domain: I("domains/invoicing") });
   assert.deepEqual([d.title, d.edges], ["Invoicing", 7]);
+  const arrows = inEdgeOrder(d, [
+    ["n1", "n2", "one, corrected invoice"], ["n1", "n3", "one to many, lines"], ["n2", "n0", "one"],
+    ["n2", "n4", "one, billed customer"], ["n2", "n3", "one to many, lines"], ["n3", "n5", "one, rule"], ["n3", "n6", "many, usage read"],
+  ]);
   assert.deepEqual(lines(d), [
     "classDiagram",
     '  class n0["Billing period"]', '  class n1["Credit note"]', '  class n2["Invoice"]', '  class n3["Invoice line"]',
     '  class n4["Customer · Pricing"]', '  class n5["Pricing rule · Pricing"]', '  class n6["Usage record · Pricing"]',
-    "  n1 --> n2 : one, corrected invoice", "  n1 --> n3 : one to many, lines", "  n2 --> n0 : one",
-    "  n2 --> n4 : one, billed customer", "  n2 --> n3 : one to many, lines", "  n3 --> n5 : one, rule", "  n3 --> n6 : many, usage read",
+    ...associations(arrows),
   ]);
-  assert.deepEqual(d.nodes[4], { node: "n4", id: "concepts/customer", title: "Customer", type: "concept" });
+  assert.deepEqual(d.nodes[4], { node: "n4", id: I("concepts/customer"), title: "Customer", type: "concept" });
   assert.equal(d.links.length, 7);
+  assert.deepEqual(d.links, linksOf(arrows));
 });
 
 test("an As cell's own colon and semicolon are escaped, since Mermaid ends an unquoted association label at either", () => {
@@ -82,7 +96,7 @@ test("plain() folds a line break and its surrounding spaces to one space, the fo
 });
 
 test("a process draws its phases in its table's order, who executes each, and each gate with its approvers", () => {
-  const d = diagram(s, { shape: "process", id: "processes/delivery" });
+  const d = diagram(s, { shape: "process", id: I("processes/delivery") });
   assert.deepEqual([d.title, d.edges, d.omitted], ["Delivery", 4, 0]);
   assert.deepEqual(lines(d), [
     "flowchart LR",
@@ -97,7 +111,7 @@ test("a process draws its phases in its table's order, who executes each, and ea
     "  classDef stop fill:none,stroke-dasharray:3 3",
     "  class stop stop",
   ]);
-  assert.deepEqual(ids(d), [["n0", "processes/delivery/phases/specify"], ["n1", "processes/delivery/phases/build"], ["n2", "processes/delivery/phases/release"]]);
+  assert.deepEqual(ids(d), [["n0", I("processes/delivery/phases/specify")], ["n1", I("processes/delivery/phases/build")], ["n2", I("processes/delivery/phases/release")]]);
   assert.deepEqual(d.links, [
     { from: "n0", to: "n1", label: "Reviewer" }, { from: "n1", to: "n2", label: "Reviewer" },
     { from: "n0", to: "n0", label: "Reviewer: reshaped" }, { from: "n1", to: "n1", label: "Reviewer: reworked" },
@@ -105,7 +119,7 @@ test("a process draws its phases in its table's order, who executes each, and ea
 });
 
 test("rows to one phase merge into one arrow, in table order, escaped in the picture and raw in links; no stop row, no Stop node", () => {
-  const d = diagram(withBackFlows(), { shape: "process", id: "processes/delivery" });
+  const d = diagram(withBackFlows(), { shape: "process", id: I("processes/delivery") });
   assert.deepEqual(lines(d).slice(6), [
     '  n0 -.->|"Reviewer: reshaped"| n0',
     '  n1 -.->|"Reviewer: respecified, held #quot;for now#quot; #lt;#35;1#gt;"| n0',
@@ -122,12 +136,12 @@ test("rows to one phase merge into one arrow, in table order, escaped in the pic
 
 test("a site's model.json, the parser's entities and edges with no schemas, draws the tool's own process picture", () => {
   const { entities, edges, commit, repo } = withBackFlows();
-  const { model, shape, ...drawn } = diagram(withBackFlows(), { shape: "process", id: "processes/delivery" });
-  assert.deepEqual(processDiagram(structuredClone({ entities, edges, commit, repo }), "processes/delivery"), drawn);
+  const { model, shape, ...drawn } = diagram(withBackFlows(), { shape: "process", id: I("processes/delivery") });
+  assert.deepEqual(processDiagram(structuredClone({ entities, edges, commit, repo }), I("processes/delivery")), drawn);
 });
 
 test("the Stop node is never a node a client links, and its arrows are never links", () => {
-  const d = diagram(s, { shape: "process", id: "processes/delivery" });
+  const d = diagram(s, { shape: "process", id: I("processes/delivery") });
   assert.ok(d.nodes.every((n) => n.node !== "stop"));
   assert.ok(d.links.every((l) => l.to !== "stop" && l.from !== "stop"));
 });
@@ -136,7 +150,7 @@ test("a phase with no If not met section, as on an older core, draws exactly tod
   const old = structuredClone(exampleSnapshot());
   for (const e of old.entities) if (e.type === "phase") e.sections = e.sections.filter((x) => x.heading !== "If not met");
   old.edges = old.edges.filter((x) => x.via !== "If not met.Leads to");
-  const d = diagram(old, { shape: "process", id: "processes/delivery" });
+  const d = diagram(old, { shape: "process", id: I("processes/delivery") });
   assert.deepEqual(lines(d), [
     "flowchart LR",
     '  n0["<b>Specify</b><br/><small>Backend Engineer</small>"]', '  n1["<b>Build</b><br/><small>Backend Engineer, Reviewer</small>"]', '  n2["<b>Release</b><br/><small>Reviewer</small>"]',
@@ -146,7 +160,7 @@ test("a phase with no If not met section, as on an older core, draws exactly tod
 });
 
 test("a neighborhood draws one hop both ways, the smallest groups first", () => {
-  const d = diagram(s, { shape: "neighborhood", id: "concepts/invoice" });
+  const d = diagram(s, { shape: "neighborhood", id: I("concepts/invoice") });
   assert.deepEqual([d.title, d.edges, d.omitted], ["Invoice", 8, 0]);
   assert.deepEqual(lines(d), [
     "flowchart LR",
@@ -156,7 +170,7 @@ test("a neighborhood draws one hop both ways, the smallest groups first", () => 
     '  n0 -->|"domain"| n1', '  n0 -->|"source"| n2', '  n3 -->|"Relations.Concept"| n0', '  n4 -->|"concepts"| n0',
     '  n5 -->|"concepts"| n0', '  n0 -->|"Relations.Concept"| n6', '  n0 -->|"Relations.Concept"| n7', '  n0 -->|"Relations.Concept"| n8',
   ]);
-  assert.deepEqual(d.nodes[0], { node: "n0", id: "concepts/invoice", title: "Invoice", type: "concept" });
+  assert.deepEqual(d.nodes[0], { node: "n0", id: I("concepts/invoice"), title: "Invoice", type: "concept" });
   assert.deepEqual(d.links, [
     { from: "n0", to: "n1", label: "domain" }, { from: "n0", to: "n2", label: "source" },
     { from: "n3", to: "n0", label: "Relations.Concept" }, { from: "n4", to: "n0", label: "concepts" },
@@ -167,15 +181,16 @@ test("a neighborhood draws one hop both ways, the smallest groups first", () => 
 });
 
 test("two rows drawing one edge are one arrow that says how many", () => {
-  const d = diagram(s, { shape: "neighborhood", id: "concepts/contract" });
+  const d = diagram(s, { shape: "neighborhood", id: I("concepts/contract") });
   assert.ok(lines(d).includes('  n0 -->|"Relations.Concept ×2"| n4'), d.mermaid);
-  assert.equal(d.nodes[4].id, "concepts/customer");
+  assert.equal(d.nodes[4].id, I("concepts/customer"));
   assert.equal(d.edges, 9);
   assert.deepEqual(d.links.find((l) => l.to === "n4" || l.from === "n4"), { from: "n0", to: "n4", label: "Relations.Concept ×2" });
 });
 
 test("past the cap a neighborhood leaves out the largest group whole and names it", () => {
-  const d = diagram(withHub({ out: 60, into: 5 }), { shape: "neighborhood", id: "concepts/hub" });
+  const hub = withHub({ out: 60, into: 5 });
+  const d = diagram(hub, { shape: "neighborhood", id: idAt(hub, "concepts/hub") });
   assert.deepEqual([d.nodes.length, d.edges, d.omitted], [7, 6, 60]);
   assert.deepEqual(lines(d).slice(-2), ['  more["+60: Relations.Concept"]', "  n0 -.- more"]);
   assert.ok(!d.nodes.some((n) => n.node === "more"));
@@ -184,13 +199,15 @@ test("past the cap a neighborhood leaves out the largest group whole and names i
 });
 
 test("at the cap nothing is left out", () => {
-  const d = diagram(withHub({ out: DIAGRAM_CAP - 6, into: 5 }), { shape: "neighborhood", id: "concepts/hub" });
+  const hub = withHub({ out: DIAGRAM_CAP - 6, into: 5 });
+  const d = diagram(hub, { shape: "neighborhood", id: idAt(hub, "concepts/hub") });
   assert.deepEqual([d.nodes.length, d.omitted], [DIAGRAM_CAP + 1, 0]);
   assert.ok(!d.mermaid.includes("more"));
 });
 
 test("a busy entity of the reference instance is drawn within the cap and says what it left out", () => {
   const i = instanceSnapshot();
+  // Named by address, which reaches the profile whether or not the instance carries ids.
   const d = diagram(i, { shape: "neighborhood", id: "profiles/robert-blust" });
   assert.ok(d.nodes.length <= DIAGRAM_CAP + 1, `${d.nodes.length} nodes`);
   assert.ok(d.omitted > 0);
@@ -198,7 +215,8 @@ test("a busy entity of the reference instance is drawn within the cap and says w
 });
 
 test("a self-reference is not drawn, an entity reached both ways is one node, and an odd title stays a label", () => {
-  const d = diagram(withLoops(), { shape: "neighborhood", id: "concepts/loop" });
+  const loops = withLoops();
+  const d = diagram(loops, { shape: "neighborhood", id: idAt(loops, "concepts/loop") });
   const odd = label(ODD);
   assert.equal(odd, "Partner #quot;A#quot; #lt;B#gt; #35;1 --#gt; C");
   assert.deepEqual(lines(d), [
@@ -214,8 +232,8 @@ test("a self-reference is not drawn, an entity reached both ways is one node, an
 test("every link's ends are drawn nodes, and the link count matches the arrow lines, over every shape", () => {
   for (const d of [
     diagram(s, { shape: "concepts" }),
-    diagram(s, { shape: "process", id: "processes/delivery" }),
-    diagram(s, { shape: "neighborhood", id: "concepts/invoice" }),
+    diagram(s, { shape: "process", id: I("processes/delivery") }),
+    diagram(s, { shape: "neighborhood", id: I("concepts/invoice") }),
     diagram(s, { shape: "schema" }),
     diagram(s, { shape: "schema", type: "profile" }),
   ]) {
@@ -234,21 +252,21 @@ test("the arguments each shape does not take, needs or cannot use are refused by
   refused(() => diagram(s, { shape: "graph" }), "invalid_argument", { argument: "shape", reason: "one of concepts, process, neighborhood, schema" });
   refused(() => diagram(s, { shape: "schema", id: "core/phase" }), "invalid_argument", { argument: "id", reason: "not taken by schema" });
   refused(() => diagram(s, { shape: "concepts", type: "phase" }), "invalid_argument", { argument: "type", reason: "not taken by concepts" });
-  refused(() => diagram(s, { shape: "schema", domain: "domains/pricing" }), "invalid_argument", { argument: "domain", reason: "not taken by schema" });
+  refused(() => diagram(s, { shape: "schema", domain: I("domains/pricing") }), "invalid_argument", { argument: "domain", reason: "not taken by schema" });
   refused(() => diagram(s, { shape: "schema", type: "nothing" }), "unknown_type");
-  refused(() => diagram(s, { shape: "concepts", id: "concepts/invoice" }), "invalid_argument", { argument: "id", reason: "not taken by concepts" });
-  refused(() => diagram(s, { shape: "process", id: "processes/delivery", domain: "domains/pricing" }), "invalid_argument", { argument: "domain", reason: "not taken by process" });
+  refused(() => diagram(s, { shape: "concepts", id: I("concepts/invoice") }), "invalid_argument", { argument: "id", reason: "not taken by concepts" });
+  refused(() => diagram(s, { shape: "process", id: I("processes/delivery"), domain: I("domains/pricing") }), "invalid_argument", { argument: "domain", reason: "not taken by process" });
   refused(() => diagram(s, { shape: "neighborhood" }), "invalid_argument", { argument: "id", reason: "needed by neighborhood" });
-  refused(() => diagram(s, { shape: "process", id: "concepts/invoice" }), "invalid_argument", { argument: "id", reason: "not a process" });
-  refused(() => diagram(s, { shape: "concepts", domain: "concepts/invoice" }), "invalid_argument", { argument: "domain", reason: "not a domain" });
+  refused(() => diagram(s, { shape: "process", id: I("concepts/invoice") }), "invalid_argument", { argument: "id", reason: "not a process" });
+  refused(() => diagram(s, { shape: "concepts", domain: I("concepts/invoice") }), "invalid_argument", { argument: "domain", reason: "not a domain" });
   refused(() => diagram(s, { shape: "process", id: "nothing/here" }), "unknown_entity", { id: "nothing/here" });
   refused(() => diagram(instanceSnapshot(), { shape: "concepts" }), "unknown_type");
 });
 
 test("a diagram with nothing to draw, or more than it holds, is refused rather than cut", () => {
   const n = withNothingToDraw();
-  refused(() => diagram(n, { shape: "concepts", domain: "domains/support" }), "cannot_draw", { shape: "concepts", reason: "empty", nodes: 0, limit: DIAGRAM_CAP });
-  refused(() => diagram(n, { shape: "process", id: "processes/intake" }), "cannot_draw", { shape: "process", reason: "empty", nodes: 0, limit: DIAGRAM_CAP });
+  refused(() => diagram(n, { shape: "concepts", domain: idAt(n, "domains/support") }), "cannot_draw", { shape: "concepts", reason: "empty", nodes: 0, limit: DIAGRAM_CAP });
+  refused(() => diagram(n, { shape: "process", id: idAt(n, "processes/intake") }), "cannot_draw", { shape: "process", reason: "empty", nodes: 0, limit: DIAGRAM_CAP });
   refused(() => diagram(withHub({ out: 60, into: 5 }), { shape: "concepts" }), "cannot_draw", { shape: "concepts", reason: "too_large", nodes: 74, limit: DIAGRAM_CAP });
 });
 
@@ -259,14 +277,15 @@ test("the too-large hint to name a domain is said only when none was given", () 
 
   // A too-large fixture that is already domain-filtered is costly to build, so the message
   // builder is asserted on directly here, with the same shape, reason and node count as above.
-  const filtered = cannot("concepts", "too_large", 74, { id: "domains/pricing", name: "Pricing" });
+  const filtered = cannot("concepts", "too_large", 74, { id: I("domains/pricing"), name: "Pricing" });
   assert.doesNotMatch(filtered.message, /name a domain/);
   assert.deepEqual(filtered.details, { shape: "concepts", reason: "too_large", nodes: 74, limit: DIAGRAM_CAP });
 });
 
 test("a concept outside the domain that belongs to no domain is drawn by its title alone", () => {
-  const d = diagram(withNothingToDraw(), { shape: "concepts", domain: "domains/pricing" });
-  const stray = d.nodes.find((n) => n.id === "concepts/stray");
+  const n = withNothingToDraw();
+  const d = diagram(n, { shape: "concepts", domain: I("domains/pricing") });
+  const stray = d.nodes.find((x) => x.id === idAt(n, "concepts/stray"));
   assert.ok(d.mermaid.split("\n").includes(`  class ${stray.node}["Stray"]`), d.mermaid);
 });
 

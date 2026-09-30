@@ -8,9 +8,13 @@ import fs from "node:fs";
 import { fileURLToPath } from "node:url";
 import { Client, InMemoryTransport } from "@modelcontextprotocol/client";
 import { createServer } from "../lib/server.mjs";
-import { exampleSnapshot, withOwnedNameTwice } from "../test/helpers.mjs";
+import { exampleSnapshot, withOwnedNameTwice, idAt } from "../test/helpers.mjs";
 
-const DDD = "skills/domain-driven-design";
+// The worked example, and each entity an example names, by where its page sits: the id a call
+// passes is the one the example's page carries, read off the snapshot as a client reads it off
+// an answer.
+const example = exampleSnapshot();
+const DDD = idAt(example, "skills/domain-driven-design");
 
 // Heading text → the call shown under it. `ambiguous` runs on the fixture in which two owners
 // each hold one title, which the worked example does not.
@@ -24,12 +28,12 @@ export const EXAMPLES = {
   "`describe_errors`": { name: "describe_errors", arguments: {} },
   "`list_entities`": { name: "list_entities", arguments: { type: "skill", limit: 2 } },
   "`get_entity`": { name: "get_entity", arguments: { id: DDD } },
-  "`list_references`": { name: "list_references", arguments: { entity: "profiles/mira-halvorsen", direction: "in", via: "nested-in" } },
+  "`list_references`": { name: "list_references", arguments: { entity: idAt(example, "profiles/mira-halvorsen"), direction: "in", via: "nested-in" } },
   "`find_evidence`": { name: "find_evidence", arguments: { skill: DDD } },
   "`search`": { name: "search", arguments: { query: "bounded context", limit: 2 } },
   "`search` with `words`": { name: "search", arguments: { query: "decided the billing contexts", match: "words", limit: 2 } },
   "`fetch`": { name: "fetch", arguments: { id: DDD } },
-  "`diagram`": { name: "diagram", arguments: { shape: "process", id: "processes/delivery" } },
+  "`diagram`": { name: "diagram", arguments: { shape: "process", id: idAt(example, "processes/delivery") } },
   "A refusal": { name: "get_entity", ambiguous: true },
 };
 
@@ -47,7 +51,7 @@ async function connect(s) {
 }
 
 export async function render(text) {
-  const plain = await connect(exampleSnapshot());
+  const plain = await connect(example);
   const twice = withOwnedNameTwice();
   const ambiguous = await connect(twice.snapshot);
   let out = text;
