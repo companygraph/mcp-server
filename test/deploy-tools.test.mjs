@@ -60,6 +60,8 @@ test("the shared tools tests pass over a snapshot that is its pin", () => {
   const r = deployment({ commit: COMMIT, tag: OWN, register: TOOLS });
   assert.equal(r.status, 0, r.stdout + r.stderr);
   assert.match(r.stdout, /every tool the server lists answers inside its schema/);
+  // The worked example's ids are all version 7, so the newest order runs here and is not skipped.
+  assert.match(r.stdout, /^ok \d+ - list_entities by newest starts with the latest moment over this snapshot$/m);
 });
 
 test("and fail over one that is not, so a pass above means something", () => {

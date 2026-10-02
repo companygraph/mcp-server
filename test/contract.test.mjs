@@ -10,6 +10,7 @@ import { OUTPUTS, ErrorResult } from "../lib/schemas.mjs";
 import { CODES } from "../lib/errors.mjs";
 import { sampleCalls, checkAnswer } from "../lib/contract.mjs";
 import { words } from "../lib/words.mjs";
+import { createdOf } from "../lib/model.mjs";
 import { exampleSnapshot, instanceSnapshot, withOwnedNameTwice, withNothingToDraw, idAt } from "./helpers.mjs";
 
 async function connect(s) {
@@ -145,6 +146,26 @@ for (const [label, s] of FIXTURES) {
     }
     await client.close();
     await other.close();
+  });
+
+  test(`${label}: list_entities without a type, by newest, answers in order or says the ids carry no time`, async () => {
+    const client = await connect(s);
+    const r = await client.callTool({ name: "list_entities", arguments: { order: "newest", limit: 200 } });
+    if (s.entities.some((e) => createdOf(e.id))) {
+      const a = checkAnswer("list_entities", r);
+      assert.equal(a.type, null);
+      const times = a.entities.map((e) => e.created).filter(Boolean);
+      assert.ok(times.length > 1);
+      assert.deepEqual(times, [...times].sort().reverse());
+    } else {
+      assert.equal(r.isError, true);
+      const { error } = checkAnswer("list_entities", r);
+      assert.equal(error.code, "no_creation_time");
+      assert.deepEqual(error.details, { order: "newest", type: null });
+      assert.equal(error.message, r.content[0].text);
+      reached.add(error.code);
+    }
+    await client.close();
   });
 }
 
@@ -311,6 +332,9 @@ test("every schema refuses a missing field, a wrong type and a field nobody decl
   assert.ok(!OUTPUTS.list_entities.safeParse({ ...listed, entities: [{ ...listed.entities[0], id: 7 }] }).success, "an id that is a number");
   const { id, ...idless } = listed.entities[0];
   assert.ok(!OUTPUTS.list_entities.safeParse({ ...listed, entities: [idless] }).success, "an entity without its id");
+  assert.ok(OUTPUTS.list_entities.safeParse(listed).success && typeof listed.entities[0].created === "string", "the example's entities carry a moment");
+  assert.ok(!OUTPUTS.list_entities.safeParse({ ...listed, entities: [{ ...listed.entities[0], created: "yesterday" }] }).success, "a created that is not an ISO time");
+  assert.ok(!OUTPUTS.list_entities.safeParse({ ...listed, entities: [{ ...listed.entities[0], created: null }] }).success, "a created that is null rather than absent");
   const refused = (await client.callTool({ name: "get_entity", arguments: { id: "nothing/here" } })).structuredContent;
   assert.ok(ErrorResult.safeParse(refused).success);
   assert.ok(!ErrorResult.safeParse({ ...refused, error: { ...refused.error, code: "not_a_code" } }).success);
