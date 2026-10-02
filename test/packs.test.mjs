@@ -139,3 +139,24 @@ test("readGitHubSchemas follows the manifest's units, and refuses a pack that is
   const missing = fakeGitHub({ ".companygraph/manifest.json": JSON.stringify({ packs: ["software"] }), "meta/core/manifest.json": "{}" });
   await assert.rejects(readGitHubSchemas({ repo: "o/r", commit: COMMIT, core: "meta/core/", fetch: missing.fetch }), /software/);
 });
+
+// A manifest that is not JSON, or whose `packs` is not a list of names, is refused by a sentence
+// naming the manifest, never a bare SyntaxError and never a string read one letter at a time.
+test("a malformed manifest, or a packs field that is not a list of names, is refused naming the manifest", async () => {
+  const local = packInstanceDir();
+  const manifest = path.join(local, ".companygraph", "manifest.json");
+  for (const [text, said] of [["{ not json", /manifest\.json.*not JSON/], [JSON.stringify({ packs: "software" }), /manifest\.json.*packs/], [JSON.stringify({ packs: [1] }), /manifest\.json.*packs/]]) {
+    fs.writeFileSync(manifest, text);
+    assert.throws(() => readSchemas(path.join(local, "meta", "core")), (err) => !(err instanceof SyntaxError) && said.test(err.message) && err.message.includes(manifest));
+    const { fetch } = fakeGitHub({ ".companygraph/manifest.json": text, "meta/core/manifest.json": "{}", "meta/software/aggregate-schema.md": "pack aggregate" });
+    await assert.rejects(readGitHubSchemas({ repo: "o/r", commit: COMMIT, core: "meta/core/", fetch }),
+      (err) => !(err instanceof SyntaxError) && said.test(err.message) && err.message.includes(`o/r@${COMMIT}:.companygraph/manifest.json`));
+  }
+});
+
+test("readGitHubSchemas reads the core alone where the core read is not the manifest's units core", async () => {
+  const { fetch } = fakeGitHub({ ".companygraph/manifest.json": JSON.stringify({ packs: ["software"] }),
+    "elsewhere/core/manifest.json": "{}", "meta/software/aggregate-schema.md": "pack aggregate" });
+  const schemas = await readGitHubSchemas({ repo: "o/r", commit: COMMIT, core: "elsewhere/core", fetch });
+  assert.deepEqual([...schemas.keys()], ["manifest.json"]);
+});
