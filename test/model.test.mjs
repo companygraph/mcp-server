@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { ModelError, listTypes, describeSchema, listEntities, getEntity, getEntityById, entityBy, REFERENCE_CAP, findEvidence, search, fetchEntity } from "../lib/model.mjs";
+import { ModelError, listTypes, describeSchema, listEntities, getEntity, getEntityById, entityBy, REFERENCE_CAP, findEvidence, search, fetchEntity, createdOf } from "../lib/model.mjs";
 import { exampleSnapshot, COMMIT, withSharedName, withOwnedNameTwice, EXAMPLE_CORE, PARSER, EXAMPLE_TYPES, instanceSnapshot, idAt } from "./helpers.mjs";
 
 const s = exampleSnapshot();
@@ -35,8 +35,31 @@ test("list_entities lists one type, in the order of where their pages sit", () =
   const r = listEntities(s, "skill");
   assert.equal(r.type, "skill");
   assert.deepEqual(r.entities.map((e) => e.id), ["skills/domain-driven-design", "skills/java-programming", "skills/product-discovery"].map((a) => idAt(s, a)));
-  assert.deepEqual(Object.keys(r.entities[0]), ["id", "type", "name", "tagline", "owner"]);
+  assert.deepEqual(Object.keys(r.entities[0]), ["id", "type", "name", "tagline", "owner", "created"]);
   assert.throws(() => listEntities(s, "person"), ModelError);
+});
+
+test("the moment a version 7 id was made is read from the id, and from no other id", () => {
+  // Made with `companygraph id` on 2026-10-02; the moment is the one the id was made at.
+  assert.equal(createdOf("01a0fadb-2a89-734e-85c3-2c8094ed07e6"), "2026-10-02T04:24:22.409Z");
+  assert.equal(createdOf("01A0FADB-2A89-734E-85C3-2C8094ED07E6"), "2026-10-02T04:24:22.409Z");
+  assert.equal(createdOf("3b241101-e2bb-4255-8caf-4136c566a962"), null, "a version 4 id");
+  assert.equal(createdOf("skills/domain-driven-design"), null, "an address standing in for an id");
+  assert.equal(createdOf("01a0fadb2a89734e85c32c8094ed07e6"), null, "a UUID without its hyphens");
+  assert.equal(createdOf(undefined), null);
+});
+
+test("every entity a tool serves carries its moment, and one whose id has none carries no key", () => {
+  const listed = listEntities(s, "skill").entities[0];
+  assert.equal(listed.created, createdOf(listed.id));
+  const found = search(s, "Domain-Driven Design", { match: "name" }).results[0];
+  assert.equal(found.created, createdOf(found.id));
+  assert.equal(getEntityById(s, DDD).entity.created, createdOf(DDD));
+  const undated = instanceSnapshot();
+  const first = listEntities(undated, "skill").entities[0];
+  assert.equal("created" in first, false);
+  assert.equal("created" in getEntityById(undated, first.id).entity, false);
+  assert.equal("created" in search(undated, first.name, { match: "name" }).results[0], false);
 });
 
 test("get_entity resolves within the type and returns references both ways, as edges", () => {

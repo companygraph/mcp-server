@@ -311,6 +311,9 @@ test("every schema refuses a missing field, a wrong type and a field nobody decl
   assert.ok(!OUTPUTS.list_entities.safeParse({ ...listed, entities: [{ ...listed.entities[0], id: 7 }] }).success, "an id that is a number");
   const { id, ...idless } = listed.entities[0];
   assert.ok(!OUTPUTS.list_entities.safeParse({ ...listed, entities: [idless] }).success, "an entity without its id");
+  assert.ok(OUTPUTS.list_entities.safeParse(listed).success && typeof listed.entities[0].created === "string", "the example's entities carry a moment");
+  assert.ok(!OUTPUTS.list_entities.safeParse({ ...listed, entities: [{ ...listed.entities[0], created: "yesterday" }] }).success, "a created that is not an ISO time");
+  assert.ok(!OUTPUTS.list_entities.safeParse({ ...listed, entities: [{ ...listed.entities[0], created: null }] }).success, "a created that is null rather than absent");
   const refused = (await client.callTool({ name: "get_entity", arguments: { id: "nothing/here" } })).structuredContent;
   assert.ok(ErrorResult.safeParse(refused).success);
   assert.ok(!ErrorResult.safeParse({ ...refused, error: { ...refused.error, code: "not_a_code" } }).success);

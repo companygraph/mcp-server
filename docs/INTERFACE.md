@@ -557,14 +557,16 @@ No argument. What a refused call looks like, for a client that reads only the pr
         "type": "skill",
         "name": "Domain-Driven Design",
         "tagline": "Modeling software around the language the business already speaks.",
-        "owner": null
+        "owner": null,
+        "created": "2026-08-23T15:52:53.000Z"
       },
       {
         "id": "01a02f53-2408-76c1-aee5-cc97a65fcc78",
         "type": "skill",
         "name": "Java Programming",
         "tagline": "Building and maintaining server-side systems on the JVM.",
-        "owner": null
+        "owner": null,
+        "created": "2026-08-23T15:52:53.000Z"
       }
     ],
     "page": {
@@ -606,6 +608,7 @@ No argument. What a refused call looks like, for a client that reads only the pr
       },
       "owner": null,
       "path": "example/model/skills/domain-driven-design.md",
+      "created": "2026-08-23T15:52:53.000Z",
       "sections": [
         {
           "heading": "In practice",
@@ -907,6 +910,7 @@ Optional `entity`, an id or an address; `direction` (`out`, `in` or `both`, rela
         "type": "profile",
         "owner": null,
         "tagline": "Backend engineer who ended up owning the parts nobody else wanted to.",
+        "created": "2026-08-23T15:52:53.000Z",
         "url": "https://github.com/companygraph/meta-model/blob/0123456789abcdef0123456789abcdef01234567/example/model/profiles/mira-halvorsen/mira-halvorsen.md",
         "matched": [
           {
@@ -921,6 +925,7 @@ Optional `entity`, an id or an address; `direction` (`out`, `in` or `both`, rela
         "type": "role",
         "owner": null,
         "tagline": "The seat that keeps the services the product runs on correct, and answers for them when they are not.",
+        "created": "2026-09-15T20:18:24.000Z",
         "url": "https://github.com/companygraph/meta-model/blob/0123456789abcdef0123456789abcdef01234567/example/model/roles/backend-engineer.md",
         "matched": [
           {
@@ -980,6 +985,7 @@ The same tool in its third mode. Beside `query` and `match` the answer carries `
         "type": "experience",
         "owner": "01a03a2c-2de8-73b4-9058-8664caea919a",
         "tagline": "Ongoing. Choosing which of the two billing contexts serves customers first, and saying why.",
+        "created": "2026-08-25T18:26:09.000Z",
         "url": "https://github.com/companygraph/meta-model/blob/0123456789abcdef0123456789abcdef01234567/example/model/profiles/tomas-reyes/experiences/2022-beacon-systems.md",
         "matched": [
           {
@@ -998,6 +1004,7 @@ The same tool in its third mode. Beside `query` and `match` the answer carries `
         "type": "profile",
         "owner": null,
         "tagline": "Product person who learned to read the code so the conversation with engineering stayed honest.",
+        "created": "2026-08-25T18:26:09.000Z",
         "url": "https://github.com/companygraph/meta-model/blob/0123456789abcdef0123456789abcdef01234567/example/model/profiles/tomas-reyes/tomas-reyes.md",
         "matched": [
           {
