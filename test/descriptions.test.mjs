@@ -39,6 +39,15 @@ test("a paged tool says how to continue, and a tool with a sibling names it", ()
   assert.match(of("diagram"), /\blist_references\b/);
 });
 
+test("the two rule tools say they describe conventions, and point to list_entities for a company's own rules", () => {
+  for (const name of ["list_rules", "describe_rule"]) {
+    assert.match(of(name), /convention/i, name);
+    assert.match(of(name), /`rule`/, name);
+    assert.match(of(name), /\blist_entities\b/, name);
+    assert.match(of(name), /\bget_entity\b/, name);
+  }
+});
+
 test("describe_relations names direction as one side of relations, not a narrower it shares with every list", () => {
   assert.match(of("describe_relations"), /one side of relations/);
   assert.doesNotMatch(of("describe_relations"), /narrow every list/);

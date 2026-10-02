@@ -11,7 +11,7 @@ It serves a snapshot parsed at build time with the meta-model's own parser, so a
 | `list_types` | every type the schemas declare |
 | `describe_schema` | one type's schema and its relations |
 | `describe_relations` | what the schemas declare between types, whole or narrowed |
-| `list_rules`, `describe_rule` | the rules the model is held to, and one as written |
+| `list_rules`, `describe_rule` | the vocabulary's conventions the model is held to, and one as written |
 | `list_checks` | the checks the model's gate runs; a list, not a verdict |
 | `describe_errors` | what a refused call looks like: every code and the refusal's JSON Schema |
 | `list_entities` | the entities of one type, paged |
