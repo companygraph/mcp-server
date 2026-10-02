@@ -104,8 +104,8 @@ export function registerToolsTests() {
     }
     const answer = checkAnswer("list_entities", r);
     const times = answer.entities.map((e) => e.created).filter(Boolean);
-    assert.ok(times.length > 0);
-    assert.ok(times[0] >= times.at(-1), `${times[0]} is not earlier than ${times.at(-1)}`);
+    assert.ok(times.length > 1, "more than one entity carries a moment, so there is an order to hold");
+    for (let i = 1; i < times.length; i++) assert.ok(times[i - 1] >= times[i], `${times[i - 1]} comes before the later ${times[i]}`);
     await client.close();
   });
 }

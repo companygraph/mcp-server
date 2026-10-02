@@ -47,6 +47,10 @@ test("the moment a version 7 id was made is read from the id, and from no other 
   assert.equal(createdOf("skills/domain-driven-design"), null, "an address standing in for an id");
   assert.equal(createdOf("01a0fadb2a89734e85c32c8094ed07e6"), null, "a UUID without its hyphens");
   assert.equal(createdOf(undefined), null);
+  // An id whose moment falls after 9999 cannot be written as the ISO time the schema holds, so it
+  // says none rather than break every answer that holds it; nor does an id whose variant is not RFC 9562's.
+  assert.equal(createdOf("ffffffff-ffff-7fff-bfff-ffffffffffff"), null, "a moment past 9999");
+  assert.equal(createdOf("01a0fadb-2a89-734e-05c3-2c8094ed07e6"), null, "a variant that is not RFC 9562's");
 });
 
 test("every entity a tool serves carries its moment, and one whose id has none carries no key", () => {
