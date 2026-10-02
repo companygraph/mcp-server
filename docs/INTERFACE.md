@@ -229,7 +229,7 @@ Optional `type`, `direction` (`declares`, `declared-to` or `both`; needs `type`)
 
 ### `list_rules`
 
-No arguments. `tagline`, and `rules` with each rule's number, `title` and the `part` of the file it stands in. `url` is that file, the `CONVENTIONS.md` beside the schemas at the served commit, null where a schema's would be.
+No arguments. The vocabulary's conventions, not a company's own rules, which are entities of type `rule`, listed with `list_entities` and read with `get_entity`. `tagline`, and `rules` with each convention's number, `title` and the `part` of the file it stands in. `url` is that file, the `CONVENTIONS.md` beside the schemas at the served commit, null where a schema's would be.
 
 ```json
 {
@@ -262,7 +262,7 @@ No arguments. `tagline`, and `rules` with each rule's number, `title` and the `p
 
 ### `describe_rule`
 
-`rule`, a number such as `R4`, in either case. The rule's `title`, `part` and `text` as written, and the `url` of the file it stands in, as `list_rules` gives it.
+`rule`, a number such as `R4`, in either case. The convention's `title`, `part` and `text` as written, and the `url` of the file it stands in, as `list_rules` gives it.
 
 ```json
 {
