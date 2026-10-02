@@ -1135,6 +1135,7 @@ A refused call is a tool error. Its text is a sentence for a reader, and its str
 | `invalid_cursor` | a cursor this server did not write, or one from another commit | `reason`: `malformed` or `other_commit` |
 | `unsupported_snapshot` | the snapshot predates what the tool reads | `missing` |
 | `cannot_draw` | a diagram would draw nothing, or more nodes than it holds | `shape`, `reason`: `too_large` or `empty`, `nodes`, `limit` |
+| `no_creation_time` | an order by when entities came into the model, over a list whose ids carry no time | `order`: `newest` or `oldest`, `type`: the type named or null |
 
 Arguments that fail a tool's input schema, a missing one, a number where a string belongs or a value outside an enumeration, are refused like any other: `invalid_argument`, with the `argument` at fault and the `reason`. Where several are at fault the sentence names each and `details` holds the first. An argument no schema names is ignored and not refused. What carries no code is what never reaches a tool: a tool name nobody registered and a request that is not the protocol's are answered by the MCP SDK as JSON-RPC errors, not as tool results.
 

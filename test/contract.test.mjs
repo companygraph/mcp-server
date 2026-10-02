@@ -10,6 +10,7 @@ import { OUTPUTS, ErrorResult } from "../lib/schemas.mjs";
 import { CODES } from "../lib/errors.mjs";
 import { sampleCalls, checkAnswer } from "../lib/contract.mjs";
 import { words } from "../lib/words.mjs";
+import { createdOf } from "../lib/model.mjs";
 import { exampleSnapshot, instanceSnapshot, withOwnedNameTwice, withNothingToDraw, idAt } from "./helpers.mjs";
 
 async function connect(s) {
@@ -145,6 +146,26 @@ for (const [label, s] of FIXTURES) {
     }
     await client.close();
     await other.close();
+  });
+
+  test(`${label}: list_entities without a type, by newest, answers in order or says the ids carry no time`, async () => {
+    const client = await connect(s);
+    const r = await client.callTool({ name: "list_entities", arguments: { order: "newest", limit: 200 } });
+    if (s.entities.some((e) => createdOf(e.id))) {
+      const a = checkAnswer("list_entities", r);
+      assert.equal(a.type, null);
+      const times = a.entities.map((e) => e.created).filter(Boolean);
+      assert.ok(times.length > 1);
+      assert.deepEqual(times, [...times].sort().reverse());
+    } else {
+      assert.equal(r.isError, true);
+      const { error } = checkAnswer("list_entities", r);
+      assert.equal(error.code, "no_creation_time");
+      assert.deepEqual(error.details, { order: "newest", type: null });
+      assert.equal(error.message, r.content[0].text);
+      reached.add(error.code);
+    }
+    await client.close();
   });
 }
 

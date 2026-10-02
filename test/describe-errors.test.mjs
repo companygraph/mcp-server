@@ -12,7 +12,7 @@ import { Client, InMemoryTransport } from "@modelcontextprotocol/client";
 import { createServer, GLOSSARY } from "../lib/server.mjs";
 import { CODES, WHEN } from "../lib/errors.mjs";
 import { checkAnswer } from "../lib/contract.mjs";
-import { exampleSnapshot, withOwnedNameTwice } from "./helpers.mjs";
+import { exampleSnapshot, withOwnedNameTwice, instanceSnapshot } from "./helpers.mjs";
 
 async function connect(s) {
   const [a, b] = InMemoryTransport.createLinkedPair();
@@ -54,6 +54,12 @@ test("the served schema judges real refusals: it takes each and refuses a made-u
     assert.ok(whole.safeParse(r.structuredContent).success, `${code}: the served schema refuses a real refusal`);
     assert.ok(detailsOf[code].safeParse(r.structuredContent.error.details).success, `${code}: its details`);
   }
+  const undated = await connect(instanceSnapshot());
+  const timeless = await undated.callTool({ name: "list_entities", arguments: { order: "oldest" } });
+  assert.equal(timeless.structuredContent.error.code, "no_creation_time");
+  assert.ok(whole.safeParse(timeless.structuredContent).success, "no_creation_time: the served schema refuses a real refusal");
+  assert.ok(detailsOf.no_creation_time.safeParse(timeless.structuredContent.error.details).success, "no_creation_time: its details");
+  await undated.close();
   const real = (await client.callTool({ name: "fetch", arguments: { id: "nothing/here" } })).structuredContent;
   assert.equal(whole.safeParse({ ...real, error: { ...real.error, code: "made_up" } }).success, false);
   assert.equal(whole.safeParse({ ...real, error: { ...real.error, details: {} } }).success, false);

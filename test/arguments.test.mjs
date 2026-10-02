@@ -30,6 +30,7 @@ test("an argument of the wrong type, a missing one and a value outside an enumer
     ["fetch", undefined, "id"],
     ["list_references", { direction: "sideways" }, "direction"],
     ["describe_relations", { type: 7 }, "type"],
+    ["list_entities", { order: "latest" }, "order"],
   ];
   for (const [name, args, argument] of CASES) {
     const where = `${name} ${JSON.stringify(args)}`;

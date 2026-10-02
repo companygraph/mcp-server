@@ -274,3 +274,61 @@ test("a snapshot from a core that predates image names no picture", () => {
   const old = instanceSnapshot();
   for (const e of old.entities) assert.ok(!("image_url" in getEntityById(old, e.id).entity), e.id);
 });
+
+// A list built from entities of the example's own type, so the order is the only thing a test
+// varies: three moments, two of them in one millisecond, and one entity whose id says none.
+const dated = (entries) => ({ ...s, entities: entries.map(([id, address]) => ({ id, type: "skill", name: address, tagline: "", owner: null, address, fields: {}, sections: [] })) });
+const EARLY = "01a0fadb-2a89-734e-85c3-2c8094ed07e6";
+const TIE_A = "01a0fadf-b1c5-7c45-b1a5-f4f9e18831f4";
+const TIE_B = "01a0fadf-b1c5-7fff-8000-000000000000";
+const UNDATED = "skills/written-before-ids";
+
+test("list_entities leaves out its type to list every type, and names none in its answer", () => {
+  const r = listEntities(s, undefined, { limit: 200 });
+  assert.equal(r.type, null);
+  assert.equal(r.page.total, s.entities.length);
+  assert.ok(new Set(r.entities.map((e) => e.type)).size > 1);
+  assert.deepEqual(r.entities, listEntities(s, undefined, { order: "address", limit: 200 }).entities, "address is the default");
+});
+
+test("newest and oldest order by the moment, then the id, and are each other reversed", () => {
+  const t = dated([[TIE_B, "skills/b"], [UNDATED, "skills/a"], [EARLY, "skills/c"], [TIE_A, "skills/d"]]);
+  assert.deepEqual(listEntities(t, "skill", { order: "oldest" }).entities.map((e) => e.id), [EARLY, TIE_A, TIE_B, UNDATED]);
+  assert.deepEqual(listEntities(t, "skill", { order: "newest" }).entities.map((e) => e.id), [TIE_B, TIE_A, EARLY, UNDATED]);
+  assert.deepEqual(listEntities(t, "skill").entities.map((e) => e.id), [UNDATED, TIE_B, EARLY, TIE_A], "address order is untouched");
+});
+
+test("entities whose ids say no moment follow in address order, and a list of only those is refused", () => {
+  const t = dated([[EARLY, "skills/c"], ["skills/z", "skills/z"], ["skills/y", "skills/y"]]);
+  assert.deepEqual(listEntities(t, "skill", { order: "newest" }).entities.map((e) => e.id), [EARLY, "skills/y", "skills/z"]);
+  const none = dated([["skills/z", "skills/z"], ["skills/y", "skills/y"]]);
+  assert.throws(() => listEntities(none, "skill", { order: "oldest" }), (e) => e instanceof ModelError && e.code === "no_creation_time"
+    && e.details.order === "oldest" && e.details.type === "skill" && /address/.test(e.message));
+  assert.throws(() => listEntities(none, undefined, { order: "newest" }), (e) => e.code === "no_creation_time" && e.details.type === null);
+  assert.equal(listEntities(none, "skill").page.total, 2, "address order lists them");
+});
+
+test("a list its filters leave empty is an empty page in any order, never a refusal", () => {
+  const r = listEntities(s, "skill", { owner: s.rootId, order: "newest" });
+  assert.deepEqual([r.entities, r.page.total], [[], 0]);
+});
+
+test("a walk through newest meets every entity once, in the order one large page gives", () => {
+  const whole = listEntities(s, undefined, { order: "newest", limit: 200 }).entities;
+  const walked = [];
+  let cursor;
+  do {
+    const r = listEntities(s, undefined, { order: "newest", limit: 2, cursor });
+    walked.push(...r.entities);
+    cursor = r.page.nextCursor;
+  } while (cursor);
+  assert.deepEqual(walked, whole);
+  assert.equal(new Set(walked.map((e) => e.id)).size, s.entities.length);
+  const times = walked.map((e) => e.created);
+  assert.deepEqual(times, [...times].sort().reverse());
+  assert.equal(walked[0].created, createdOf(walked[0].id));
+});
+
+test("an order outside the three is refused, named", () => {
+  assert.throws(() => listEntities(s, "skill", { order: "latest" }), (e) => e.code === "invalid_argument" && e.details.argument === "order");
+});

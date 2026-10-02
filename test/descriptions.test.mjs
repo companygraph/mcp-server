@@ -33,6 +33,8 @@ test("fetch says id or address, like the other entity-taking tools", () => {
 test("a paged tool says how to continue, and a tool with a sibling names it", () => {
   for (const name of ["list_entities", "list_references", "find_evidence", "search"]) assert.match(of(name), /`cursor`/, name);
   assert.match(of("list_entities"), /\bsearch\b/);
+  assert.match(of("list_entities"), /`order`/);
+  assert.match(of("list_entities"), /newest/);
   assert.match(of("describe_relations"), /\bdescribe_schema\b/);
   assert.match(of("describe_schema"), /\bdescribe_relations\b/);
   assert.match(of("list_rules"), /\bdescribe_rule\b/);
