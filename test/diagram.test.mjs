@@ -3,6 +3,7 @@
 // is sent and a line out of place is a different picture.
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { typeOfAddress } from "companygraph-meta-model/instance";
 import { diagram, processDiagram, label, plain, cannot, DIAGRAM_CAP } from "../lib/diagram.mjs";
 import { ModelError } from "../lib/errors.mjs";
 import { exampleSnapshot, instanceSnapshot, withHub, withLoops, withPunctuation, withNothingToDraw, withBackFlows, ODD, COMMIT, idAt } from "./helpers.mjs";
@@ -286,7 +287,7 @@ test("a concept outside the domain that belongs to no domain is drawn by its tit
 test("the schemas draw every type, each declared reference with its multiplicity and each nesting, and leave out what every type declares", () => {
   const d = diagram(s, { shape: "schema" });
   assert.equal(d.title, null);
-  assert.deepEqual(d.nodes.map((n) => n.title), s.schemas.map((x) => x.address.slice("core/".length)).sort());
+  assert.deepEqual(d.nodes.map((n) => n.title), s.schemas.map((x) => typeOfAddress(x.address)).sort());
   assert.deepEqual(d.nodes[0], { node: "n0", id: "core/achievement-kind", title: "achievement-kind", type: "schema",
     url: `https://github.com/companygraph/meta-model/blob/${COMMIT}/core/achievement-kind-schema.md` });
   // Every type but the source's own declares `source`, so it is said once and drawn by none,

@@ -4,9 +4,12 @@
 // the commit it was read from, so a deployment can bake it and answer for one commit. An
 // operator error — an unknown flag, a directory that is not there, a malformed --github value,
 // a parser throw, a core with no manifest — is one line on stderr and exit 2, never a stack.
+// The packs the instance takes are read beside its core without an argument of their own: from
+// the repository's manifest on GitHub, and locally from the manifest of the instance the core
+// directory sits in.
 import fs from "node:fs";
 import { parseArgs } from "node:util";
-import { readDir, readGitHub } from "../lib/read.mjs";
+import { readDir, readSchemas, readGitHub, readGitHubSchemas } from "../lib/read.mjs";
 import { buildSnapshot } from "../lib/snapshot.mjs";
 
 try {
@@ -33,13 +36,13 @@ try {
     const core = values.core ?? "meta/core/";
     const [files, schemas] = await Promise.all([
       readGitHub({ repo, commit, sub: values.sub }),
-      readGitHub({ repo, commit, sub: core }),
+      readGitHubSchemas({ repo, commit, core }),
     ]);
     snapshot = buildSnapshot({ files, schemas, sub: values.sub, core, commit, repo });
   } else {
     const [modelDir, coreDir] = positionals;
     if (!modelDir || !coreDir) { console.error("two directories: <model-dir> <core-dir>"); process.exit(2); }
-    snapshot = buildSnapshot({ files: readDir(modelDir), schemas: readDir(coreDir), sub: values.sub, core: values.core ?? null, commit: values.commit ?? null, repo: values.repo ?? null });
+    snapshot = buildSnapshot({ files: readDir(modelDir), schemas: readSchemas(coreDir), sub: values.sub, core: values.core ?? null, commit: values.commit ?? null, repo: values.repo ?? null });
   }
   fs.writeFileSync(values.out, JSON.stringify(snapshot) + "\n");
   console.log(`wrote ${values.out}: ${snapshot.entities.length} entities, ${snapshot.edges.length} edges, core ${snapshot.core.version}, commit ${snapshot.commit ?? "(none)"}`);

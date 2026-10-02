@@ -6,7 +6,7 @@ import path from "node:path";
 import { execFileSync } from "node:child_process";
 import { Client } from "@modelcontextprotocol/client";
 import { StdioClientTransport } from "@modelcontextprotocol/client/stdio";
-import { fixtureRoot, EXAMPLE_CORE, EXAMPLE_TYPES } from "./helpers.mjs";
+import { fixtureRoot, EXAMPLE_CORE, EXAMPLE_TYPES, packInstanceDir } from "./helpers.mjs";
 import { TOOLS } from "../lib/tools.mjs";
 
 const bin = new URL("../bin/stdio.mjs", import.meta.url).pathname;
@@ -20,6 +20,16 @@ test("the stdio server lists every tool and answers with the model", async () =>
   const r = await client.callTool({ name: "list_types", arguments: {} });
   assert.equal(r.structuredContent.model.core, EXAMPLE_CORE);
   assert.equal(r.structuredContent.types.length, EXAMPLE_TYPES);
+  await client.close();
+});
+
+test("the stdio server serves the packs the instance around its core takes", async () => {
+  const root = packInstanceDir();
+  const transport = new StdioClientTransport({ command: "node", args: [bin, path.join(root, "model"), path.join(root, "meta", "core")] });
+  const client = new Client({ name: "test", version: "0" });
+  await client.connect(transport);
+  const r = await client.callTool({ name: "list_types", arguments: {} });
+  assert.equal(r.structuredContent.types.find((x) => x.type === "bounded-context")?.count, 1);
   await client.close();
 });
 
