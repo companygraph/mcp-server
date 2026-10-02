@@ -1,4 +1,5 @@
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { readDir } from "../lib/read.mjs";
@@ -153,4 +154,22 @@ export function withNothingToDraw() {
   files.set("concepts/stray.md", concept("Stray", []));
   files.set("concepts/priced.md", concept("Priced", ["Stray"]).replace("source: Local\n", "source: Local\ndomain: Pricing\n"));
   return built(files, schemas);
+}
+
+// An instance that takes the software pack (meta-model 0.68.0): the example's model with one
+// bounded context added, its core at `meta/core/` and the pack's schemas, as the pinned release
+// ships them, at `meta/software/`, beside it, with the manifest naming the pack. Written to a
+// fresh directory each call, so a test reads it the way a CLI reads a checkout.
+export const CONTEXT_ID = "01a0ffff-0000-7000-8000-0000000000bc";
+export function packInstanceDir({ packs = ["software"] } = {}) {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "pack-instance-"));
+  fs.mkdirSync(path.join(root, ".companygraph"));
+  fs.writeFileSync(path.join(root, ".companygraph", "manifest.json"), JSON.stringify({ packs }) + "\n");
+  fs.cpSync(path.join(fixtureRoot, "core"), path.join(root, "meta", "core"), { recursive: true });
+  for (const pack of packs) fs.cpSync(path.join(fixtureRoot, "packs", pack), path.join(root, "meta", pack), { recursive: true });
+  fs.cpSync(path.join(fixtureRoot, "example", "model"), path.join(root, "model"), { recursive: true });
+  fs.mkdirSync(path.join(root, "model", "bounded-contexts", "quoting"), { recursive: true });
+  fs.writeFileSync(path.join(root, "model", "bounded-contexts", "quoting", "quoting.md"),
+    `---\nid: ${CONTEXT_ID}\nsource: Local\nclassification: core\nrealizes:\n  - Pricing\n---\n\n# Quoting\n\n> Prices an order. Invoicing it is left to another context.\n\n## Responsibilities\n\n- Price an order before it is placed\n`);
+  return root;
 }

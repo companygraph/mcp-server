@@ -34,7 +34,7 @@ From an instance's root, over stdio:
 npx --package github:companygraph/mcp-server companygraph-mcp ./model ./meta/core
 ```
 
-An entity cites its file on GitHub when `--repo owner/name` says which repository the directories belong to, and a schema and a rule cite theirs when `--core meta/core/` also says where the core sits in it; the snapshot command takes the same two, and from `--github` it knows both already.
+An entity cites its file on GitHub when `--repo owner/name` says which repository the directories belong to, and a schema and a rule cite theirs when `--core meta/core/` also says where the core sits in it; the snapshot command takes the same two, and from `--github` it knows both already. The packs the instance takes are read beside the core with no argument of their own: from `.companygraph/manifest.json` at the commit `--github` names, and locally from the manifest of the instance whose `<units>/core/` the core directory is.
 
 A snapshot for a deployment, then the HTTP server on it:
 

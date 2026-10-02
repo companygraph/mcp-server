@@ -4,6 +4,7 @@
 // them, against the example's core and the reference instance's.
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { typeOfAddress } from "companygraph-meta-model/instance";
 import { ModelError, describeSchema, describeRelations } from "../lib/model.mjs";
 import { OUTPUTS } from "../lib/schemas.mjs";
 import { exampleSnapshot, instanceSnapshot, COMMIT, EXAMPLE_CORE, PARSER } from "./helpers.mjs";
@@ -63,7 +64,7 @@ test("describe_schema carries the type's relations both ways, read from the decl
 test("every relation names declared types, in the instance's own core too", () => {
   for (const snapshot of [s, instanceSnapshot()]) {
     const r = describeRelations(snapshot);
-    const types = new Set(snapshot.schemas.map((x) => x.address.slice("core/".length)));
+    const types = new Set(snapshot.schemas.map((x) => typeOfAddress(x.address)));
     assert.ok(r.relations.length > 0);
     for (const x of r.relations) {
       assert.ok(types.has(x.from), `${x.from}.${x.via} → ${x.to}`);
