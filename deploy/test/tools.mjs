@@ -88,4 +88,24 @@ export function registerToolsTests() {
     assert.ok(r.results.some((x) => x.id === s.rootId));
     await client.close();
   });
+
+  // The order reaches a deployment with a re-pin and nothing else, so each holds it against the
+  // model it serves. An instance whose ids carry no time is told so, and skips rather than fails.
+  test("list_entities by newest starts with the latest moment over this snapshot", async (t) => {
+    const [a, b] = InMemoryTransport.createLinkedPair();
+    await createServer(s).connect(a);
+    const client = new Client({ name: "test", version: "0" });
+    await client.connect(b);
+    const r = await client.callTool({ name: "list_entities", arguments: { order: "newest", limit: 200 } });
+    if (r.isError) {
+      assert.equal(checkAnswer("list_entities", r).error.code, "no_creation_time");
+      await client.close();
+      return t.skip("this instance's ids carry no time");
+    }
+    const answer = checkAnswer("list_entities", r);
+    const times = answer.entities.map((e) => e.created).filter(Boolean);
+    assert.ok(times.length > 0);
+    assert.ok(times[0] >= times.at(-1), `${times[0]} is not earlier than ${times.at(-1)}`);
+    await client.close();
+  });
 }

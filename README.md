@@ -14,7 +14,7 @@ It serves a snapshot parsed at build time with the meta-model's own parser, so a
 | `list_rules`, `describe_rule` | the vocabulary's conventions the model is held to, and one as written |
 | `list_checks` | the checks the model's gate runs; a list, not a verdict |
 | `describe_errors` | what a refused call looks like: every code and the refusal's JSON Schema |
-| `list_entities` | the entities of one type, paged |
+| `list_entities` | the entities of one type or of every type, by address or by when they came into the model, paged |
 | `get_entity` | one entity as structured data, by id or by type and name |
 | `list_references` | the model's edges, filtered and paged |
 | `find_evidence` | everything the model says about one skill, paged |

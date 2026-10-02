@@ -21,7 +21,7 @@ A shape this package builds is closed, and a field it does not declare fails the
 
 ## Which tool
 
-`get_entity` is an entity as structured data, for a client that reasons over the model. `fetch` is the same entity's page as written, the Markdown source, for a client that quotes or displays it, and carries no structured copy. `search` with `match: "name"` answers a name with every entity that carries it, which is the way from a name to an id. `list_entities` browses one type, `list_references` the edges, and `describe_schema` and `describe_relations` what the schemas declare, for one type and for all of them. `diagram` draws part of the model as Mermaid, for a client that shows a picture rather than lists the edges.
+`get_entity` is an entity as structured data, for a client that reasons over the model. `fetch` is the same entity's page as written, the Markdown source, for a client that quotes or displays it, and carries no structured copy. `search` with `match: "name"` answers a name with every entity that carries it, which is the way from a name to an id. `list_entities` browses one type or every type, in address order or by when entities came into the model, `list_references` the edges, and `describe_schema` and `describe_relations` what the schemas declare, for one type and for all of them. `diagram` draws part of the model as Mermaid, for a client that shows a picture rather than lists the edges.
 
 ## The tools
 
@@ -540,7 +540,7 @@ No argument. What a refused call looks like, for a client that reads only the pr
 
 ### `list_entities`
 
-`type`; optional `owner`, an id or an address, to keep one owner's entities; `limit` and `cursor`. `entities` in the order of their addresses, where their pages sit, and `page`; each still carries its id.
+Optional `type`, which keeps its entities and, left out, lists every type; optional `owner`, an id or an address, to keep one owner's entities; optional `order`; `limit` and `cursor`. `entities` and `page`, and `type`, the type named or null where none was. `order` is `address`, where the pages sit, by default, or `newest` or `oldest`, by `created` and then by the id, `newest` being `oldest` reversed. An entity carries `created` where its id is a UUID version 7: the moment the id was made, in ISO 8601 and UTC to the millisecond. Every id `companygraph id` makes is one, and `companygraph ids` gave each page written before ids existed one from its first commit, so `created` is when the entity came into the model. An entity whose id is not version 7 carries no `created` and, in `newest` or `oldest` order, follows the ones that do, in address order; a list where none carries one is refused as `no_creation_time`, and `address` order lists it.
 
 ```json
 {
@@ -585,9 +585,56 @@ No argument. What a refused call looks like, for a client that reads only the pr
 }
 ```
 
+### `list_entities` by newest
+
+Every type, the entity that came into the model last first: the ten newest entities with their taglines are `{ "order": "newest", "limit": 10 }`.
+
+```json
+{
+  "tool": "list_entities",
+  "arguments": {
+    "order": "newest",
+    "limit": 2
+  },
+  "answer": {
+    "type": null,
+    "entities": [
+      {
+        "id": "01a0f254-3527-78bd-9d78-ee022ef66188",
+        "type": "localization",
+        "name": "Language",
+        "tagline": "Beacon Systems writes its model in American English for everyone who reads it, people and agents alike.",
+        "owner": null,
+        "created": "2026-09-30T12:40:00.039Z"
+      },
+      {
+        "id": "01a0f10b-91d2-7004-96e6-daffc70ee0c1",
+        "type": "identifier",
+        "name": "Entity id",
+        "tagline": "An entity keeps this id through every rename and every language it is written in, so whatever holds one outside the model still finds the entity.",
+        "owner": null,
+        "created": "2026-09-30T06:41:02.418Z"
+      }
+    ],
+    "page": {
+      "total": 76,
+      "returned": 2,
+      "hasMore": true,
+      "nextCursor": "eyJvIjoyLCJjIjoiMDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWYwMTIzNDU2NyJ9"
+    },
+    "model": {
+      "commit": "0123456789abcdef0123456789abcdef01234567",
+      "repo": "companygraph/meta-model",
+      "core": "0.0.0",
+      "parser": "v0.0.0"
+    }
+  }
+}
+```
+
 ### `get_entity`
 
-`id`, which is an id or an address, or `type` and `name`; given both, the id wins. The entity's `fields`, `sections` and tables, and its edges both ways. An entity whose schema declares an `image` field and that names a picture carries `image_url`, where the site the identity names serves it, at `images/<address>.<extension>`, where `<address>` is the folder and slug the page sits at; an entity without one carries no such key. `references` and `referencedBy` hold at most 50 edges each, in the order `list_references` gives them; `referenceCounts` holds the true totals, and `list_references` pages the rest. An entity's own content is never cut.
+`id`, which is an id or an address, or `type` and `name`; given both, the id wins. The entity's `fields`, `sections` and tables, and its edges both ways. An entity whose schema declares an `image` field and that names a picture carries `image_url`, where the site the identity names serves it, at `images/<address>.<extension>`, where `<address>` is the folder and slug the page sits at; an entity without one carries no such key. `references` and `referencedBy` hold at most 50 edges each, in the order `list_references` gives them; `referenceCounts` holds the true totals, and `list_references` pages the rest. An entity's own content is never cut. An entity carries `created` where its id is a UUID version 7, as under `list_entities`.
 
 ```json
 {
@@ -891,7 +938,7 @@ Optional `entity`, an id or an address; `direction` (`out`, `in` or `both`, rela
 
 ### `search`
 
-`query`; optional `match`; `type`, to keep one type's entities; `owner`, an id or an address, to keep one owner's; `limit` and `cursor`. `match: "text"`, the default, is a case-insensitive substring over name, tagline, fields, section text and table cells. `match: "name"` is the exact canonical name, case-insensitive, across types. `match: "words"` cuts the query into words, reduces each to its stem and keeps every entity whose name, tagline, fields, section text or table cells hold every required stem, anywhere: the words need not stand together or in one place. A word is a run of letters and digits, lowered, with diacritics folded and a possessive's apostrophe-s dropped, so "the owner's" asks for owner. The stemmer is Porter's algorithm for English, which joins the inflections of one word and not its relatives, so deciding meets decide and decided, and decision meets neither. A stem that occurs in more than half of the model's entities is common: it is reported and not required, and a query of common stems alone is held to all of them. A function word outside that set is required like any other, so a client sends the words that carry the meaning and leaves the rest out. A query with no words is refused as `invalid_argument` on `query`. `matched` says where each result hit: `where` is one of `name`, `tagline`, `field`, `section` or `table`, and `key` the field or section heading, null for the first two; in words mode it names each place where a required stem occurs. Results whose name matched come first, then all are ordered by type, name and address: past that one tier a listing, not a ranking, so an entity named by a common word stands before everything that merely mentions it. A result's name is under `title`, as it is for `fetch`, because some clients call only these two tools and require that field.
+`query`; optional `match`; `type`, to keep one type's entities; `owner`, an id or an address, to keep one owner's; `limit` and `cursor`. `match: "text"`, the default, is a case-insensitive substring over name, tagline, fields, section text and table cells. `match: "name"` is the exact canonical name, case-insensitive, across types. `match: "words"` cuts the query into words, reduces each to its stem and keeps every entity whose name, tagline, fields, section text or table cells hold every required stem, anywhere: the words need not stand together or in one place. A word is a run of letters and digits, lowered, with diacritics folded and a possessive's apostrophe-s dropped, so "the owner's" asks for owner. The stemmer is Porter's algorithm for English, which joins the inflections of one word and not its relatives, so deciding meets decide and decided, and decision meets neither. A stem that occurs in more than half of the model's entities is common: it is reported and not required, and a query of common stems alone is held to all of them. A function word outside that set is required like any other, so a client sends the words that carry the meaning and leaves the rest out. A query with no words is refused as `invalid_argument` on `query`. `matched` says where each result hit: `where` is one of `name`, `tagline`, `field`, `section` or `table`, and `key` the field or section heading, null for the first two; in words mode it names each place where a required stem occurs. Results whose name matched come first, then all are ordered by type, name and address: past that one tier a listing, not a ranking, so an entity named by a common word stands before everything that merely mentions it. A result's name is under `title`, as it is for `fetch`, because some clients call only these two tools and require that field. An entity carries `created` where its id is a UUID version 7, as under `list_entities`.
 
 ```json
 {
