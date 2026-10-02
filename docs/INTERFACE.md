@@ -274,7 +274,7 @@ No arguments. `tagline`, and `rules` with each rule's number, `title` and the `p
     "rule": "R4",
     "title": "An unresolvable reference is an error",
     "part": "Structure",
-    "text": "Not a warning. A reference naming an entity that does not exist, or that exists under a different type, fails the check. A reference in a locale's prose or grouped headings resolves among that locale'…",
+    "text": "Not a warning. A reference naming an entity that does not exist, or that exists under a different type, fails the check.\n\nA reference whose schema names an owned type, `ref → <type>` and its sibling f…",
     "url": "https://github.com/companygraph/meta-model/blob/0123456789abcdef0123456789abcdef01234567/core/CONVENTIONS.md",
     "model": {
       "commit": "0123456789abcdef0123456789abcdef01234567",
