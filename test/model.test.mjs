@@ -114,6 +114,28 @@ test("list_types serves question-kind, and a question's kind is an edge to it", 
   assert.deepEqual([kind.to.type, kind.to.name], ["question-kind", "Product"]);
 });
 
+// core 0.53.0 adds rule, risk and control. A company's rule is an entity like any other, not one
+// of the conventions list_rules serves: it is listed, fetched, and its Applies to rows draw edges
+// to the entity each row's own Type and Owner cells name, beside its protects, serves and
+// motivated-by fields.
+test("a rule is listed and fetched like any entity, with its Applies to edges and its fields", () => {
+  const types = listTypes(s).types.map((t) => t.type);
+  for (const t of ["rule", "risk", "control"]) assert.ok(types.includes(t), `list_types includes ${t}`);
+  const RULE = idAt(s, "rules/a-change-is-reviewed-before-it-ships");
+  assert.deepEqual(listEntities(s, "rule").entities.map((e) => e.id), [RULE]);
+  const r = getEntityById(s, RULE);
+  assert.equal(r.entity.type, "rule");
+  const applies = r.entity.references.filter((x) => x.via === "Applies to.Entity");
+  assert.deepEqual(applies.map((x) => x.to), [
+    { id: idAt(s, "processes/delivery/phases/release"), type: "phase", name: "Release" },
+    { id: idAt(s, "roles/reviewer"), type: "role", name: "Reviewer" },
+  ]);
+  const field = (via) => r.entity.references.filter((x) => x.via === via).map((x) => [x.to.type, x.to.name]);
+  assert.deepEqual(field("protects"), [["value", "Craftsmanship"]]);
+  assert.deepEqual(field("serves"), [["strategic-objective", "Support stops explaining invoices"]]);
+  assert.deepEqual(field("motivated-by"), [["risk", "An unreviewed change reaches customers"]]);
+});
+
 test("get_entity takes an id, and the tool's entry takes either and refuses neither", () => {
   assert.deepEqual(getEntityById(s, DDD), getEntity(s, "skill", "Domain-Driven Design"));
   assert.equal(entityBy(s, { id: ROOT }).entity.id, ROOT);

@@ -119,9 +119,10 @@ test("validated in the open finds the experience whose bullets hold validation, 
   // "in" was common while core 0.43.0's example entities held it past half of them; core 0.45.0's
   // question-kind and fourth question grow the example past that boundary again, and "in" falls
   // back to required; meta-model 0.65.0's example adds the entity-id format, whose tagline says
-  // "written in", and "in" stands in more than half again. A common or required word is reported
-  // the same way, so the results below are unmoved either way.
-  assert.deepEqual(r.words.map((w) => w.common), [false, true, true, false, false]);
+  // "written in", and "in" stands in more than half again; core 0.53.0's rule, risk and control
+  // grow it past that boundary once more, and "in" is required. A common or required word is
+  // reported the same way, so the results below are unmoved either way.
+  assert.deepEqual(r.words.map((w) => w.common), [false, false, true, false, false]);
   // withHeadlines() adds pages with no `id:`, so each one's id is its address.
   assert.deepEqual(r.results.map((x) => x.id), ["profiles/nils-aker/experiences/2024-open-review"]);
   assert.deepEqual(r.results[0].matched, [{ where: "name", key: null }, { where: "section", key: "Achievements" }], "open in the name, the rest in the bullets");
@@ -185,9 +186,13 @@ test("an entity whose name matched stands first, before every entity that only m
   const REVIEWER = idAt(s, "roles/reviewer");
   for (const match of ["words", "text"]) {
     const r = search(s, "Reviewer", { match });
-    assert.equal(r.results[0].id, REVIEWER, match);
-    assert.equal(r.results[0].matched[0].where, "name");
-    const rest = r.results.slice(1);
+    // The name tier holds the role alone in text mode; in words mode "Reviewer" asks for the stem
+    // "review", which core 0.53.0's control and rule carry in their names too.
+    const tier = r.results.filter((x) => x.matched[0].where === "name");
+    assert.deepEqual(tier.map((x) => x.type), match === "words" ? ["control", "role", "rule"] : ["role"], match);
+    assert.ok(tier.some((x) => x.id === REVIEWER), match);
+    assert.deepEqual(r.results.slice(0, tier.length), tier, `${match}: the name tier stands first`);
+    const rest = r.results.slice(tier.length);
     assert.ok(rest.length > 1 && rest.every((x) => x.matched[0].where !== "name"), match);
     const order = (a, b) => (a.type < b.type ? -1 : a.type > b.type ? 1 : a.title < b.title ? -1 : a.title > b.title ? 1 : a.id < b.id ? -1 : 1);
     assert.deepEqual(rest.map((x) => x.id), [...rest].sort(order).map((x) => x.id), `${match}: past the name tier, type then name then id`);
