@@ -170,8 +170,9 @@ test("a side with no type, an unknown side and an unknown type are refused by co
 // carries `to: null` with `by` and `in` naming the columns instead.
 test("a reference whose type is read from its row carries to: null, by and in named, and no other relation does", () => {
   const { relations } = describeRelations(s);
-  // Two declare the form since core 0.43.0: a question's Rests on and a decision's Bears on.
-  const rowTyped = [["question", "Rests on.Entity"], ["decision", "Bears on.Entity"]];
+  // A question's Rests on and a decision's Bears on declare the form since core 0.43.0, and a
+  // rule's and a control's Applies to since core 0.53.0.
+  const rowTyped = [["question", "Rests on.Entity"], ["decision", "Bears on.Entity"], ["rule", "Applies to.Entity"], ["control", "Applies to.Entity"]];
   for (const [from, via] of rowTyped)
     assert.deepEqual(find(relations, from, via), { from, via, to: null, form: "ref", by: "Type", in: "Owner", array: false, required: true, min: 0, max: null });
   for (const x of relations) if (!rowTyped.some(([from, via]) => x.from === from && x.via === via)) assert.deepEqual([x.by, x.in], [null, null], `${x.from}.${x.via}`);

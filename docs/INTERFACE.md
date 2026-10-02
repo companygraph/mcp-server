@@ -125,8 +125,8 @@ No arguments. `types` holds every type the schemas declare, with its `owner` typ
       ],
       "referencedBy": [
         {
-          "from": "decision",
-          "via": "Bears on.Entity",
+          "from": "control",
+          "via": "Applies to.Entity",
           "form": "ref",
           "by": "Type",
           "in": "Owner",
@@ -136,13 +136,13 @@ No arguments. `types` holds every type the schemas declare, with its `owner` typ
           "max": null
         },
         {
-          "from": "experience",
-          "via": "skills",
+          "from": "decision",
+          "via": "Bears on.Entity",
           "form": "ref",
-          "by": null,
-          "in": null,
-          "array": true,
-          "required": false,
+          "by": "Type",
+          "in": "Owner",
+          "array": false,
+          "required": true,
           "min": 0,
           "max": null
         }
@@ -175,8 +175,8 @@ Optional `type`, `direction` (`declares`, `declared-to` or `both`; needs `type`)
   "answer": {
     "relations": [
       {
-        "from": "decision",
-        "via": "Bears on.Entity",
+        "from": "control",
+        "via": "Applies to.Entity",
         "to": null,
         "form": "ref",
         "by": "Type",
@@ -187,14 +187,14 @@ Optional `type`, `direction` (`declares`, `declared-to` or `both`; needs `type`)
         "max": null
       },
       {
-        "from": "experience",
-        "via": "skills",
-        "to": "skill",
+        "from": "decision",
+        "via": "Bears on.Entity",
+        "to": null,
         "form": "ref",
-        "by": null,
-        "in": null,
-        "array": true,
-        "required": false,
+        "by": "Type",
+        "in": "Owner",
+        "array": false,
+        "required": true,
         "min": 0,
         "max": null
       }
@@ -600,24 +600,24 @@ Every type, the entity that came into the model last first: the ten newest entit
     "type": null,
     "entities": [
       {
-        "id": "01a0f254-3527-78bd-9d78-ee022ef66188",
-        "type": "localization",
-        "name": "Language",
-        "tagline": "Beacon Systems writes its model in American English for everyone who reads it, people and agents alike.",
+        "id": "01a0fb1b-b534-79e9-a261-eda408034315",
+        "type": "control",
+        "name": "Main requires a review",
+        "tagline": "The default branch refuses a merge that carries no approving review from someone other than its author.",
         "owner": null,
-        "created": "2026-09-30T12:40:00.039Z"
+        "created": "2026-10-02T05:34:52.212Z"
       },
       {
-        "id": "01a0f10b-91d2-7004-96e6-daffc70ee0c1",
-        "type": "identifier",
-        "name": "Entity id",
-        "tagline": "An entity keeps this id through every rename and every language it is written in, so whatever holds one outside the model still finds the entity.",
+        "id": "01a0fb1b-b4ff-7020-8a63-e80de5bbcc7f",
+        "type": "rule",
+        "name": "A change is reviewed before it ships",
+        "tagline": "A change reaches the default branch only after a second person has read it and approved it.",
         "owner": null,
-        "created": "2026-09-30T06:41:02.418Z"
+        "created": "2026-10-02T05:34:52.159Z"
       }
     ],
     "page": {
-      "total": 76,
+      "total": 79,
       "returned": 2,
       "hasMore": true,
       "nextCursor": "eyJvIjoyLCJjIjoiMDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWYwMTIzNDU2NyJ9"
