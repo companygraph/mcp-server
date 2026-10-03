@@ -134,6 +134,11 @@ test("with the history unreadable, two distinct checks green do not meet a count
   assert.equal(classify({ ...byCount, runs: [ok("test"), ok("lint"), ok("lint", "2026-09-29T09:55:00Z")] }), "past_checks");
 });
 
+test("with the history unreadable, a green run of a name today's rules do not require never counts toward the number", () => {
+  assert.equal(classify({ ...byCount, runs: [ok("test"), ok("lint"), ok("docs")] }), "past_checks");
+  assert.equal(classify({ ...byCount, required: null }), "past_checks", "today's rules that cannot be read leave nothing to count");
+});
+
 test("with the history unreadable, a fourth run started before the merge and still in progress is past its checks", () => {
   assert.equal(classify({ ...byCount, runs: [...byCount.runs, { name: "docs", status: "in_progress", conclusion: null, started_at: "2026-09-29T09:45:00Z", completed_at: null }] }), "past_checks");
   assert.equal(classify({ ...byCount, runs: [...byCount.runs, { name: "docs", status: "queued", conclusion: null, started_at: null, completed_at: null }] }), "past_checks", "a queued run counts as started by the merge");
