@@ -82,6 +82,10 @@ test("an earlier success superseded by a re-run that failed before the merge is 
   assert.equal(classify({ ...behindMain, runs: [ok("test"), ok("lint"), { name: "lint", status: "completed", conclusion: "failure", started_at: "2026-09-29T09:55:00Z", completed_at: "2026-09-29T09:58:00Z" }] }), "past_checks");
 });
 
+test("an earlier success superseded by a re-run still queued, neither started nor completed, is past its checks", () => {
+  assert.equal(classify({ ...behindMain, runs: [ok("test"), ok("lint"), { name: "lint", status: "queued", conclusion: null, started_at: null, completed_at: null }] }), "past_checks");
+});
+
 test("a run started after the merge does not stand for the check at the merge", () => {
   assert.equal(classify({ ...behindMain, runs: [ok("test"), ok("lint"), { name: "lint", status: "completed", conclusion: "failure", started_at: "2026-09-29T10:05:00Z", completed_at: "2026-09-29T10:08:00Z" }] }), "behind_main");
 });
