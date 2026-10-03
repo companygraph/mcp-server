@@ -125,12 +125,16 @@ test("a branch whose rules name no required check is past its checks, since the 
 // request must ask for that branch's ref, since a bypass on another branch is no escape from the
 // default branch's review. Each bypass in the week is then classified from its rule suite, its
 // pull request, that head's check runs (one head's on two pages), the comparison with main as it
-// stood before the push, and the branch's rules: org/a holds one bypass behind main, one with no
-// pull request and one merged before a required check finished; org/b holds one that also passed
-// over the pull-request rule, one whose check runs are refused and one whose only pull request
-// was merged hours before the push. NOW fixes the week, so the test
-// never reads the wall clock. The process runs asynchronously, since a synchronous child would
-// hold this process's event loop and the fake server could never answer it.
+// stood before the push, and the required checks of the ruleset as it stood at the merge, read from
+// the ruleset's history, or of the branch's rules today when that history cannot be read. org/a
+// holds one bypass behind main by its ruleset's history although today's rules require one more
+// check, one with no pull request and one merged before a required check finished; org/b holds
+// one that also passed over the pull-request rule, which is decided before its pull request is
+// asked for, one whose check runs are refused, one whose only pull request was merged hours
+// before the push, and one behind main by today's rules because its ruleset's history is
+// refused. NOW fixes the week, so the test never reads the wall clock. The process runs
+// asynchronously, since a synchronous child would hold this process's event loop and the fake
+// server could never answer it.
 const NOW = "2026-10-05T06:00:00Z";
 const FROM = "2026-09-28T00:00:00.000Z";
 const bin = new URL("../bin/bypasses.mjs", import.meta.url).pathname;
@@ -145,16 +149,21 @@ test("the command reads every page of the default branch, classifies each bypass
   const statusOnly = [{ rule_type: "required_status_checks", result: "fail" }, { rule_type: "pull_request", result: "pass" }];
   // Bypass 11 also failed a rule in evaluate mode, which blocks nothing and must not make it past
   // its checks.
-  const evaluateOnly = [{ rule_type: "required_status_checks", result: "fail", enforcement: "active" }, { rule_type: "pull_request", result: "fail", enforcement: "evaluate" }];
-  const evaluations = { "org/a/11": evaluateOnly, "org/a/12": statusOnly, "org/a/13": statusOnly, "org/b/21": [{ rule_type: "required_status_checks", result: "fail" }, { rule_type: "pull_request", result: "fail" }], "org/b/22": statusOnly, "org/b/23": statusOnly };
+  const evaluateOnly = [{ rule_type: "required_status_checks", result: "fail", enforcement: "active", rule_source: { type: "ruleset", id: 7 } }, { rule_type: "pull_request", result: "fail", enforcement: "evaluate", rule_source: { type: "ruleset", id: 7 } }];
+  const evaluations = { "org/a/11": evaluateOnly, "org/a/12": statusOnly, "org/a/13": statusOnly, "org/b/21": [{ rule_type: "required_status_checks", result: "fail" }, { rule_type: "pull_request", result: "fail" }], "org/b/22": statusOnly, "org/b/23": statusOnly, "org/b/24": [{ rule_type: "required_status_checks", result: "fail", rule_source: { type: "ruleset", id: 9 } }] };
   const pr = (sha, merged_hours, base) => [{ number: Number(sha), merged_at: inside(merged_hours), merge_commit_sha: `m${sha}`, head: { sha: `h${sha}` }, base: { ref: base } }];
   const pulls = { "org/a/m11": pr("11", 2, "main"), "org/a/m12": [], "org/a/m13": pr("13", 31, "main"), "org/b/m21": pr("21", 5, "release/v1"), "org/b/m22": pr("22", 6, "release/v1"),
     // Bypass 23's commit lists only a pull request merged into the branch two hours before the
     // push, with another merge commit: a pull request that touched the commit, not the one that
     // made the push, so the bypass has no pull request and is past its checks.
-    "org/b/m23": [{ ...pr("23", 6, "release/v1")[0], merge_commit_sha: "other" }] };
+    "org/b/m23": [{ ...pr("23", 6, "release/v1")[0], merge_commit_sha: "other" }],
+    "org/b/m24": pr("24", 9, "release/v1") };
   const success = (name, hours) => ({ name, status: "completed", conclusion: "success", started_at: inside(hours - 0.25), completed_at: inside(hours) });
-  const runs = { "org/a/h13": [success("test", 30), success("lint", 31.5)], "org/b/h21": [success("test", 4)], "org/b/h23": [success("test", 5)] };
+  const runs = { "org/a/h13": [success("test", 30), success("lint", 31.5)], "org/b/h21": [success("test", 4)], "org/b/h23": [success("test", 5)], "org/b/h24": [success("test", 8.5)] };
+  // Ruleset 7 of org/a required test and lint when bypass 11 was merged, two hours into the week;
+  // an older version also required ghost and a later one added build, which today's rules name.
+  const versions = { 1: [before, ["test", "lint", "ghost"]], 2: [inside(0.5), ["test", "lint"]], 3: [inside(10), ["test", "lint", "build"]] };
+  const checksRule = (contexts) => ({ type: "required_status_checks", parameters: { required_status_checks: contexts.map((context) => ({ context })) } });
   const seen = [];
   const refs = [];
   const server = http.createServer((req, res) => {
@@ -176,7 +185,7 @@ test("the command reads every page of the default branch, classifies each bypass
       if (url.searchParams.get("page") === "2") return json([suite(13, 30, "13"), at(before, { id: 10, after_sha: "m10", before_sha: "p10" })]);
       return json([suite(11, 1, "11"), suite(12, 2, "12")], "/repos/org/a/rulesets/rule-suites?time_period=month&rule_suite_result=bypass&ref=refs%2Fheads%2Fmain&per_page=100&page=2");
     }
-    if (url.pathname === "/repos/org/b/rulesets/rule-suites") return json([suite(21, 4, "21"), suite(22, 6, "22"), suite(23, 8, "23")]);
+    if (url.pathname === "/repos/org/b/rulesets/rule-suites") return json([suite(21, 4, "21"), suite(22, 6, "22"), suite(23, 8, "23"), suite(24, 9, "24")]);
     let m;
     if ((m = url.pathname.match(/^\/repos\/(org\/[ab])\/rulesets\/rule-suites\/(\d+)$/))) return json({ id: Number(m[2]), result: "bypass", rule_evaluations: evaluations[`${m[1]}/${m[2]}`] });
     if ((m = url.pathname.match(/^\/repos\/(org\/[ab])\/commits\/([^/]+)\/pulls$/))) return json(pulls[`${m[1]}/${m[2]}`]);
@@ -185,9 +194,14 @@ test("the command reads every page of the default branch, classifies each bypass
       if (url.searchParams.get("page") === "2") return json({ total_count: 2, check_runs: [success("lint", 1.5)] });
       return json({ total_count: 2, check_runs: [success("test", 1)] }, "/repos/org/a/commits/h11/check-runs?filter=all&per_page=100&page=2");
     }
-    if ((m = url.pathname.match(/^\/repos\/(org\/[ab])\/commits\/(h1[13]|h2[13])\/check-runs$/))) return json({ total_count: 0, check_runs: runs[`${m[1]}/${m[2]}`] });
+    if ((m = url.pathname.match(/^\/repos\/(org\/[ab])\/commits\/(h1[13]|h2[134])\/check-runs$/))) return json({ total_count: 0, check_runs: runs[`${m[1]}/${m[2]}`] });
     if ((m = url.pathname.match(/^\/repos\/(org\/[ab])\/compare\/(h\d+)\.\.\.(p\d+)$/))) return json({ ahead_by: 2, behind_by: 1, status: "diverged" });
-    if (url.pathname === "/repos/org/a/rules/branches/main") return json([{ type: "pull_request", parameters: {} }, { type: "required_status_checks", parameters: { required_status_checks: [{ context: "test" }, { context: "lint" }] } }]);
+    if (url.pathname === "/repos/org/a/rulesets/7/history") return json(Object.entries(versions).reverse().map(([version_id, [updated_at]]) => ({ version_id: Number(version_id), updated_at })));
+    if ((m = url.pathname.match(/^\/repos\/org\/a\/rulesets\/7\/history\/(\d)$/))) {
+      const [updated_at, contexts] = versions[m[1]];
+      return json({ version_id: Number(m[1]), updated_at, state: { id: 7, name: "protect-main", rules: [{ type: "pull_request", parameters: {} }, checksRule(contexts)] } });
+    }
+    if (url.pathname === "/repos/org/a/rules/branches/main") return json([{ type: "pull_request", parameters: {} }, checksRule(["test", "lint", "build"])]);
     if (url.pathname === "/repos/org/b/rules/branches/release/v1") return json([{ type: "required_status_checks", parameters: { required_status_checks: [{ context: "test" }] } }]);
     res.writeHead(403, { "content-type": "application/json" });
     res.end(JSON.stringify({ message: "Resource not accessible by integration" }));
@@ -204,11 +218,11 @@ test("the command reads every page of the default branch, classifies each bypass
     assert.equal(week.from, FROM);
     assert.deepEqual(week.repositories, {
       "org/a": { bypasses: 3, past_checks: 2, behind_main: 1 },
-      "org/b": { bypasses: 3, past_checks: 3, behind_main: 0 },
+      "org/b": { bypasses: 4, past_checks: 3, behind_main: 1 },
     });
     assert.deepEqual(week.unread, ["org/x"]);
     assert.equal(week.past_checks, 5);
-    assert.equal(week.behind_main, 1);
+    assert.equal(week.behind_main, 2);
     assert.equal(week.bypasses, week.past_checks + week.behind_main);
     for (const counts of Object.values(week.repositories)) assert.equal(counts.bypasses, counts.past_checks + counts.behind_main);
     assert.ok(seen.every((r) => r.authorization === `Bearer ${token}`), "every request carries the token");
@@ -218,11 +232,15 @@ test("the command reads every page of the default branch, classifies each bypass
     assert.ok(seen.some((r) => r.url === "/repos/org/a/compare/h11...p11?per_page=1"), "main is compared as it stood before the push");
     assert.ok(!seen.some((r) => r.url.includes("m10") || r.url.includes("rule-suites/10")), "a bypass outside the week is never classified");
     assert.equal(seen.filter((r) => r.url.startsWith("/repos/org/a/rules/branches/")).length, 1, "a branch's rules are read once per repository");
+    assert.ok(seen.some((r) => r.url.startsWith("/repos/org/a/rulesets/7/history/2")), "the ruleset is read as it stood at the merge");
+    assert.ok(!seen.some((r) => /\/history\/[13]/.test(r.url)), "no other version of the ruleset is read");
+    assert.ok(seen.some((r) => r.url.startsWith("/repos/org/b/rules/branches/release/v1")), "today's rules stand in when the history is refused");
+    assert.ok(!seen.some((r) => r.url.startsWith("/repos/org/b/commits/m21/")), "a bypass its failed rules decide asks nothing more");
     assert.equal(refs.length, 4, JSON.stringify(refs));
     for (const { repo, ref } of refs) assert.equal(ref, `refs/heads/${branches[repo]}`, `${repo} asks for its default branch`);
     assert.ok(!stdout.includes("ghs_") && !stderr.includes("ghs_"), stdout + stderr);
     assert.match(stdout, /^ {2}org\/a 3 bypasses, 2 past their checks, 1 behind main$/m);
-    assert.match(stdout, /^ {2}org\/b 3 bypasses, 3 past their checks, 0 behind main$/m);
+    assert.match(stdout, /^ {2}org\/b 4 bypasses, 3 past their checks, 1 behind main$/m);
     assert.match(stdout, /org\/x/);
   } finally {
     server.close();
