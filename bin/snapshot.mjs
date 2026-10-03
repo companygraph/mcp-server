@@ -47,6 +47,6 @@ try {
   fs.writeFileSync(values.out, JSON.stringify(snapshot) + "\n");
   console.log(`wrote ${values.out}: ${snapshot.entities.length} entities, ${snapshot.edges.length} edges, core ${snapshot.core.version}, commit ${snapshot.commit ?? "(none)"}`);
 } catch (err) {
-  console.error(err.message);
+  console.error((/** @type {Error} */ (err)).message);
   process.exit(2);
 }

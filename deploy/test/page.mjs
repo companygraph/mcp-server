@@ -22,6 +22,12 @@
 //
 // A browser is the only thing that can see any of those, which is why this file is the one
 // place in the shared test suite that needs one.
+
+// The functions handed to `page.evaluate` run in that browser, so they are checked against the
+// browser's own types. Nothing declared here names one: this file's declaration is a function
+// with no parameters.
+/// <reference lib="dom" />
+
 import { test, before, after, describe } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
@@ -34,11 +40,12 @@ import { jsonld } from "../build/index.mjs";
 export function registerPageTests() {
   describe("the page a deployment serves", () => {
     const s = snapshot();
+    /** @param {string} f */
     const read = (f) => fs.readFileSync(path.join(ROOT, f), "utf8");
     const jsonldPath = path.join(DIST, "jsonld.json");
     const hasJsonld = fs.existsSync(jsonldPath);
 
-    let server, browser, base;
+    let /** @type {import("node:http").Server} */ server, /** @type {import("playwright").Browser} */ browser, /** @type {string} */ base;
 
     before(async () => {
       server = createHttpServer(s, {
@@ -48,8 +55,8 @@ export function registerPageTests() {
         pageJsonld: hasJsonld ? JSON.stringify(JSON.parse(fs.readFileSync(jsonldPath, "utf8"))).replace(/</g, "\\u003c") : null,
         robots: read("robots.txt"),
       });
-      await new Promise((r) => server.listen(0, "127.0.0.1", r));
-      base = `http://127.0.0.1:${server.address().port}/`;
+      await /** @type {Promise<void>} */ (new Promise((r) => server.listen(0, "127.0.0.1", r)));
+      base = `http://127.0.0.1:${(/** @type {import("node:net").AddressInfo} */ (server.address())).port}/`;
       browser = await chromium.launch();
     });
 
@@ -66,7 +73,7 @@ export function registerPageTests() {
       const page = await browser.newPage({ viewport: { width: 1400, height: 900 } });
       await page.goto(base, { waitUntil: "networkidle" });
       const shell = await page.evaluate(() => {
-        const m = document.querySelector("main.shell");
+        const m = /** @type {Element} */ (document.querySelector("main.shell"));
         const cs = getComputedStyle(m);
         const box = m.getBoundingClientRect();
         return {
@@ -94,7 +101,7 @@ export function registerPageTests() {
       const page = await browser.newPage({ viewport: { width: 1400, height: 900 } });
       await page.goto(base, { waitUntil: "networkidle" });
       const got = await page.evaluate(() => {
-        const cs = getComputedStyle(document.querySelector("main.shell"));
+        const cs = getComputedStyle(/** @type {Element} */ (document.querySelector("main.shell")));
         return { maxWidth: cs.maxWidth, padding: cs.paddingLeft };
       });
       assert.equal(got.maxWidth, want["max-width"], "the page takes the package's measure");
@@ -111,7 +118,9 @@ export function registerPageTests() {
       const page = await browser.newPage({ viewport: { width: 1400, height: 900 } });
       await page.goto(base, { waitUntil: "networkidle" });
       const h = await page.evaluate(() => {
-        const cs = (s) => getComputedStyle(document.querySelector(s));
+        /** @param {string} s */
+        const cs = (s) => getComputedStyle(/** @type {Element} */ (document.querySelector(s)));
+        /** @param {string} s */
         const weight = (s) => Number(cs(s).fontWeight);
         return {
           family: cs(".title h1").fontFamily,
@@ -133,7 +142,7 @@ export function registerPageTests() {
       const page = await browser.newPage({ viewport: { width: 1400, height: 900 } });
       await page.goto(base, { waitUntil: "networkidle" });
       const measure = () => page.evaluate(() => {
-        const r = document.querySelector(".brand svg").getBoundingClientRect();
+        const r = /** @type {Element} */ (document.querySelector(".brand svg")).getBoundingClientRect();
         const shell = document.querySelector(".shell:has(> header > .bar)");
         return { left: Math.round(r.left), top: Math.round(r.top), size: Math.round(r.height),
                  bar: shell ? Math.round(shell.getBoundingClientRect().height) : null,
@@ -160,11 +169,13 @@ export function registerPageTests() {
       const page = await browser.newPage({ viewport: { width: 1400, height: 900 } });
       await page.goto(base, { waitUntil: "networkidle" });
       const colors = await page.evaluate(() => {
-        const b = document.querySelector(".brand b");
-        const span = b.querySelector("span");
+        const b = /** @type {Element} */ (document.querySelector(".brand b"));
+        const span = /** @type {Element} */ (b.querySelector("span"));
         const accent = getComputedStyle(document.documentElement).getPropertyValue("--c-mid").trim();
         const ink = getComputedStyle(document.documentElement).getPropertyValue("--ink").trim();
+        /** @param {Element} el */
         const hex = (el) => getComputedStyle(el).color;
+        /** @param {string} v */
         const asRgb = (v) => { const d = document.createElement("i"); d.style.color = v; document.body.append(d); const c = getComputedStyle(d).color; d.remove(); return c; };
         return { b: hex(b), span: hex(span), accent: asRgb(accent), ink: asRgb(ink) };
       });
@@ -181,8 +192,8 @@ export function registerPageTests() {
       const page = await browser.newPage({ viewport: { width: 360, height: 640 } });
       await page.goto(base, { waitUntil: "networkidle" });
       const shut = await page.evaluate(() => ({
-        brand: Math.round(document.querySelector(".brand").getBoundingClientRect().height),
-        mark: Math.round(document.querySelector(".brand svg").getBoundingClientRect().height),
+        brand: Math.round(/** @type {Element} */ (document.querySelector(".brand")).getBoundingClientRect().height),
+        mark: Math.round(/** @type {Element} */ (document.querySelector(".brand svg")).getBoundingClientRect().height),
         wide: document.documentElement.scrollWidth > window.innerWidth,
       }));
       assert.ok(shut.brand <= shut.mark,
@@ -210,7 +221,7 @@ export function registerPageTests() {
         return;
       }
       assert.ok(fs.existsSync(jsonldPath), "the model names a surface, so jsonld.json should have been written");
-      assert.deepEqual(JSON.parse(script), want, "the served graph is the one jsonld() builds from this model");
+      assert.deepEqual(JSON.parse(/** @type {string} */ (script)), want, "the served graph is the one jsonld() builds from this model");
       await page.close();
     });
 
@@ -231,7 +242,7 @@ export function registerPageTests() {
       const page = await browser.newPage({ viewport: { width: 1400, height: 900 } });
       await page.goto(base, { waitUntil: "networkidle" });
       const href = await page.getAttribute(".brand", "href");
-      const identity = s.entities.find((e) => e.id === s.rootId);
+      const identity = /** @type {import("../../lib/snapshot.mjs").SnapshotEntity} */ (s.entities.find((e) => e.id === s.rootId));
       assert.equal(href, identity.fields.url, "the brand links the identity's url");
       await page.close();
     });

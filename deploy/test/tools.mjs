@@ -15,6 +15,8 @@ import { listTypes, describeSchema, listEntities, getEntityById } from "companyg
 import { sampleCalls, checkAnswer } from "companygraph-mcp-server/contract";
 import { ROOT, source, snapshot } from "../build/config.mjs";
 
+/** @import { SnapshotEntity } from "../../lib/snapshot.mjs" */
+
 export function registerToolsTests() {
   const src = source();
   const s = snapshot();
@@ -39,7 +41,7 @@ export function registerToolsTests() {
       assert.equal(describeSchema(s, t.type).type, t.type);
       assert.equal(listEntities(s, t.type).page.total, t.count, `${t.type} lists as many entities as list_types counts`);
       if (t.count === 0) continue;
-      const { entity } = getEntityById(s, s.entities.find((e) => e.type === t.type).id);
+      const { entity } = getEntityById(s, /** @type {SnapshotEntity} */ (s.entities.find((e) => e.type === t.type)).id);
       assert.equal(entity.type, t.type);
       assert.ok(Array.isArray(entity.references) && Array.isArray(entity.referencedBy));
     }
@@ -50,12 +52,12 @@ export function registerToolsTests() {
     await createServer(s).connect(a);
     const client = new Client({ name: "test", version: "0" });
     await client.connect(b);
-    assert.equal(client.getServerVersion().title, s.root);
+    assert.equal(/** @type {{ title?: string }} */ (client.getServerVersion()).title, s.root);
     const { tools } = await client.listTools();
     // No count and no argument is held here: the list is the server's and the arguments are read
     // from this snapshot by the package that declares the tools. A tool it gains with no sample
     // call fails by name, never in silence.
-    const calls = sampleCalls(s);
+    const calls = /** @type {Record<string, Record<string, unknown> | undefined>} */ (sampleCalls(s));
     assert.ok(tools.length > 0);
     for (const name of tools.map((x) => x.name)) {
       assert.ok(name in calls, `${name} is served and the package ships no sample call for it`);
@@ -81,11 +83,11 @@ export function registerToolsTests() {
     await createServer(s).connect(a);
     const client = new Client({ name: "test", version: "0" });
     await client.connect(b);
-    const root = s.entities.find((e) => e.id === s.rootId);
+    const root = /** @type {SnapshotEntity} */ (s.entities.find((e) => e.id === s.rootId));
     const r = checkAnswer("search", await client.callTool({ name: "search", arguments: { query: root.name, match: "words", type: root.type } }));
     assert.equal(r.match, "words");
-    assert.ok(r.words.length > 0 && r.words.every((w) => typeof w.stem === "string" && typeof w.common === "boolean"));
-    assert.ok(r.results.some((x) => x.id === s.rootId));
+    assert.ok(r.words.length > 0 && r.words.every((/** @type {{ stem: unknown; common: unknown }} */ w) => typeof w.stem === "string" && typeof w.common === "boolean"));
+    assert.ok(r.results.some((/** @type {{ id: string }} */ x) => x.id === s.rootId));
     await client.close();
   });
 
@@ -103,7 +105,7 @@ export function registerToolsTests() {
       return t.skip("this instance's ids carry no time");
     }
     const answer = checkAnswer("list_entities", r);
-    const times = answer.entities.map((e) => e.created).filter(Boolean);
+    const times = answer.entities.map((/** @type {{ created?: string }} */ e) => e.created).filter(Boolean);
     assert.ok(times.length > 1, "more than one entity carries a moment, so there is an order to hold");
     for (let i = 1; i < times.length; i++) assert.ok(times[i - 1] >= times[i], `${times[i - 1]} comes before the later ${times[i]}`);
     await client.close();

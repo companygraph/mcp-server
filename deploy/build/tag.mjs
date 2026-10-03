@@ -3,4 +3,4 @@
 import { snapshot } from "./config.mjs";
 
 const s = snapshot();
-process.stdout.write(`${s.core.version}-${s.commit.slice(0, 7)}\n`);
+process.stdout.write(`${s.core.version}-${/** @type {string} */ (s.commit).slice(0, 7)}\n`);

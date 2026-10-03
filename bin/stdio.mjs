@@ -33,6 +33,6 @@ try {
   const snapshot = buildSnapshot({ files: readDir(modelDir), schemas: readSchemas(coreDir), sub: values.sub, core: values.core ?? null, commit, repo: values.repo ?? null });
   await createServer(snapshot).connect(new StdioServerTransport());
 } catch (err) {
-  console.error(err.message);
+  console.error((/** @type {Error} */ (err)).message);
   process.exit(2);
 }

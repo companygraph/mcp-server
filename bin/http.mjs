@@ -16,6 +16,7 @@ try {
   const pageCss = values["page-css"] ? fs.readFileSync(values["page-css"], "utf8") : null;
   // An icon travels as a data URI rather than a route, so the page stays one response and the
   // server keeps no static directory. Type from the extension, which is all a favicon needs.
+  /** @type {Record<string, string | undefined>} */
   const ICON_TYPES = { ".svg": "image/svg+xml", ".png": "image/png", ".ico": "image/x-icon" };
   let pageIcon = null;
   if (values["page-icon"]) {
@@ -40,6 +41,6 @@ try {
     console.log(`companygraph-mcp-http on :${port}, commit ${snapshot.commit ?? "(none)"}, core ${snapshot.core.version}, hosts ${allowedHosts ? allowedHosts.join(" ") : "any"}, page css ${values["page-css"] ?? "built-in"}, icon ${values["page-icon"] ?? "none"}, brand ${values["page-brand"] ?? "the name"}, json-ld ${values["page-jsonld"] ? "yes" : "none"}, robots ${values.robots ? "yes" : "none"}`);
   });
 } catch (err) {
-  console.error(err.message);
+  console.error((/** @type {Error} */ (err)).message);
   process.exit(2);
 }
