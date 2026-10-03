@@ -136,6 +136,14 @@ test("a rule is listed and fetched like any entity, with its Applies to edges an
   assert.deepEqual(field("motivated-by"), [["risk", "An unreviewed change reaches customers"]]);
 });
 
+// core 0.54.0 gives a KPI an assesses field, a list of references to controls. It is read from
+// the schema like every other field, so the edge is served with no code of the server's own.
+test("a KPI is served with an assesses edge to the control it assesses", () => {
+  const r = getEntity(s, "kpi", "Review Escapes");
+  const assesses = r.entity.references.filter((x) => x.via === "assesses").map((x) => [x.to.type, x.to.name]);
+  assert.deepEqual(assesses, [["control", "Main requires a review"]]);
+});
+
 test("get_entity takes an id, and the tool's entry takes either and refuses neither", () => {
   assert.deepEqual(getEntityById(s, DDD), getEntity(s, "skill", "Domain-Driven Design"));
   assert.equal(entityBy(s, { id: ROOT }).entity.id, ROOT);
