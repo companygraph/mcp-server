@@ -160,6 +160,9 @@ test("the count of required checks is read from the rule suite's required status
   assert.equal(requiredCount([checks(null)]), null);
   assert.equal(requiredCount([checks("3 of 3 required status checks are expected."), checks("something else")]), null);
   assert.equal(requiredCount([]), null);
+  assert.equal(requiredCount([checks("1 of 1 required status check is expected.")]), 1, "the singular is read");
+  assert.equal(requiredCount([checks('Required status check "test" is expected.')]), 1, "a single named check is one");
+  assert.equal(requiredCount([checks("3 of 3 required status checks are expected."), { ...checks("All checks passed."), result: "pass" }]), 3, "a passed evaluation is not read");
 });
 
 test("with the count unparseable, today's rules decide as before", () => {
@@ -168,24 +171,24 @@ test("with the count unparseable, today's rules decide as before", () => {
 });
 
 // The command runs against a fake API that answers the way GitHub does: the repositories on two
-// pages, the second reached only through the Link header, one repository's rule suites on two
-// pages the same way, and one repository refused with a 403, as robertblust/xiny answers. Each
-// repository names its default branch, one of them with a slash in it, and every rule-suites
-// request must ask for that branch's ref, since a bypass on another branch is no escape from the
-// default branch's review. Each bypass in the week is then classified from its rule suite, its
-// pull request, that head's check runs (one head's on two pages), the comparison with main as it
-// stood before the push, and the required checks of the ruleset as it stood at the merge, read from
-// the ruleset's history, or, when GitHub refuses that history to the App as it does in
-// production, by the count of required checks the rule suite states. org/a holds one bypass behind
-// main by its ruleset's history although today's rules require one more check, one with no pull
-// request and one merged before a required check finished; org/b holds one that also passed over
-// the pull-request rule, which is decided before its pull request is asked for, one whose check
-// runs are refused, one whose only pull request was merged hours before the push, one behind main
-// by its rule suite's count of one check although today's rules require two, because its
-// ruleset's history is refused, and one with the same history refused whose rule suite states no
-// count, so today's rules decide and it is past its checks. NOW fixes the week, so the test never reads the wall clock. The process runs
-// asynchronously, since a synchronous child would hold this process's event loop and the fake
-// server could never answer it.
+// pages, the second reached only through the Link header, one repository's rule suites on two pages
+// the same way, and one repository refused with a 403, as robertblust/xiny answers. Each repository
+// names its default branch, one of them with a slash in it, and every rule-suites request must ask
+// for that branch's ref, since a bypass on another branch is no escape from the default branch's
+// review. Each bypass in the week is then classified from its rule suite, its pull request, that
+// head's check runs (one head's on two pages), the comparison with main as it stood before the
+// push, and the required checks of the ruleset as it stood at the merge, read from the ruleset's
+// history, or, when GitHub refuses that history to the App as it does in production, by the count
+// of required checks the rule suite states. org/a holds one bypass behind main by its ruleset's
+// history although today's rules require one more check, one with no pull request and one merged
+// before a required check finished; org/b holds one that also passed over the pull-request rule,
+// which is decided before its pull request is asked for, one whose check runs are refused, one
+// whose only pull request was merged hours before the push, one behind main by its rule suite's
+// count of one check although today's rules require two, because its ruleset's history is refused,
+// and one with the same history refused whose rule suite states no count, so today's rules decide
+// and it is past its checks. NOW fixes the week, so the test never reads the wall clock. The
+// process runs asynchronously, since a synchronous child would hold this process's event loop and
+// the fake server could never answer it.
 const NOW = "2026-10-05T06:00:00Z";
 const FROM = "2026-09-28T00:00:00.000Z";
 const bin = new URL("../bin/bypasses.mjs", import.meta.url).pathname;

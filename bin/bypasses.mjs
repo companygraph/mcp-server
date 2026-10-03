@@ -28,14 +28,16 @@
 // checks required at the merge are known by their count from the rule suite and not by their names:
 // a check started by the merge that no rule required must have passed too, and only a check that
 // today's rules require counts toward the number, so a check removed or renamed since the merge
-// fails to count and leaves the merge past its checks. Several required status checks evaluations
-// in one rule suite have their counts added, since their checks may overlap and too high a number
-// only leaves a merge past its checks. When that count cannot be parsed from the rule suite, or the
-// suite names no ruleset for its required checks, or a history holds no version from before the
-// merge, the required checks are the branch's rules as they stand when the job runs, so a check
-// added or removed since then is judged by today's rules. A ruleset in evaluate mode blocks nothing
-// and adds no required check. And a check run is matched to a required check by its name alone, not
-// by the app that made it, so a run of the same name from another app would satisfy it.
+// fails to count and leaves the merge past its checks, while a check today's rules require that was
+// not required at the merge can, if it ran green on the pull request, stand in for a then-required
+// check that never started. Several required status checks evaluations in one rule suite have their
+// counts added, since their checks may overlap and too high a number only leaves a merge past its
+// checks. When that count cannot be parsed from the rule suite, or the suite names no ruleset for
+// its required checks, or a history holds no version from before the merge, the required checks are
+// the branch's rules as they stand when the job runs, so a check added or removed since then is
+// judged by today's rules. A ruleset in evaluate mode blocks nothing and adds no required check.
+// And a check run is matched to a required check by its name alone, not by the app that made it, so
+// a run of the same name from another app would satisfy it.
 import fs from "node:fs";
 import { lastWeek, countBypasses, classify, requiredCount } from "../lib/bypasses.mjs";
 
@@ -159,17 +161,17 @@ const FALLBACK_WINDOW = 10 * 60 * 1000;
 // and so was not bypassed. The pull request is the merged one whose merge commit is the pushed
 // commit, or failing that a merged one into the default branch, since a squash or rebase merge
 // still lists the pull request it came from, as long as it was merged within ten minutes of the
-// push; a pull request merged further from it only touched the commit, so the bypass has none.
-// The comparison runs from the head to before_sha, the default branch as it stood just before the
-// push, because main today already holds the merge and every branch would look behind it; ahead_by
-// is then the commits main had that the branch lacked, and one commit per page is asked for since
+// push; a pull request merged further from it only touched the commit, so the bypass has none. The
+// comparison runs from the head to before_sha, the default branch as it stood just before the push,
+// because main today already holds the merge and every branch would look behind it; ahead_by is
+// then the commits main had that the branch lacked, and one commit per page is asked for since
 // nothing else of the answer is read. The check runs are asked for with filter=all, since the
-// default answers only each name's latest run and a re-run after the merge would hide the state
-// the check was in when the merge went through. When the rulesets' history cannot be read, the
-// number of checks required at the merge comes from the rule suite's own evaluation and is met only
-// by checks today's rules name, and when it cannot be parsed today's rules decide alone. A bypass the failed rules already decide, because
-// the rule suite cannot be read or a rule other than required status checks was passed over, is
-// classified at once and asks GitHub nothing more.
+// default answers only each name's latest run and a re-run after the merge would hide the state the
+// check was in when the merge went through. When the rulesets' history cannot be read, the number
+// of checks required at the merge comes from the rule suite's own evaluation and is met only by
+// checks today's rules name, and when it cannot be parsed today's rules decide alone. A bypass the
+// failed rules already decide, because the rule suite cannot be read or a rule other than required
+// status checks was passed over, is classified at once and asks GitHub nothing more.
 async function kind(repo, suite) {
   const detail = await get(`${api}/repos/${repo}/rulesets/rule-suites/${suite.id}`);
   const evaluations = detail.status === 200 ? detail.body.rule_evaluations ?? [] : [];
