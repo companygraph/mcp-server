@@ -600,24 +600,24 @@ Every type, the entity that came into the model last first: the ten newest entit
     "type": null,
     "entities": [
       {
+        "id": "01a10040-3005-7db7-a01b-d031d4bebf58",
+        "type": "kpi",
+        "name": "Review Escapes",
+        "tagline": "The changes that reached the default branch without the review its protection asks for.",
+        "owner": null,
+        "created": "2026-10-03T05:32:49.029Z"
+      },
+      {
         "id": "01a0fb1b-b534-79e9-a261-eda408034315",
         "type": "control",
         "name": "Main requires a review",
         "tagline": "The default branch refuses a merge that carries no approving review from someone other than its author.",
         "owner": null,
         "created": "2026-10-02T05:34:52.212Z"
-      },
-      {
-        "id": "01a0fb1b-b4ff-7020-8a63-e80de5bbcc7f",
-        "type": "rule",
-        "name": "A change is reviewed before it ships",
-        "tagline": "A change reaches the default branch only after a second person has read it and approved it.",
-        "owner": null,
-        "created": "2026-10-02T05:34:52.159Z"
       }
     ],
     "page": {
-      "total": 79,
+      "total": 80,
       "returned": 2,
       "hasMore": true,
       "nextCursor": "eyJvIjoyLCJjIjoiMDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWYwMTIzNDU2NyJ9"

@@ -187,9 +187,10 @@ test("an entity whose name matched stands first, before every entity that only m
   for (const match of ["words", "text"]) {
     const r = search(s, "Reviewer", { match });
     // The name tier holds the role alone in text mode; in words mode "Reviewer" asks for the stem
-    // "review", which core 0.53.0's control and rule carry in their names too.
+    // "review", which core 0.53.0's control and rule carry in their names too, and so does the example's
+    // KPI Review Escapes since meta-model v0.72.0.
     const tier = r.results.filter((x) => x.matched[0].where === "name");
-    assert.deepEqual(tier.map((x) => x.type), match === "words" ? ["control", "role", "rule"] : ["role"], match);
+    assert.deepEqual(tier.map((x) => x.type), match === "words" ? ["control", "kpi", "role", "rule"] : ["role"], match);
     assert.ok(tier.some((x) => x.id === REVIEWER), match);
     assert.deepEqual(r.results.slice(0, tier.length), tier, `${match}: the name tier stands first`);
     const rest = r.results.slice(tier.length);
