@@ -1,35 +1,40 @@
 #!/usr/bin/env node
-// Writes the week's Merges Past Their Checks object of one organization to the file OUT names,
-// for the weekly KPI workflow to upload. GITHUB_TOKEN is an installation token of the
-// organization's GitHub App, so the repositories are the installation's, listed page by page, and
-// each repository's rule suites with result bypass on its default branch are read for the past
-// month, which always covers the ISO week that ended before a run on any day of the following
-// week. Only the default branch counts, because the KPI counts changes that reached it with its
-// required checks passed over, and a bypass on a working branch brings nothing there. Each bypass
-// in the week is then classified from its rule suite's failed rules, the pull request that made
-// its commit, that head's check runs, the comparison of the head with the default branch as it
-// stood before the push, and the checks its rulesets required at the merge, read from each
-// ruleset's history, since a ruleset that gained a check later would otherwise judge an earlier
-// merge by a check it never had: a pull request whose required checks
-// had all succeeded before the merge and whose branch was behind is behind main, anything else is
-// past its checks. A bypass whose pull request, runs, comparison, rules or rule suite cannot be
-// read is past its checks, and its repository still counts as read. The week is the one that
-// ended before NOW, an ISO instant, when it is set, and before the moment of the run otherwise.
-// The log is public, since the host repositories are, so it carries counts and full names
-// (org/repo) and never the token: the token travels only in a request header. A missing variable,
-// or a NOW that is no instant, is one line on stderr and exit 2; a listing GitHub refuses is one
-// line and exit 1, since without it there is nothing to count; a request that throws, on the
-// network or on a body that is not JSON, aborts the run with its error before any object is
-// written, so a week is never kept from a partial reading.
-// Two limits follow from what GitHub keeps. When a ruleset's history cannot be read, or the rule
-// suite names no ruleset for its required checks, the required checks are the branch's rules as
-// they stand when the job runs, not as they stood at the merge, so a check added or removed since
-// then is judged by today's rules. That includes every organization-level ruleset, whose history
-// the repository endpoint read here does not answer; the family's rulesets are the repositories'
-// own. A ruleset in evaluate mode blocks nothing and adds no required check. And a check run is matched to a required check by its name
-// alone, not by the app that made it, so a run of the same name from another app would satisfy it.
+// Writes the week's Merges Past Their Checks object of one organization to the file OUT names, for
+// the weekly KPI workflow to upload. GITHUB_TOKEN is an installation token of the organization's
+// GitHub App, so the repositories are the installation's, listed page by page, and each
+// repository's rule suites with result bypass on its default branch are read for the past month,
+// which always covers the ISO week that ended before a run on any day of the following week. Only
+// the default branch counts, because the KPI counts changes that reached it with its required
+// checks passed over, and a bypass on a working branch brings nothing there. Each bypass in the
+// week is then classified from its rule suite's failed rules, the pull request that made its
+// commit, that head's check runs, the comparison of the head with the default branch as it stood
+// before the push, and the checks its rulesets required at the merge, read from each ruleset's
+// history, since a ruleset that gained a check later would otherwise judge an earlier merge by a
+// check it never had: a pull request whose required checks had all succeeded before the merge and
+// whose branch was behind is behind main, anything else is past its checks. An App's installation
+// token cannot read a ruleset's history, GitHub answers it 403, so in production the rule suite's
+// own evaluation gives the number of checks required at the merge instead, and the pull request is
+// behind main when every check started by the merge had succeeded before it and at least that many
+// distinct checks did. A bypass whose pull request, runs, comparison, rules or rule suite cannot be
+// read is past its checks, and its repository still counts as read. The week is the one that ended
+// before NOW, an ISO instant, when it is set, and before the moment of the run otherwise. The log
+// is public, since the host repositories are, so it carries counts and full names (org/repo) and
+// never the token: the token travels only in a request header. A missing variable, or a NOW that is
+// no instant, is one line on stderr and exit 2; a listing GitHub refuses is one line and exit 1,
+// since without it there is nothing to count; a request that throws, on the network or on a body
+// that is not JSON, aborts the run with its error before any object is written, so a week is never
+// kept from a partial reading.
+// Three limits follow from what GitHub keeps. The App cannot read a ruleset's history, so the
+// checks required at the merge are known by their count from the rule suite and not by their names:
+// a check started by the merge that no rule required must have passed too, and a run of any name
+// counts toward the number. When that count cannot be parsed from the rule suite, or the suite
+// names no ruleset for its required checks, or a history holds no version from before the merge,
+// the required checks are the branch's rules as they stand when the job runs, so a check added or
+// removed since then is judged by today's rules. A ruleset in evaluate mode blocks nothing and adds
+// no required check. And a check run is matched to a required check by its name alone, not by the
+// app that made it, so a run of the same name from another app would satisfy it.
 import fs from "node:fs";
-import { lastWeek, countBypasses, classify } from "../lib/bypasses.mjs";
+import { lastWeek, countBypasses, classify, requiredCount } from "../lib/bypasses.mjs";
 
 const { GITHUB_TOKEN: token, ORGANIZATION: organization, OUT: out } = process.env;
 const api = (process.env.GITHUB_API_URL || "https://api.github.com").replace(/\/$/, "");
@@ -122,19 +127,22 @@ async function contextsAt(repo, id, version) {
 
 // The contexts required at the merge: for each ruleset whose required status checks the rule
 // suite evaluated, its latest version updated at or before merged_at. Today's rules stand in for
-// all of them when the suite names no such ruleset, or when any history or version cannot be read
-// or holds no version from before the merge, since a mix of past and present rules would match
-// neither.
+// all of them when the suite names no such ruleset, or when a history holds no version from before
+// the merge, since a mix of past and present rules would match neither. When any history or
+// version cannot be read, which is always the case with an App's installation token, the answer
+// is null, so the caller can count the checks the rule suite says were required instead.
 async function requiredAt(repo, rulesets, merged_at) {
   if (!rulesets.length) return requiredOf(repo);
   const merged = new Date(merged_at);
   const contexts = new Set();
   for (const id of rulesets) {
-    const versions = (await historyOf(repo, id))?.filter((v) => new Date(v.updated_at) <= merged);
-    if (!versions?.length) return requiredOf(repo);
+    const history = await historyOf(repo, id);
+    if (!history) return null;
+    const versions = history.filter((v) => new Date(v.updated_at) <= merged);
+    if (!versions.length) return requiredOf(repo);
     const latest = versions.reduce((a, b) => (new Date(b.updated_at) > new Date(a.updated_at) ? b : a));
     const at = await contextsAt(repo, id, latest.version_id);
-    if (!at) return requiredOf(repo);
+    if (!at) return null;
     for (const context of at) contexts.add(context);
   }
   return [...contexts];
@@ -154,7 +162,9 @@ const FALLBACK_WINDOW = 10 * 60 * 1000;
 // is then the commits main had that the branch lacked, and one commit per page is asked for since
 // nothing else of the answer is read. The check runs are asked for with filter=all, since the
 // default answers only each name's latest run and a re-run after the merge would hide the state
-// the check was in when the merge went through. A bypass the failed rules already decide, because
+// the check was in when the merge went through. When the rulesets' history cannot be read, the
+// number of checks required at the merge comes from the rule suite's own evaluation, and only when
+// that cannot be parsed do today's rules decide. A bypass the failed rules already decide, because
 // the rule suite cannot be read or a rule other than required status checks was passed over, is
 // classified at once and asks GitHub nothing more.
 async function kind(repo, suite) {
@@ -175,10 +185,13 @@ async function kind(repo, suite) {
   if (!pr) return classify(none);
   const runs = await pages(`${api}/repos/${repo}/commits/${pr.head.sha}/check-runs?filter=all&per_page=100`, (body) => body.check_runs);
   const comparison = await get(`${api}/repos/${repo}/compare/${pr.head.sha}...${suite.before_sha}?per_page=1`);
+  const atMerge = await requiredAt(repo, rulesets, pr.merged_at);
+  const count = atMerge === null ? requiredCount(evaluations) : null;
   return classify({
     merged_at: pr.merged_at,
     head_sha: pr.head.sha,
-    required: await requiredAt(repo, rulesets, pr.merged_at),
+    required: atMerge ?? (count === null ? await requiredOf(repo) : null),
+    count,
     runs: runs.status === 200 ? runs.items : null,
     behind: comparison.status === 200 ? comparison.body.ahead_by : null,
     failed,
