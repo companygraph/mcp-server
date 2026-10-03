@@ -2,14 +2,33 @@
 # reads the organization's rule suites with its GitHub App and writes the week's object to the
 # project's kpi-reports bucket as kpi-reporter, which only a run on main can act as; the job is
 # skipped on any other ref as well, so a run elsewhere never asks for the App's token. The log
-# carries counts and repository names, never a token.
+# carries counts and full names (org/repo), never a token.
+#
+# The hosts sit in other organizations than this workflow, and `secrets: inherit` does not cross
+# an organization, so a host names what it passes. Its calling job reads:
+#
+#   permissions: { contents: read, id-token: write }
+#   uses: companygraph/mcp-server/.github/workflows/kpi-google.yml@<tag>
+#   with: { app-id: ${{ vars.KPI_APP_ID }} }
+#   secrets: { KPI_APP_PRIVATE_KEY: ${{ secrets.KPI_APP_PRIVATE_KEY }} }
 #
 # The checkout is the calling host's, whose root package.json pins companygraph-mcp-server at a
 # tag, so npm ci installs the release the host chose and the run executes that release's script,
-# as chat-server's report runs the chat release the host's chat/ pins.
+# as chat-server's report runs the chat release the host's chat/ pins. The steps run in an order
+# that keeps credentials away from dependency scripts: the checkout keeps no token and npm ci runs
+# before the App token or the Google credentials exist.
 name: kpi
 on:
   workflow_call:
+    inputs:
+      app-id:
+        description: The organization's KPI GitHub App id, the host's variable KPI_APP_ID.
+        type: string
+        required: true
+    secrets:
+      KPI_APP_PRIVATE_KEY:
+        description: The private key of that App.
+        required: true
 jobs:
   ruleset-bypasses:
     if: github.ref == 'refs/heads/main'
@@ -19,32 +38,34 @@ jobs:
       id-token: write
     steps:
       - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
       - run: |
           jq -r '"PROJECT=\(.project)\nPROJECT_NUMBER=\(.project_number)"' deployment.json >> "$GITHUB_ENV"
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - run: npm ci
       # The App holds Administration: Read-only, which rule suites need, and the token asks for
       # that alone.
       - uses: actions/create-github-app-token@v2
         id: app
         with:
-          app-id: ${{ vars.KPI_APP_ID }}
+          app-id: ${{ inputs.app-id }}
           private-key: ${{ secrets.KPI_APP_PRIVATE_KEY }}
           owner: ${{ github.repository_owner }}
           permission-administration: read
-      - uses: google-github-actions/auth@v3
-        with:
-          workload_identity_provider: projects/${{ env.PROJECT_NUMBER }}/locations/global/workloadIdentityPools/github/providers/github
-          service_account: kpi-reporter@${{ env.PROJECT }}.iam.gserviceaccount.com
-      - uses: google-github-actions/setup-gcloud@v3
-      - uses: actions/setup-node@v7
-        with:
-          node-version: 22
-      - run: npm ci
       - name: the week's ruleset bypasses
         env:
           GITHUB_TOKEN: ${{ steps.app.outputs.token }}
           ORGANIZATION: ${{ github.repository_owner }}
           OUT: ${{ runner.temp }}/week.json
         run: node node_modules/companygraph-mcp-server/bin/bypasses.mjs
+      - uses: google-github-actions/auth@v3
+        with:
+          workload_identity_provider: projects/${{ env.PROJECT_NUMBER }}/locations/global/workloadIdentityPools/github/providers/github
+          service_account: kpi-reporter@${{ env.PROJECT }}.iam.gserviceaccount.com
+      - uses: google-github-actions/setup-gcloud@v3
       # A week already written is replaced; the bucket's versioning keeps the earlier object.
       - name: the object, kept
         run: |
