@@ -1,16 +1,22 @@
 # The week's KPI values of an organization, called by its MCP host on its own schedule. The run
-# reads the organization's rule suites with its GitHub App and writes the week's object to the
-# project's kpi-reports bucket as kpi-reporter, which only a run on main can act as; the job is
-# skipped on any other ref as well, so a run elsewhere never asks for the App's token. The log
-# carries counts and full names (org/repo), never a token.
+# reads the organization's rule suites with its GitHub App, classifies each bypass as behind main
+# or past its checks, and writes the week's object to the project's kpi-reports bucket as
+# kpi-reporter, which only a run on main can act as; the job is skipped on any other ref as well,
+# so a run elsewhere never asks for the App's token. The log carries counts and full names
+# (org/repo), never a token.
 #
 # The hosts sit in other organizations than this workflow, and `secrets: inherit` does not cross
-# an organization, so a host names what it passes. Its calling job reads:
+# an organization, so a host names what it passes. Its calling job reads as below, in block
+# mappings, since a flow mapping holding ${{ }} does not parse:
 #
-#   permissions: { contents: read, id-token: write }
+#   permissions:
+#     contents: read
+#     id-token: write
 #   uses: companygraph/mcp-server/.github/workflows/kpi-google.yml@<tag>
-#   with: { app-id: ${{ vars.KPI_APP_ID }} }
-#   secrets: { KPI_APP_PRIVATE_KEY: ${{ secrets.KPI_APP_PRIVATE_KEY }} }
+#   with:
+#     app-id: ${{ vars.KPI_APP_ID }}
+#   secrets:
+#     KPI_APP_PRIVATE_KEY: ${{ secrets.KPI_APP_PRIVATE_KEY }}
 #
 # The checkout is the calling host's, whose root package.json pins companygraph-mcp-server at a
 # tag, so npm ci installs the release the host chose and the run executes that release's script,
@@ -46,8 +52,10 @@ jobs:
         with:
           node-version: 22
       - run: npm ci
-      # The App holds Administration: Read-only, which rule suites need, and the token asks for
-      # that alone.
+      # The App holds Administration, Checks, Contents and Pull requests: Read-only, and the token
+      # asks for those alone: Administration for the rule suites and the branch's rules, Pull
+      # requests for the pull request that made a commit, Checks for its head's check runs and
+      # Contents for the comparison with the default branch.
       - uses: actions/create-github-app-token@v2
         id: app
         with:
@@ -55,7 +63,10 @@ jobs:
           private-key: ${{ secrets.KPI_APP_PRIVATE_KEY }}
           owner: ${{ github.repository_owner }}
           permission-administration: read
-      - name: the week's ruleset bypasses
+          permission-checks: read
+          permission-contents: read
+          permission-pull-requests: read
+      - name: the week's merges past their checks
         env:
           GITHUB_TOKEN: ${{ steps.app.outputs.token }}
           ORGANIZATION: ${{ github.repository_owner }}
