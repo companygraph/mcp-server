@@ -10,7 +10,9 @@
   "files": [
     "lib",
     "bin",
-    "deploy"
+    "deploy",
+    "types/lib",
+    "types/deploy"
   ],
   "bin": {
     "companygraph-mcp": "bin/stdio.mjs",
@@ -19,19 +21,55 @@
     "companygraph-mcp-deploy": "bin/deploy.mjs"
   },
   "exports": {
-    ".": "./lib/server.mjs",
-    "./model": "./lib/model.mjs",
-    "./schemas": "./lib/schemas.mjs",
-    "./errors": "./lib/errors.mjs",
-    "./diagram": "./lib/diagram.mjs",
-    "./contract": "./lib/contract.mjs",
-    "./snapshot": "./lib/snapshot.mjs",
-    "./read": "./lib/read.mjs",
-    "./http": "./lib/http.mjs",
-    "./deploy": "./deploy/build/index.mjs",
-    "./deploy/tests": "./deploy/test/index.mjs"
+    ".": {
+      "types": "./types/lib/server.d.mts",
+      "default": "./lib/server.mjs"
+    },
+    "./model": {
+      "types": "./types/lib/model.d.mts",
+      "default": "./lib/model.mjs"
+    },
+    "./schemas": {
+      "types": "./types/lib/schemas.d.mts",
+      "default": "./lib/schemas.mjs"
+    },
+    "./errors": {
+      "types": "./types/lib/errors.d.mts",
+      "default": "./lib/errors.mjs"
+    },
+    "./diagram": {
+      "types": "./types/lib/diagram.d.mts",
+      "default": "./lib/diagram.mjs"
+    },
+    "./contract": {
+      "types": "./types/lib/contract.d.mts",
+      "default": "./lib/contract.mjs"
+    },
+    "./snapshot": {
+      "types": "./types/lib/snapshot.d.mts",
+      "default": "./lib/snapshot.mjs"
+    },
+    "./read": {
+      "types": "./types/lib/read.d.mts",
+      "default": "./lib/read.mjs"
+    },
+    "./http": {
+      "types": "./types/lib/http.d.mts",
+      "default": "./lib/http.mjs"
+    },
+    "./deploy": {
+      "types": "./types/deploy/build/index.d.mts",
+      "default": "./deploy/build/index.mjs"
+    },
+    "./deploy/tests": {
+      "types": "./types/deploy/test/index.d.mts",
+      "default": "./deploy/test/index.mjs"
+    }
   },
   "scripts": {
+    "build": "tsc",
+    "build:check": "node tools/build-check.mjs",
+    "typecheck": "tsc --noEmit",
     "fixtures": "node scripts/fixtures.mjs",
     "pretest": "node scripts/fixtures.mjs",
     "test": "node --test 'test/*.test.mjs'",
@@ -45,6 +83,8 @@
   },
   "devDependencies": {
     "@modelcontextprotocol/client": "^2.1.0",
-    "playwright": "^1.63.0"
+    "@types/node": "22.20.4",
+    "playwright": "^1.63.0",
+    "typescript": "7.0.2"
   }
 }
