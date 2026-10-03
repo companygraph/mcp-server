@@ -19,6 +19,10 @@
 // line and exit 1, since without it there is nothing to count; a request that throws, on the
 // network or on a body that is not JSON, aborts the run with its error before any object is
 // written, so a week is never kept from a partial reading.
+// Two limits follow from what GitHub keeps. The required checks are the branch's rules as they
+// stand when the job runs, not as they stood at the merge, so a check added or removed since then
+// is judged by today's rules. And a check run is matched to a required check by its name alone,
+// not by the app that made it, so a run of the same name from another app would satisfy it.
 import fs from "node:fs";
 import { lastWeek, countBypasses, classify } from "../lib/bypasses.mjs";
 
@@ -88,14 +92,21 @@ async function requiredOf(repo) {
   return required[repo];
 }
 
+// How far from the push a pull request found only by its base branch may have been merged and
+// still be the one that made it.
+const FALLBACK_WINDOW = 10 * 60 * 1000;
+
 // One bypass, classified. The failed rules leave out a rule in evaluate mode, which blocks nothing
 // and so was not bypassed. The pull request is the merged one whose merge commit is the pushed
 // commit, or failing that a merged one into the default branch, since a squash or rebase merge
-// still lists the pull request it came from. The comparison runs from the head to before_sha, the
-// default branch as it stood just before the push, because main today already holds the merge
-// and every branch would look behind it; ahead_by is then the commits main had that the branch
-// lacked. The check runs are asked for with filter=all, since the default answers only each
-// name's latest run and a re-run after the merge would hide the success that came before it.
+// still lists the pull request it came from, as long as it was merged within ten minutes of the
+// push; a pull request merged further from it only touched the commit, so the bypass has none.
+// The comparison runs from the head to before_sha, the default branch as it stood just before the
+// push, because main today already holds the merge and every branch would look behind it; ahead_by
+// is then the commits main had that the branch lacked, and one commit per page is asked for since
+// nothing else of the answer is read. The check runs are asked for with filter=all, since the
+// default answers only each name's latest run and a re-run after the merge would hide the state
+// the check was in when the merge went through.
 async function kind(repo, suite) {
   const detail = await get(`${api}/repos/${repo}/rulesets/rule-suites/${suite.id}`);
   const failed = detail.status !== 200 ? null : (detail.body.rule_evaluations ?? [])
@@ -103,10 +114,11 @@ async function kind(repo, suite) {
     .map((e) => e.rule_type);
   const pulls = await get(`${api}/repos/${repo}/commits/${suite.after_sha}/pulls`);
   const merged = pulls.status === 200 ? pulls.body.filter((p) => p.merged_at) : [];
-  const pr = merged.find((p) => p.merge_commit_sha === suite.after_sha) ?? merged.find((p) => p.base?.ref === branches[repo]);
+  const near = (p) => Math.abs(new Date(p.merged_at) - new Date(suite.pushed_at)) <= FALLBACK_WINDOW;
+  const pr = merged.find((p) => p.merge_commit_sha === suite.after_sha) ?? merged.find((p) => p.base?.ref === branches[repo] && near(p));
   if (!pr) return classify({ merged_at: null, head_sha: null, required: null, runs: null, behind: null, failed });
   const runs = await pages(`${api}/repos/${repo}/commits/${pr.head.sha}/check-runs?filter=all&per_page=100`, (body) => body.check_runs);
-  const comparison = await get(`${api}/repos/${repo}/compare/${pr.head.sha}...${suite.before_sha}`);
+  const comparison = await get(`${api}/repos/${repo}/compare/${pr.head.sha}...${suite.before_sha}?per_page=1`);
   return classify({
     merged_at: pr.merged_at,
     head_sha: pr.head.sha,

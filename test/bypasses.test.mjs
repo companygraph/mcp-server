@@ -49,7 +49,9 @@ test("a result other than bypass is not counted", async () => {
 // One bypass that is behind main and nothing else: every required check succeeded before the
 // merge and main had moved on. Each case below changes one thing about it.
 const MERGED = "2026-09-29T10:00:00Z";
-const ok = (name, completed_at = "2026-09-29T09:50:00Z") => ({ name, status: "completed", conclusion: "success", completed_at });
+// A run starts five minutes before it completes, so the latest run of a name by started_at is the
+// state of that check at the merge.
+const ok = (name, completed_at = "2026-09-29T09:50:00Z") => ({ name, status: "completed", conclusion: "success", started_at: new Date(new Date(completed_at).getTime() - 300_000).toISOString(), completed_at });
 const behindMain = { merged_at: MERGED, head_sha: "h1", required: ["test", "lint"], runs: [ok("test"), ok("lint")], behind: 2, failed: ["required_status_checks"] };
 
 test("a merge with every required check passed before it and main ahead is behind main", () => {
@@ -69,7 +71,19 @@ test("a required run that completed after the merge is past its checks", () => {
 });
 
 test("a required run still running at the merge is past its checks", () => {
-  assert.equal(classify({ ...behindMain, runs: [ok("test"), { name: "lint", status: "in_progress", conclusion: null, completed_at: null }] }), "past_checks");
+  assert.equal(classify({ ...behindMain, runs: [ok("test"), { name: "lint", status: "in_progress", conclusion: null, started_at: "2026-09-29T09:45:00Z", completed_at: null }] }), "past_checks");
+});
+
+test("an earlier success superseded by a re-run still running at the merge is past its checks", () => {
+  assert.equal(classify({ ...behindMain, runs: [ok("test"), ok("lint"), { name: "lint", status: "in_progress", conclusion: null, started_at: "2026-09-29T09:55:00Z", completed_at: null }] }), "past_checks");
+});
+
+test("an earlier success superseded by a re-run that failed before the merge is past its checks", () => {
+  assert.equal(classify({ ...behindMain, runs: [ok("test"), ok("lint"), { name: "lint", status: "completed", conclusion: "failure", started_at: "2026-09-29T09:55:00Z", completed_at: "2026-09-29T09:58:00Z" }] }), "past_checks");
+});
+
+test("a run started after the merge does not stand for the check at the merge", () => {
+  assert.equal(classify({ ...behindMain, runs: [ok("test"), ok("lint"), { name: "lint", status: "completed", conclusion: "failure", started_at: "2026-09-29T10:05:00Z", completed_at: "2026-09-29T10:08:00Z" }] }), "behind_main");
 });
 
 test("a failed required run is past its checks", () => {
@@ -109,7 +123,8 @@ test("a branch whose rules name no required check is past its checks, since the 
 // pull request, that head's check runs (one head's on two pages), the comparison with main as it
 // stood before the push, and the branch's rules: org/a holds one bypass behind main, one with no
 // pull request and one merged before a required check finished; org/b holds one that also passed
-// over the pull-request rule and one whose check runs are refused. NOW fixes the week, so the test
+// over the pull-request rule, one whose check runs are refused and one whose only pull request
+// was merged hours before the push. NOW fixes the week, so the test
 // never reads the wall clock. The process runs asynchronously, since a synchronous child would
 // hold this process's event loop and the fake server could never answer it.
 const NOW = "2026-10-05T06:00:00Z";
@@ -124,11 +139,18 @@ test("the command reads every page of the default branch, classifies each bypass
   const branches = { "org/a": "main", "org/b": "release/v1", "org/x": "main" };
   const suite = (id, hours, sha) => at(inside(hours), { id, after_sha: `m${sha}`, before_sha: `p${sha}` });
   const statusOnly = [{ rule_type: "required_status_checks", result: "fail" }, { rule_type: "pull_request", result: "pass" }];
-  const evaluations = { "org/a/11": statusOnly, "org/a/12": statusOnly, "org/a/13": statusOnly, "org/b/21": [{ rule_type: "required_status_checks", result: "fail" }, { rule_type: "pull_request", result: "fail" }], "org/b/22": statusOnly };
+  // Bypass 11 also failed a rule in evaluate mode, which blocks nothing and must not make it past
+  // its checks.
+  const evaluateOnly = [{ rule_type: "required_status_checks", result: "fail", enforcement: "active" }, { rule_type: "pull_request", result: "fail", enforcement: "evaluate" }];
+  const evaluations = { "org/a/11": evaluateOnly, "org/a/12": statusOnly, "org/a/13": statusOnly, "org/b/21": [{ rule_type: "required_status_checks", result: "fail" }, { rule_type: "pull_request", result: "fail" }], "org/b/22": statusOnly, "org/b/23": statusOnly };
   const pr = (sha, merged_hours, base) => [{ number: Number(sha), merged_at: inside(merged_hours), merge_commit_sha: `m${sha}`, head: { sha: `h${sha}` }, base: { ref: base } }];
-  const pulls = { "org/a/m11": pr("11", 2, "main"), "org/a/m12": [], "org/a/m13": pr("13", 31, "main"), "org/b/m21": pr("21", 5, "release/v1"), "org/b/m22": pr("22", 6, "release/v1") };
-  const success = (name, hours) => ({ name, status: "completed", conclusion: "success", completed_at: inside(hours) });
-  const runs = { "org/a/h13": [success("test", 30), success("lint", 31.5)], "org/b/h21": [success("test", 4)] };
+  const pulls = { "org/a/m11": pr("11", 2, "main"), "org/a/m12": [], "org/a/m13": pr("13", 31, "main"), "org/b/m21": pr("21", 5, "release/v1"), "org/b/m22": pr("22", 6, "release/v1"),
+    // Bypass 23's commit lists only a pull request merged into the branch two hours before the
+    // push, with another merge commit: a pull request that touched the commit, not the one that
+    // made the push, so the bypass has no pull request and is past its checks.
+    "org/b/m23": [{ ...pr("23", 6, "release/v1")[0], merge_commit_sha: "other" }] };
+  const success = (name, hours) => ({ name, status: "completed", conclusion: "success", started_at: inside(hours - 0.25), completed_at: inside(hours) });
+  const runs = { "org/a/h13": [success("test", 30), success("lint", 31.5)], "org/b/h21": [success("test", 4)], "org/b/h23": [success("test", 5)] };
   const seen = [];
   const refs = [];
   const server = http.createServer((req, res) => {
@@ -150,7 +172,7 @@ test("the command reads every page of the default branch, classifies each bypass
       if (url.searchParams.get("page") === "2") return json([suite(13, 30, "13"), at(before, { id: 10, after_sha: "m10", before_sha: "p10" })]);
       return json([suite(11, 1, "11"), suite(12, 2, "12")], "/repos/org/a/rulesets/rule-suites?time_period=month&rule_suite_result=bypass&ref=refs%2Fheads%2Fmain&per_page=100&page=2");
     }
-    if (url.pathname === "/repos/org/b/rulesets/rule-suites") return json([suite(21, 4, "21"), suite(22, 6, "22")]);
+    if (url.pathname === "/repos/org/b/rulesets/rule-suites") return json([suite(21, 4, "21"), suite(22, 6, "22"), suite(23, 8, "23")]);
     let m;
     if ((m = url.pathname.match(/^\/repos\/(org\/[ab])\/rulesets\/rule-suites\/(\d+)$/))) return json({ id: Number(m[2]), result: "bypass", rule_evaluations: evaluations[`${m[1]}/${m[2]}`] });
     if ((m = url.pathname.match(/^\/repos\/(org\/[ab])\/commits\/([^/]+)\/pulls$/))) return json(pulls[`${m[1]}/${m[2]}`]);
@@ -159,7 +181,7 @@ test("the command reads every page of the default branch, classifies each bypass
       if (url.searchParams.get("page") === "2") return json({ total_count: 2, check_runs: [success("lint", 1.5)] });
       return json({ total_count: 2, check_runs: [success("test", 1)] }, "/repos/org/a/commits/h11/check-runs?filter=all&per_page=100&page=2");
     }
-    if ((m = url.pathname.match(/^\/repos\/(org\/[ab])\/commits\/(h1[13]|h21)\/check-runs$/))) return json({ total_count: 0, check_runs: runs[`${m[1]}/${m[2]}`] });
+    if ((m = url.pathname.match(/^\/repos\/(org\/[ab])\/commits\/(h1[13]|h2[13])\/check-runs$/))) return json({ total_count: 0, check_runs: runs[`${m[1]}/${m[2]}`] });
     if ((m = url.pathname.match(/^\/repos\/(org\/[ab])\/compare\/(h\d+)\.\.\.(p\d+)$/))) return json({ ahead_by: 2, behind_by: 1, status: "diverged" });
     if (url.pathname === "/repos/org/a/rules/branches/main") return json([{ type: "pull_request", parameters: {} }, { type: "required_status_checks", parameters: { required_status_checks: [{ context: "test" }, { context: "lint" }] } }]);
     if (url.pathname === "/repos/org/b/rules/branches/release/v1") return json([{ type: "required_status_checks", parameters: { required_status_checks: [{ context: "test" }] } }]);
@@ -178,10 +200,10 @@ test("the command reads every page of the default branch, classifies each bypass
     assert.equal(week.from, FROM);
     assert.deepEqual(week.repositories, {
       "org/a": { bypasses: 3, past_checks: 2, behind_main: 1 },
-      "org/b": { bypasses: 2, past_checks: 2, behind_main: 0 },
+      "org/b": { bypasses: 3, past_checks: 3, behind_main: 0 },
     });
     assert.deepEqual(week.unread, ["org/x"]);
-    assert.equal(week.past_checks, 4);
+    assert.equal(week.past_checks, 5);
     assert.equal(week.behind_main, 1);
     assert.equal(week.bypasses, week.past_checks + week.behind_main);
     for (const counts of Object.values(week.repositories)) assert.equal(counts.bypasses, counts.past_checks + counts.behind_main);
@@ -189,14 +211,14 @@ test("the command reads every page of the default branch, classifies each bypass
     assert.ok(seen.some((r) => r.url.includes("page=2") && r.url.startsWith("/installation/")), "the second page of repositories was read");
     assert.ok(seen.some((r) => r.url.includes("page=2") && r.url.startsWith("/repos/org/a/rulesets/")), "the second page of rule suites was read");
     assert.ok(seen.some((r) => r.url.includes("page=2") && r.url.startsWith("/repos/org/a/commits/h11/check-runs")), "the second page of check runs was read");
-    assert.ok(seen.some((r) => r.url === "/repos/org/a/compare/h11...p11"), "main is compared as it stood before the push");
+    assert.ok(seen.some((r) => r.url === "/repos/org/a/compare/h11...p11?per_page=1"), "main is compared as it stood before the push");
     assert.ok(!seen.some((r) => r.url.includes("m10") || r.url.includes("rule-suites/10")), "a bypass outside the week is never classified");
     assert.equal(seen.filter((r) => r.url.startsWith("/repos/org/a/rules/branches/")).length, 1, "a branch's rules are read once per repository");
     assert.equal(refs.length, 4, JSON.stringify(refs));
     for (const { repo, ref } of refs) assert.equal(ref, `refs/heads/${branches[repo]}`, `${repo} asks for its default branch`);
     assert.ok(!stdout.includes("ghs_") && !stderr.includes("ghs_"), stdout + stderr);
     assert.match(stdout, /^ {2}org\/a 3 bypasses, 2 past their checks, 1 behind main$/m);
-    assert.match(stdout, /^ {2}org\/b 2 bypasses, 2 past their checks, 0 behind main$/m);
+    assert.match(stdout, /^ {2}org\/b 3 bypasses, 3 past their checks, 0 behind main$/m);
     assert.match(stdout, /org\/x/);
   } finally {
     server.close();
