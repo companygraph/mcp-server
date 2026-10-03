@@ -24,7 +24,9 @@
 // Two limits follow from what GitHub keeps. When a ruleset's history cannot be read, or the rule
 // suite names no ruleset for its required checks, the required checks are the branch's rules as
 // they stand when the job runs, not as they stood at the merge, so a check added or removed since
-// then is judged by today's rules. And a check run is matched to a required check by its name
+// then is judged by today's rules. That includes every organization-level ruleset, whose history
+// the repository endpoint read here does not answer; the family's rulesets are the repositories'
+// own. A ruleset in evaluate mode blocks nothing and adds no required check. And a check run is matched to a required check by its name
 // alone, not by the app that made it, so a run of the same name from another app would satisfy it.
 import fs from "node:fs";
 import { lastWeek, countBypasses, classify } from "../lib/bypasses.mjs";
@@ -164,7 +166,7 @@ async function kind(repo, suite) {
   const none = { merged_at: null, head_sha: null, required: null, runs: null, behind: null, failed };
   if (!failed || failed.some((type) => type !== "required_status_checks")) return classify(none);
   const rulesets = [...new Set(evaluations
-    .filter((e) => e.rule_type === "required_status_checks" && e.rule_source?.type === "ruleset" && e.rule_source.id != null)
+    .filter((e) => e.rule_type === "required_status_checks" && e.enforcement !== "evaluate" && e.rule_source?.type === "ruleset" && e.rule_source.id != null)
     .map((e) => e.rule_source.id))];
   const pulls = await get(`${api}/repos/${repo}/commits/${suite.after_sha}/pulls`);
   const merged = pulls.status === 200 ? pulls.body.filter((p) => p.merged_at) : [];

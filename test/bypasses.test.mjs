@@ -247,6 +247,61 @@ test("the command reads every page of the default branch, classifies each bypass
   }
 });
 
+// Three bypasses in org/c, each naming two active rulesets, 5 and 6, and an evaluate-mode
+// ruleset 8 whose history is refused. Ruleset 5 required docs at the merge, a version found only
+// on the second page of its history, and ruleset 6 required test; today's rules require build,
+// which never ran. Bypass 31 passed docs and test and is behind main, which it can be only if the
+// second page was read, ruleset 8 added nothing and today's rules did not stand in; bypass 32
+// lacks docs and bypass 33 lacks test, so each ruleset's checks count.
+test("the required checks unite the rulesets in force at the merge, read across history pages, and an evaluate-mode ruleset adds none", async () => {
+  const inside = (hours) => new Date(new Date(FROM).getTime() + hours * 3600_000).toISOString();
+  const before = new Date(new Date(FROM).getTime() - 3600_000).toISOString();
+  const success = (name, hours) => ({ name, status: "completed", conclusion: "success", started_at: inside(hours - 0.25), completed_at: inside(hours) });
+  const checksRule = (contexts) => ({ type: "required_status_checks", parameters: { required_status_checks: contexts.map((context) => ({ context })) } });
+  const evaluation = (id, enforcement = "active") => ({ rule_type: "required_status_checks", result: "fail", enforcement, rule_source: { type: "ruleset", id } });
+  const runs = { h31: [success("docs", 1), success("test", 1)], h32: [success("test", 2)], h33: [success("docs", 3)] };
+  const seen = [];
+  const server = http.createServer((req, res) => {
+    seen.push(req.url);
+    const base = `http://127.0.0.1:${server.address().port}`;
+    const json = (body, link) => {
+      res.writeHead(200, { "content-type": "application/json", ...(link ? { link: `<${base}${link}>; rel="next"` } : {}) });
+      res.end(JSON.stringify(body));
+    };
+    const url = new URL(req.url, base);
+    let m;
+    if (url.pathname === "/installation/repositories") return json({ total_count: 1, repositories: [{ full_name: "org/c", default_branch: "main" }] });
+    if (url.pathname === "/repos/org/c/rulesets/rule-suites") return json([31, 32, 33].map((id, i) => at(inside(i + 1.5), { id, after_sha: `m${id}`, before_sha: `p${id}` })));
+    if ((m = url.pathname.match(/^\/repos\/org\/c\/rulesets\/rule-suites\/(\d+)$/))) return json({ id: Number(m[1]), rule_evaluations: [evaluation(5), evaluation(6), evaluation(8, "evaluate")] });
+    if ((m = url.pathname.match(/^\/repos\/org\/c\/commits\/m(\d+)\/pulls$/))) return json([{ number: Number(m[1]), merged_at: inside(Number(m[1]) - 29.5), merge_commit_sha: `m${m[1]}`, head: { sha: `h${m[1]}` }, base: { ref: "main" } }]);
+    if ((m = url.pathname.match(/^\/repos\/org\/c\/commits\/(h\d+)\/check-runs$/))) return json({ total_count: 0, check_runs: runs[m[1]] });
+    if (url.pathname.startsWith("/repos/org/c/compare/")) return json({ ahead_by: 1 });
+    if (url.pathname === "/repos/org/c/rulesets/5/history") {
+      if (url.searchParams.get("page") === "2") return json([{ version_id: 51, updated_at: before }]);
+      return json([{ version_id: 52, updated_at: inside(50) }], "/repos/org/c/rulesets/5/history?per_page=100&page=2");
+    }
+    if (url.pathname === "/repos/org/c/rulesets/5/history/51") return json({ version_id: 51, state: { rules: [checksRule(["docs"])] } });
+    if (url.pathname === "/repos/org/c/rulesets/5/history/52") return json({ version_id: 52, state: { rules: [checksRule(["docs", "late"])] } });
+    if (url.pathname === "/repos/org/c/rulesets/6/history") return json([{ version_id: 61, updated_at: before }]);
+    if (url.pathname === "/repos/org/c/rulesets/6/history/61") return json({ version_id: 61, state: { rules: [checksRule(["test"])] } });
+    if (url.pathname === "/repos/org/c/rules/branches/main") return json([checksRule(["build"])]);
+    res.writeHead(403, { "content-type": "application/json" });
+    res.end(JSON.stringify({ message: "Resource not accessible by integration" }));
+  });
+  await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
+  const out = path.join(fs.mkdtempSync(path.join(os.tmpdir(), "bypasses-")), "week.json");
+  try {
+    await run({ GITHUB_TOKEN: "ghs_notarealtoken0123456789", ORGANIZATION: "org", OUT: out, GITHUB_API_URL: `http://127.0.0.1:${server.address().port}` });
+    assert.deepEqual(JSON.parse(fs.readFileSync(out, "utf8")).repositories, { "org/c": { bypasses: 3, past_checks: 2, behind_main: 1 } });
+    assert.ok(seen.some((u) => u.startsWith("/repos/org/c/rulesets/5/history?") && u.includes("page=2")), "the second page of the history was read");
+    assert.ok(!seen.some((u) => u.startsWith("/repos/org/c/rulesets/8/")), "an evaluate-mode ruleset is never read");
+    assert.ok(!seen.some((u) => u.startsWith("/repos/org/c/rules/branches/")), "today's rules do not stand in");
+    assert.equal(seen.filter((u) => u.startsWith("/repos/org/c/rulesets/6/history/61")).length, 1, "a version is read once");
+  } finally {
+    server.close();
+  }
+});
+
 test("a repository read with no bypass is printed with three zeros", async () => {
   const server = http.createServer((req, res) => {
     res.writeHead(200, { "content-type": "application/json" });
