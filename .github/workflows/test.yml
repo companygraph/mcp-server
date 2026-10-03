@@ -29,6 +29,8 @@ jobs:
       - run: terraform -chdir=deploy/google/terraform validate
       - run: terraform -chdir=deploy/google/bootstrap init -backend=false -input=false
       - run: terraform -chdir=deploy/google/bootstrap validate
+      - run: terraform -chdir=deploy/google/kpi init -backend=false -input=false
+      - run: terraform -chdir=deploy/google/kpi validate
       - run: terraform -chdir=deploy/azure/terraform init -backend=false -input=false
       - run: terraform -chdir=deploy/azure/terraform validate
       - run: terraform -chdir=deploy/azure/bootstrap init -backend=false -input=false
