@@ -541,6 +541,12 @@ test("one command naming the same event under two Whens draws two messages in it
   assert.deepEqual([d.nodes.length, d.edges], [2, 2]);
 });
 
+test("a flow totalling exactly the cap is drawn", () => {
+  const commands = Array.from({ length: DIAGRAM_CAP - 2 }, (_, i) => [`Command ${i}`, "", "", ""]);
+  const d = diagram(edited(K.quote, { commands, edges: [] }), { shape: "flow", id: K.quote });
+  assert.deepEqual([d.shape, d.nodes.length], ["flow", 1]);
+});
+
 test("a flow or a lifecycle past the cap is refused as too large", () => {
   // A flow counts the caller, each participant and each message, so fifty commands and one aggregate make fifty-two.
   const commands = Array.from({ length: DIAGRAM_CAP }, (_, i) => [`Command ${i}`, "", "", ""]);
