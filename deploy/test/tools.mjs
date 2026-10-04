@@ -126,4 +126,23 @@ export function registerToolsTests() {
     }
     await client.close();
   });
+
+  // A flow and a lifecycle read tables an instance may not yet write, so a context whose aggregates
+  // hold none is refused as empty and every other answers in its shape.
+  test("every bounded context answers its flow and its lifecycle, or says it has nothing to draw", async (t) => {
+    const contexts = s.entities.filter((e) => e.type === "bounded-context");
+    if (!contexts.length) return t.skip("this instance holds no bounded context");
+    const [a, b] = InMemoryTransport.createLinkedPair();
+    await createServer(s).connect(a);
+    const client = new Client({ name: "test", version: "0" });
+    await client.connect(b);
+    for (const c of contexts) {
+      for (const shape of ["flow", "lifecycle"]) {
+        const d = checkAnswer("diagram", await client.callTool({ name: "diagram", arguments: { shape, id: c.id } }));
+        if (d.error) assert.deepEqual([d.error.code, d.error.details.reason], ["cannot_draw", "empty"], `${c.name} ${shape}`);
+        else assert.ok(d.mermaid.startsWith(shape === "flow" ? "sequenceDiagram" : "stateDiagram-v2"), `${c.name} ${shape}`);
+      }
+    }
+    await client.close();
+  });
 }

@@ -246,7 +246,7 @@ test("every link's ends are drawn nodes, and the link count matches the arrow li
 });
 
 test("the arguments each shape does not take, needs or cannot use are refused by name", () => {
-  refused(() => diagram(s, { shape: "graph" }), "invalid_argument", { argument: "shape", reason: "one of concepts, process, neighborhood, schema, context, aggregate" });
+  refused(() => diagram(s, { shape: "graph" }), "invalid_argument", { argument: "shape", reason: "one of concepts, process, neighborhood, schema, context, aggregate, flow, lifecycle" });
   refused(() => diagram(s, { shape: "schema", id: "core/phase" }), "invalid_argument", { argument: "id", reason: "not taken by schema" });
   refused(() => diagram(s, { shape: "concepts", type: "phase" }), "invalid_argument", { argument: "type", reason: "not taken by concepts" });
   refused(() => diagram(s, { shape: "schema", domain: I("domains/pricing") }), "invalid_argument", { argument: "domain", reason: "not taken by schema" });
@@ -475,4 +475,148 @@ test("an aggregate holds fifty nodes and refuses one more; a context with none, 
   refused(() => diagram(rootless, { shape: "aggregate", id: K.priceList }), "cannot_draw", { shape: "aggregate", reason: "empty", nodes: 0, limit: DIAGRAM_CAP });
   refused(() => diagram(B, { shape: "aggregate", id: K.money }), "invalid_argument", { argument: "id", reason: "not an aggregate or a bounded-context" });
   refused(() => diagram(s, { shape: "aggregate", id: "nothing/here" }), "unknown_type");
+});
+
+// The flow and the lifecycle are read from an aggregate's handled commands and state transitions.
+// `edited` is the context fixture with one aggregate's tables and the edges its commands draw replaced.
+const edited = (aggregateId, { commands, transitions, edges }) => {
+  const m = structuredClone(B);
+  const a = m.entities.find((x) => x.id === aggregateId);
+  const put = (heading, rows) => { if (rows) for (const t of a.sections.find((x) => x.heading === heading).tables) t.rows = rows; };
+  put("Handled commands", commands);
+  put("State transitions", transitions);
+  for (const sec of a.sections) if (sec.table) sec.table = sec.tables[0];
+  if (edges) m.edges = m.edges.filter((x) => !(x.via === "Handled commands.Emits" && x.from === aggregateId)).concat(edges);
+  return m;
+};
+const emits = (from, to, command, when = "") => ({ from, to, via: "Handled commands.Emits", attrs: { Command: command, When: when, Description: "" } });
+
+test("a flow draws each command sent to the aggregate and the events it emits, a command of several rows an alt", () => {
+  const d = diagram(B, { shape: "flow", id: K.quote });
+  assert.deepEqual([d.shape, d.title, d.edges, d.omitted], ["flow", "Quote", 2, 0]);
+  assert.equal(d.mermaid, [
+    "sequenceDiagram", "  participant caller as Caller", "  participant n0 as Quote",
+    "  caller->>n0: Send quote", "  n0--)caller: Quote sent",
+    "  caller->>n0: Accept quote", "  alt the customer signs before it expires", "    n0--)caller: Quote accepted",
+    "  else it has expired (INV-T1)", "    Note over n0: —", "  end",
+  ].join("\n"));
+  assert.deepEqual(ids(d), [["n0", K.quote], ["n1", K.sent], ["n2", K.accepted]]);
+  assert.deepEqual(d.nodes.map((n) => n.title), ["Quote", "Quote sent", "Quote accepted"]);
+  assert.deepEqual(d.links, [{ from: "n0", to: "n1", label: "Send quote" }, { from: "n0", to: "n2", label: "Accept quote · the customer signs before it expires" }]);
+});
+
+test("a context's flow draws its aggregates in name order, one with a command and no answer included", () => {
+  const d = diagram(B, { shape: "flow", id: CONTEXT_ID });
+  assert.deepEqual(lines(d).slice(0, 6), ["sequenceDiagram", "  participant caller as Caller", "  participant n0 as Price list", "  participant n1 as Quote", "  caller->>n0: Publish price list", "  caller->>n1: Send quote"]);
+  assert.deepEqual(ids(d).slice(0, 2), [["n0", K.priceList], ["n1", K.quote]]);
+  assert.equal(d.links.length, 2);
+});
+
+test("a command whose rows all name no event draws its message and empty branches, never a refusal", () => {
+  const m = edited(K.quote, { commands: [["Close", "", "it is paid", ""], ["Close", "", "it is void", ""]], edges: [] });
+  const d = diagram(m, { shape: "flow", id: K.quote });
+  assert.equal(d.mermaid, ["sequenceDiagram", "  participant caller as Caller", "  participant n0 as Quote", "  caller->>n0: Close",
+    "  alt it is paid", "    Note over n0: —", "  else it is void", "    Note over n0: —", "  end"].join("\n"));
+  assert.deepEqual([d.links, d.nodes.length, d.edges], [[], 1, 0]);
+});
+
+test("one event two commands emit is two links, each labeled with its own command", () => {
+  const m = edited(K.quote, {
+    commands: [["Send quote", "Quote sent", "", ""], ["Resend quote", "Quote sent", "", ""]],
+    edges: [emits(K.quote, K.sent, "Send quote"), emits(K.quote, K.sent, "Resend quote")],
+  });
+  const d = diagram(m, { shape: "flow", id: K.quote });
+  assert.deepEqual(d.links, [{ from: "n0", to: "n1", label: "Send quote" }, { from: "n0", to: "n1", label: "Resend quote" }]);
+  assert.equal(d.nodes.length, 2);
+});
+
+test("one command naming the same event under two Whens draws two messages in its alt and two labeled links", () => {
+  const m = edited(K.quote, {
+    commands: [["Accept quote", "Quote accepted", "by the customer", ""], ["Accept quote", "Quote accepted", "by the agent", ""]],
+    edges: [emits(K.quote, K.accepted, "Accept quote", "by the customer"), emits(K.quote, K.accepted, "Accept quote", "by the agent")],
+  });
+  const d = diagram(m, { shape: "flow", id: K.quote });
+  assert.deepEqual(lines(d).slice(3), ["  caller->>n0: Accept quote", "  alt by the customer", "    n0--)caller: Quote accepted", "  else by the agent", "    n0--)caller: Quote accepted", "  end"]);
+  assert.deepEqual(d.links, [{ from: "n0", to: "n1", label: "Accept quote · by the customer" }, { from: "n0", to: "n1", label: "Accept quote · by the agent" }]);
+  assert.deepEqual([d.nodes.length, d.edges], [2, 2]);
+});
+
+test("a flow totalling exactly the cap is drawn", () => {
+  const commands = Array.from({ length: DIAGRAM_CAP - 2 }, (_, i) => [`Command ${i}`, "", "", ""]);
+  const d = diagram(edited(K.quote, { commands, edges: [] }), { shape: "flow", id: K.quote });
+  assert.deepEqual([d.shape, d.nodes.length], ["flow", 1]);
+});
+
+test("a flow or a lifecycle past the cap is refused as too large", () => {
+  // A flow counts the caller, each participant and each message, so fifty commands and one aggregate make fifty-two.
+  const commands = Array.from({ length: DIAGRAM_CAP }, (_, i) => [`Command ${i}`, "", "", ""]);
+  refused(() => diagram(edited(K.quote, { commands, edges: [] }), { shape: "flow", id: K.quote }), "cannot_draw", { shape: "flow", reason: "too_large", nodes: DIAGRAM_CAP + 2, limit: DIAGRAM_CAP });
+  const transitions = Array.from({ length: DIAGRAM_CAP + 1 }, (_, i) => ["", `Step ${i}`, `State ${i}`]);
+  refused(() => diagram(edited(K.quote, { transitions }), { shape: "lifecycle", id: K.quote }), "cannot_draw", { shape: "lifecycle", reason: "too_large", nodes: DIAGRAM_CAP + 1, limit: DIAGRAM_CAP });
+});
+
+test("a lifecycle draws the states, a blank From as the start and a state no step leaves as an end", () => {
+  const d = diagram(B, { shape: "lifecycle", id: K.quote });
+  assert.deepEqual([d.shape, d.title, d.edges, d.omitted, d.links, d.nodes], ["lifecycle", "Quote", 3, 0, [], [{ node: "n0", id: K.quote, title: "Quote", type: "aggregate" }]]);
+  assert.equal(d.mermaid, [
+    "stateDiagram-v2", '  state "Sent" as s0', '  state "Accepted" as s1', '  state "Expired" as s2',
+    "  [*] --> s0 : Send quote", "  s0 --> s1 : Accept quote", "  s0 --> s2", "  s1 --> [*]", "  s2 --> [*]",
+  ].join("\n"));
+  assert.deepEqual(d.transitions, [
+    { aggregate: "Quote", from: null, to: "Sent", command: "Send quote" },
+    { aggregate: "Quote", from: "Sent", to: "Accepted", command: "Accept quote" },
+    { aggregate: "Quote", from: "Sent", to: "Expired", command: null },
+  ]);
+});
+
+test("a context's lifecycle wraps each aggregate's states in a composite state under its name", () => {
+  const d = diagram(B, { shape: "lifecycle", id: CONTEXT_ID });
+  const one = lines(diagram(B, { shape: "lifecycle", id: K.quote })).slice(1).map((l) => `  ${l}`);
+  assert.deepEqual(lines(d), ["stateDiagram-v2", '  state "Quote" as n0 {', ...one, "  }"]);
+});
+
+test("a state named in two aggregates of one context is two states, one in each composite", () => {
+  const m = structuredClone(B);
+  const a = m.entities.find((x) => x.id === K.priceList);
+  a.sections.push({ heading: "State transitions", text: "", tables: [{ caption: null, columns: ["From", "Command", "To"], rows: [["", "Publish price list", "Sent"]] }] });
+  a.sections.at(-1).table = a.sections.at(-1).tables[0];
+  const d = diagram(m, { shape: "lifecycle", id: CONTEXT_ID });
+  const states = lines(d).filter((l) => l.includes('"Sent"'));
+  assert.deepEqual(states, ['    state "Sent" as s0', '    state "Sent" as s1']);
+  // Each "Sent" sits inside its own composite: between its opening line and the next closing brace.
+  const all = lines(d);
+  const open = all.map((l, i) => (/^  state ".*" as n\d+ \{$/.test(l) ? i : -1)).filter((i) => i >= 0);
+  assert.equal(open.length, 2);
+  open.forEach((from, k) => {
+    const to = all.indexOf("  }", from);
+    assert.deepEqual(all.slice(from, to).filter((l) => l.includes('"Sent"')), [`    state "Sent" as s${k}`]);
+  });
+  assert.deepEqual(d.nodes.map((n) => n.node), ["n0", "n1"]);
+  assert.equal(d.transitions.length, 4);
+});
+
+test("nothing to draw, or another type, is refused by the flow and the lifecycle", () => {
+  refused(() => diagram(B, { shape: "flow", id: K.archive }), "cannot_draw", { shape: "flow", reason: "empty", nodes: 0, limit: DIAGRAM_CAP });
+  refused(() => diagram(B, { shape: "lifecycle", id: K.priceList }), "cannot_draw", { shape: "lifecycle", reason: "empty", nodes: 0, limit: DIAGRAM_CAP });
+  for (const shape of ["flow", "lifecycle"]) {
+    refused(() => diagram(B, { shape, id: K.money }), "invalid_argument", { argument: "id", reason: "not an aggregate or a bounded-context" });
+    refused(() => diagram(B, { shape }), "invalid_argument", { argument: "id", reason: `needed by ${shape}` });
+    refused(() => diagram(s, { shape, id: "nothing/here" }), "unknown_type");
+  }
+});
+
+test("a When, a command and a state holding a quote, a colon and a semicolon are escaped", () => {
+  const odd = 'a "q": b; c';
+  const m = edited(K.quote, {
+    commands: [[odd, "Quote sent", odd, ""], [odd, "Quote accepted", "or not", ""]],
+    transitions: [[odd, odd, odd]],
+    edges: [emits(K.quote, K.sent, odd, odd), emits(K.quote, K.accepted, odd, "or not")],
+  });
+  const flow = diagram(m, { shape: "flow", id: K.quote }).mermaid;
+  const life = diagram(m, { shape: "lifecycle", id: K.quote }).mermaid;
+  const esc = "a #quot;q#quot;#58; b#59; c";
+  assert.ok(flow.includes(`caller->>n0: ${esc}`) && flow.includes(`alt ${esc}`), flow);
+  // A state's words sit inside quotes, where only the quote is escaped, as for every quoted label.
+  assert.ok(life.includes(`state "a #quot;q#quot;: b; c" as s0`) && life.includes(`s0 --> s0 : ${esc}`), life);
+  assert.ok(!/[^#]"q"|: b;/.test(flow), flow);
 });

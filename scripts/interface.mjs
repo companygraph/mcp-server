@@ -17,7 +17,7 @@ const example = exampleSnapshot();
 const DDD = idAt(example, "skills/domain-driven-design");
 
 // Heading text → the call shown under it. `ambiguous` runs on the fixture in which two owners
-// each hold one title, which the worked example does not. The two pictures of a context run on
+// each hold one title, which the worked example does not. The pictures of a context run on
 // the pack instance built for them, since the worked example takes no pack.
 export const EXAMPLES = {
   "`list_types`": { name: "list_types", arguments: {} },
@@ -38,6 +38,8 @@ export const EXAMPLES = {
   "`diagram`": { name: "diagram", arguments: { shape: "process", id: idAt(example, "processes/delivery") } },
   "`diagram` of a context": { name: "diagram", contexts: true, arguments: { shape: "context", id: CONTEXT_ID } },
   "`diagram` of its aggregates": { name: "diagram", contexts: true, arguments: { shape: "aggregate", id: CONTEXT_ID } },
+  "`diagram` of its flow": { name: "diagram", contexts: true, arguments: { shape: "flow", id: CONTEXT_ID } },
+  "`diagram` of its lifecycle": { name: "diagram", contexts: true, arguments: { shape: "lifecycle", id: CONTEXT_ID } },
   "A refusal": { name: "get_entity", ambiguous: true },
 };
 
