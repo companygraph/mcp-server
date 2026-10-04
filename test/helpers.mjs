@@ -137,11 +137,14 @@ export function withBackFlows() {
 }
 
 // Bond names Glue with an As cell holding both a colon and a semicolon, the two characters an
-// association's unquoted text must escape that a quoted label does not.
+// association's unquoted text must escape that a quoted label does not. Quoted names Glue with an
+// As holding a quote and a semicolon, which must be mapped in one pass, since mapping after
+// `label()` would break its `#quot;`.
 export function withPunctuation() {
   const { files, schemas } = exampleFiles();
   files.set("concepts/bond.md", concept("Bond", [["Glue", "a: b; c"]]));
   files.set("concepts/glue.md", concept("Glue", []));
+  files.set("concepts/quoted.md", concept("Quoted", [["Glue", 'the "glue"; a']]));
   return built(files, schemas);
 }
 

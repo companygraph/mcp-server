@@ -6,7 +6,7 @@ import assert from "node:assert/strict";
 import { typeOfAddress } from "companygraph-meta-model/instance";
 import { diagram, processDiagram, label, plain, cannot, DIAGRAM_CAP } from "../lib/diagram.mjs";
 import { ModelError } from "../lib/errors.mjs";
-import { exampleSnapshot, instanceSnapshot, withHub, withLoops, withPunctuation, withNothingToDraw, withBackFlows, withContexts, CONTEXT_ID, CONTEXT_IDS, ODD, COMMIT, idAt } from "./helpers.mjs";
+import { exampleSnapshot, instanceSnapshot, withHub, withLoops, withPunctuation, withNothingToDraw, withBackFlows, withContexts, CONTEXT_ID, CONTEXT_IDS, ODD_ATTRIBUTE, ODD, COMMIT, idAt } from "./helpers.mjs";
 
 const s = exampleSnapshot();
 // The example's entities by where their pages sit, and the ids the snapshot gives them. A fixture
@@ -77,6 +77,8 @@ test("an As cell's own colon and semicolon are escaped, since Mermaid ends an un
   const glue = d.nodes.find((n) => n.title === "Glue").node;
   assert.ok(lines(d).includes(`  ${bond} --> ${glue} : one, a#58; b#59; c`), d.mermaid);
   assert.deepEqual(d.links.find((l) => l.from === bond && l.to === glue), { from: bond, to: glue, label: "one, a: b; c" });
+  const quoted = d.nodes.find((n) => n.title === "Quoted").node;
+  assert.ok(lines(d).includes(`  ${quoted} --> ${glue} : one, the #quot;glue#quot;#59; a`), d.mermaid);
 });
 
 // The model's own parser reads every field one line at a time, so a raw value can never carry a
@@ -405,4 +407,61 @@ test("a context map is refused for an id of another type, and where the pack is 
   refused(() => diagram(B, { shape: "context", id: K.quote }), "invalid_argument", { argument: "id", reason: "not a bounded-context" });
   refused(() => diagram(B, { shape: "context" }), "invalid_argument", { argument: "id", reason: "needed by context" });
   refused(() => diagram(s, { shape: "context", id: "nothing/here" }), "unknown_type");
+});
+
+// An aggregate is drawn from its root, its members and the events that name it: what it holds,
+// never what its root merely reaches.
+test("an aggregate draws its root and members with their kinds and attributes, the cardinalities, and its events", () => {
+  const d = diagram(B, { shape: "aggregate", id: K.quote });
+  assert.deepEqual([d.shape, d.title, d.edges, d.omitted], ["aggregate", "Quote", 6, 0]);
+  assert.deepEqual(lines(d), [
+    "classDiagram",
+    '  class n0["Quote"] {', "    <<aggregate root>>", "    Number : string", "    Total : Money",
+    "    Note #quot;a#quot; #35;1#58; #123;x#125; : string", "  }",
+    '  class n1["Quote line"] {', "    <<entity>>", "    Quantity : number", "  }",
+    '  class n2["Money"] {', "    <<value object>>", "    Amount : decimal", "    Currency : ISO 4217 code", "  }",
+    '  class n3["Discount"] {', "    <<value object>>", "  }",
+    '  class n4["Quote accepted"] {', "    <<domain event>>", "  }",
+    '  class n5["Quote sent"] {', "    <<domain event>>", "  }",
+    '  n0 *-- "1..*" n1', '  n0 *-- "1" n2', "  n0 *-- n3", "  n1 --> n2 : one",
+    "  n0 ..> n4 : emits", "  n0 ..> n5 : emits",
+  ]);
+  assert.deepEqual(ids(d), [["n0", K.quoteDesign], ["n1", K.lineDesign], ["n2", K.money], ["n3", K.discount], ["n4", K.accepted], ["n5", K.sent]]);
+  assert.ok(!d.nodes.some((n) => n.id === K.customer), "Customer is reached by the root, never held");
+  assert.deepEqual(d.links, [
+    { from: "n0", to: "n1", label: "1..*" }, { from: "n0", to: "n2", label: "1" }, { from: "n0", to: "n3", label: "" },
+    { from: "n1", to: "n2", label: "one" }, { from: "n0", to: "n4", label: "emits" }, { from: "n0", to: "n5", label: "emits" },
+  ]);
+  assert.ok(lines(d).some((l) => l.includes(ODD_ATTRIBUTE.slice(0, 4))), "the odd attribute is drawn");
+});
+
+test("a context's id draws every aggregate it holds in one picture, a term two of them hold drawn once", () => {
+  const d = diagram(B, { shape: "aggregate", id: CONTEXT_ID });
+  assert.deepEqual([d.title, d.edges], ["Quoting", 7]);
+  assert.deepEqual(d.nodes.map((n) => n.title), ["Price list", "Money", "Quote", "Quote line", "Discount", "Quote accepted", "Quote sent"]);
+  assert.deepEqual(lines(d).filter((l) => /\*--|-->|\.\.>/.test(l)), [
+    '  n0 *-- "*" n1', '  n2 *-- "1..*" n3', '  n2 *-- "1" n1', "  n2 *-- n4", "  n3 --> n1 : one",
+    "  n2 ..> n5 : emits", "  n2 ..> n6 : emits",
+  ]);
+});
+
+test("a root that another aggregate of the context holds is drawn once, as a root, joined to both", () => {
+  const both = structuredClone(B);
+  const list = both.entities.find((e) => e.id === K.priceList);
+  list.fields.members = ["Money", "Quote"];
+  both.edges.push({ from: K.priceList, via: "members", to: K.quoteDesign, attrs: {} });
+  const d = diagram(both, { shape: "aggregate", id: CONTEXT_ID });
+  const quote = d.nodes.filter((n) => n.id === K.quoteDesign);
+  assert.equal(quote.length, 1);
+  const at = lines(d).indexOf(`  class ${quote[0].node}["Quote"] {`);
+  assert.equal(lines(d)[at + 1], "    <<aggregate root>>");
+  assert.ok(lines(d).includes(`  n0 *-- ${quote[0].node}`), d.mermaid);
+});
+
+test("an aggregate holds fifty nodes and refuses one more; a context with none, or another type, is refused", () => {
+  assert.equal(diagram(withContexts({ crowd: 44 }), { shape: "aggregate", id: K.quote }).nodes.length, 50);
+  refused(() => diagram(withContexts({ crowd: 45 }), { shape: "aggregate", id: K.quote }), "cannot_draw", { shape: "aggregate", reason: "too_large", nodes: 51, limit: DIAGRAM_CAP });
+  refused(() => diagram(B, { shape: "aggregate", id: K.archive }), "cannot_draw", { shape: "aggregate", reason: "empty", nodes: 0, limit: DIAGRAM_CAP });
+  refused(() => diagram(B, { shape: "aggregate", id: K.money }), "invalid_argument", { argument: "id", reason: "not an aggregate or a bounded-context" });
+  refused(() => diagram(s, { shape: "aggregate", id: "nothing/here" }), "unknown_type");
 });
