@@ -6,7 +6,7 @@ import assert from "node:assert/strict";
 import { typeOfAddress } from "companygraph-meta-model/instance";
 import { diagram, processDiagram, label, plain, cannot, DIAGRAM_CAP } from "../lib/diagram.mjs";
 import { ModelError } from "../lib/errors.mjs";
-import { exampleSnapshot, instanceSnapshot, withHub, withLoops, withPunctuation, withNothingToDraw, withBackFlows, ODD, COMMIT, idAt } from "./helpers.mjs";
+import { exampleSnapshot, instanceSnapshot, withHub, withLoops, withPunctuation, withNothingToDraw, withBackFlows, withContexts, CONTEXT_ID, CONTEXT_IDS, ODD, COMMIT, idAt } from "./helpers.mjs";
 
 const s = exampleSnapshot();
 // The example's entities by where their pages sit, and the ids the snapshot gives them. A fixture
@@ -77,6 +77,8 @@ test("an As cell's own colon and semicolon are escaped, since Mermaid ends an un
   const glue = d.nodes.find((n) => n.title === "Glue").node;
   assert.ok(lines(d).includes(`  ${bond} --> ${glue} : one, a#58; b#59; c`), d.mermaid);
   assert.deepEqual(d.links.find((l) => l.from === bond && l.to === glue), { from: bond, to: glue, label: "one, a: b; c" });
+  const quoted = d.nodes.find((n) => n.title === "Quoted").node;
+  assert.ok(lines(d).includes(`  ${quoted} --> ${glue} : one, the #quot;glue#quot;#59; a`), d.mermaid);
 });
 
 // The model's own parser reads every field one line at a time, so a raw value can never carry a
@@ -244,7 +246,7 @@ test("every link's ends are drawn nodes, and the link count matches the arrow li
 });
 
 test("the arguments each shape does not take, needs or cannot use are refused by name", () => {
-  refused(() => diagram(s, { shape: "graph" }), "invalid_argument", { argument: "shape", reason: "one of concepts, process, neighborhood, schema" });
+  refused(() => diagram(s, { shape: "graph" }), "invalid_argument", { argument: "shape", reason: "one of concepts, process, neighborhood, schema, context, aggregate, flow, lifecycle" });
   refused(() => diagram(s, { shape: "schema", id: "core/phase" }), "invalid_argument", { argument: "id", reason: "not taken by schema" });
   refused(() => diagram(s, { shape: "concepts", type: "phase" }), "invalid_argument", { argument: "type", reason: "not taken by concepts" });
   refused(() => diagram(s, { shape: "schema", domain: I("domains/pricing") }), "invalid_argument", { argument: "domain", reason: "not taken by schema" });
@@ -335,4 +337,286 @@ test("a schema node links nowhere where the repository or the commit is not know
 test("the too-large hint for the schemas is to name a type, said only when none was given", () => {
   assert.match(cannot("schema", "too_large", 60).message, /name a type to draw part of it/);
   assert.doesNotMatch(cannot("schema", "too_large", 60, "phase").message, /name a type/);
+});
+
+// The software pack's pictures, over a pack instance built for them. A context map is drawn from
+// the Relationships rows on both sides of the context, one hop out.
+const B = withContexts();
+const K = CONTEXT_IDS;
+
+test("a context map draws its neighbours one hop out, upstream above downstream, each arrow labeled by its pattern", () => {
+  const d = diagram(B, { shape: "context", id: CONTEXT_ID });
+  assert.deepEqual([d.shape, d.title, d.edges, d.omitted], ["context", "Quoting", 4, 0]);
+  assert.deepEqual(lines(d), [
+    "flowchart TB",
+    '  n0["<small>«bounded-context» · core</small><br/><b>Quoting</b>"]',
+    '  n1["<small>«bounded-context» · supporting</small><br/>Catalog"]',
+    '  n2["<small>«bounded-context» · core</small><br/>Invoicing"]',
+    '  n3["<small>«bounded-context» · generic</small><br/>Ordering"]',
+    '  n1 -->|"U → D · conformist"| n0',
+    '  n2 <-->|"shared kernel"| n0',
+    '  n0 -->|"U → D · customer/supplier"| n3',
+  ]);
+  assert.deepEqual(ids(d), [["n0", CONTEXT_ID], ["n1", K.catalog], ["n2", K.invoicing], ["n3", K.ordering]]);
+  assert.deepEqual(d.nodes.map((n) => n.type), ["bounded-context", "bounded-context", "bounded-context", "bounded-context"]);
+  assert.deepEqual(d.links, [
+    { from: "n1", to: "n0", label: "U → D · conformist" },
+    { from: "n2", to: "n0", label: "shared kernel" },
+    { from: "n0", to: "n3", label: "U → D · customer/supplier" },
+  ]);
+});
+
+test("a symmetric pattern named from both sides is one arrow, from either side's map", () => {
+  const d = diagram(B, { shape: "context", id: K.invoicing });
+  assert.deepEqual([d.title, d.edges], ["Invoicing", 2]);
+  assert.deepEqual(lines(d).slice(1), [
+    '  n0["<small>«bounded-context» · core</small><br/><b>Invoicing</b>"]',
+    '  n1["<small>«bounded-context» · core</small><br/>Quoting"]',
+    '  n0 <-->|"shared kernel"| n1',
+  ]);
+});
+
+test("a symmetric arrow reads the same whichever row comes first", () => {
+  const flipped = structuredClone(B);
+  flipped.edges.reverse();
+  for (const id of [K.invoicing, CONTEXT_ID]) {
+    const [x, y] = [diagram(B, { shape: "context", id }), diagram(flipped, { shape: "context", id })];
+    assert.deepEqual([y.mermaid, y.links], [x.mermaid, x.links]);
+  }
+});
+
+test("two rows that disagree each keep their own arrow", () => {
+  const d = diagram(withContexts({ disagree: true }), { shape: "context", id: CONTEXT_ID });
+  assert.equal(d.edges, 5);
+  assert.deepEqual(lines(d).slice(5), [
+    '  n1 -->|"U → D · conformist"| n0',
+    '  n1 <-->|"partnership"| n0',
+    '  n2 <-->|"shared kernel"| n0',
+    '  n0 -->|"U → D · customer/supplier"| n3',
+  ]);
+});
+
+test("a context with no relationship is a map of one node", () => {
+  const d = diagram(B, { shape: "context", id: K.archive });
+  assert.deepEqual([lines(d), d.links, d.edges], [["flowchart TB", '  n0["<small>«bounded-context» · generic</small><br/><b>Archive</b>"]'], [], 0]);
+});
+
+test("a context naming itself draws no arrow to itself", () => {
+  const self = structuredClone(B);
+  self.edges.push({ from: CONTEXT_ID, via: "Relationships.Context", to: CONTEXT_ID, attrs: { Pattern: "conformist" } });
+  assert.equal(diagram(self, { shape: "context", id: CONTEXT_ID }).mermaid, diagram(B, { shape: "context", id: CONTEXT_ID }).mermaid);
+});
+
+test("a context map holds fifty nodes, its middle among them, and refuses one more", () => {
+  assert.equal(diagram(withContexts({ crowd: 46 }), { shape: "context", id: CONTEXT_ID }).nodes.length, 50);
+  refused(() => diagram(withContexts({ crowd: 47 }), { shape: "context", id: CONTEXT_ID }), "cannot_draw", { shape: "context", reason: "too_large", nodes: 51, limit: DIAGRAM_CAP });
+});
+
+test("a context map is refused for an id of another type, and where the pack is not taken", () => {
+  refused(() => diagram(B, { shape: "context", id: K.quote }), "invalid_argument", { argument: "id", reason: "not a bounded-context" });
+  refused(() => diagram(B, { shape: "context" }), "invalid_argument", { argument: "id", reason: "needed by context" });
+  refused(() => diagram(s, { shape: "context", id: "nothing/here" }), "unknown_type");
+});
+
+// An aggregate is drawn from its root, its members and the events that name it: what it holds,
+// never what its root merely reaches.
+test("an aggregate draws its root and members with their kinds and attributes, the cardinalities, and its events", () => {
+  const d = diagram(B, { shape: "aggregate", id: K.quote });
+  assert.deepEqual([d.shape, d.title, d.edges, d.omitted], ["aggregate", "Quote", 6, 0]);
+  assert.deepEqual(lines(d), [
+    "classDiagram",
+    '  class n0["Quote"] {', "    <<aggregate root>>", "    Number : string", "    Total : Money",
+    "    Note #quot;a#quot; #35;1#58; #123;x#125; : string", "  }",
+    '  class n1["Quote line"] {', "    <<entity>>", "    Quantity : number", "  }",
+    '  class n2["Money"] {', "    <<value object>>", "    Amount : decimal", "    Currency : ISO 4217 code", "  }",
+    '  class n3["Discount"] {', "    <<value object>>", "  }",
+    '  class n4["Quote accepted"] {', "    <<domain event>>", "  }",
+    '  class n5["Quote sent"] {', "    <<domain event>>", "  }",
+    '  n0 *-- "1..*" n1', '  n0 *-- "1" n2', "  n0 *-- n3", "  n1 --> n2 : one",
+    "  n0 ..> n4 : emits", "  n0 ..> n5 : emits",
+  ]);
+  assert.deepEqual(ids(d), [["n0", K.quoteDesign], ["n1", K.lineDesign], ["n2", K.money], ["n3", K.discount], ["n4", K.accepted], ["n5", K.sent]]);
+  assert.ok(!d.nodes.some((n) => n.id === K.customer), "Customer is reached by the root, never held");
+  assert.deepEqual(d.links, [
+    { from: "n0", to: "n1", label: "1..*" }, { from: "n0", to: "n2", label: "1" }, { from: "n0", to: "n3", label: "" },
+    { from: "n1", to: "n2", label: "one" }, { from: "n0", to: "n4", label: "emits" }, { from: "n0", to: "n5", label: "emits" },
+  ]);
+});
+
+test("a context's id draws every aggregate it holds in one picture, a term two of them hold drawn once", () => {
+  const d = diagram(B, { shape: "aggregate", id: CONTEXT_ID });
+  assert.deepEqual([d.title, d.edges], ["Quoting", 7]);
+  assert.deepEqual(d.nodes.map((n) => n.title), ["Price list", "Money", "Quote", "Quote line", "Discount", "Quote accepted", "Quote sent"]);
+  assert.deepEqual(lines(d).filter((l) => /\*--|-->|\.\.>/.test(l)), [
+    '  n0 *-- "*" n1', '  n2 *-- "1..*" n3', '  n2 *-- "1" n1', "  n2 *-- n4", "  n3 --> n1 : one",
+    "  n2 ..> n5 : emits", "  n2 ..> n6 : emits",
+  ]);
+});
+
+test("a root that another aggregate of the context holds is drawn once, as a root, joined to both", () => {
+  const both = structuredClone(B);
+  const list = both.entities.find((e) => e.id === K.priceList);
+  list.fields.members = ["Money", "Quote"];
+  both.edges.push({ from: K.priceList, via: "members", to: K.quoteDesign, attrs: {} });
+  const d = diagram(both, { shape: "aggregate", id: CONTEXT_ID });
+  const quote = d.nodes.filter((n) => n.id === K.quoteDesign);
+  assert.equal(quote.length, 1);
+  const at = lines(d).indexOf(`  class ${quote[0].node}["Quote"] {`);
+  assert.equal(lines(d)[at + 1], "    <<aggregate root>>");
+  assert.ok(lines(d).includes(`  n0 *-- ${quote[0].node}`), d.mermaid);
+});
+
+test("an aggregate holds fifty nodes and refuses one more; a context with none, or another type, is refused", () => {
+  assert.equal(diagram(withContexts({ crowd: 44 }), { shape: "aggregate", id: K.quote }).nodes.length, 50);
+  refused(() => diagram(withContexts({ crowd: 45 }), { shape: "aggregate", id: K.quote }), "cannot_draw", { shape: "aggregate", reason: "too_large", nodes: 51, limit: DIAGRAM_CAP });
+  refused(() => diagram(B, { shape: "aggregate", id: K.archive }), "cannot_draw", { shape: "aggregate", reason: "empty", nodes: 0, limit: DIAGRAM_CAP });
+  const rootless = structuredClone(B);
+  rootless.edges = rootless.edges.filter((x) => !(x.via === "root" && x.from === K.priceList));
+  refused(() => diagram(rootless, { shape: "aggregate", id: K.priceList }), "cannot_draw", { shape: "aggregate", reason: "empty", nodes: 0, limit: DIAGRAM_CAP });
+  refused(() => diagram(B, { shape: "aggregate", id: K.money }), "invalid_argument", { argument: "id", reason: "not an aggregate or a bounded-context" });
+  refused(() => diagram(s, { shape: "aggregate", id: "nothing/here" }), "unknown_type");
+});
+
+// The flow and the lifecycle are read from an aggregate's handled commands and state transitions.
+// `edited` is the context fixture with one aggregate's tables and the edges its commands draw replaced.
+const edited = (aggregateId, { commands, transitions, edges }) => {
+  const m = structuredClone(B);
+  const a = m.entities.find((x) => x.id === aggregateId);
+  const put = (heading, rows) => { if (rows) for (const t of a.sections.find((x) => x.heading === heading).tables) t.rows = rows; };
+  put("Handled commands", commands);
+  put("State transitions", transitions);
+  for (const sec of a.sections) if (sec.table) sec.table = sec.tables[0];
+  if (edges) m.edges = m.edges.filter((x) => !(x.via === "Handled commands.Emits" && x.from === aggregateId)).concat(edges);
+  return m;
+};
+const emits = (from, to, command, when = "") => ({ from, to, via: "Handled commands.Emits", attrs: { Command: command, When: when, Description: "" } });
+
+test("a flow draws each command sent to the aggregate and the events it emits, a command of several rows an alt", () => {
+  const d = diagram(B, { shape: "flow", id: K.quote });
+  assert.deepEqual([d.shape, d.title, d.edges, d.omitted], ["flow", "Quote", 2, 0]);
+  assert.equal(d.mermaid, [
+    "sequenceDiagram", "  participant caller as Caller", "  participant n0 as Quote",
+    "  caller->>n0: Send quote", "  n0--)caller: Quote sent",
+    "  caller->>n0: Accept quote", "  alt the customer signs before it expires", "    n0--)caller: Quote accepted",
+    "  else it has expired (INV-T1)", "    Note over n0: —", "  end",
+  ].join("\n"));
+  assert.deepEqual(ids(d), [["n0", K.quote], ["n1", K.sent], ["n2", K.accepted]]);
+  assert.deepEqual(d.nodes.map((n) => n.title), ["Quote", "Quote sent", "Quote accepted"]);
+  assert.deepEqual(d.links, [{ from: "n0", to: "n1", label: "Send quote" }, { from: "n0", to: "n2", label: "Accept quote · the customer signs before it expires" }]);
+});
+
+test("a context's flow draws its aggregates in name order, one with a command and no answer included", () => {
+  const d = diagram(B, { shape: "flow", id: CONTEXT_ID });
+  assert.deepEqual(lines(d).slice(0, 6), ["sequenceDiagram", "  participant caller as Caller", "  participant n0 as Price list", "  participant n1 as Quote", "  caller->>n0: Publish price list", "  caller->>n1: Send quote"]);
+  assert.deepEqual(ids(d).slice(0, 2), [["n0", K.priceList], ["n1", K.quote]]);
+  assert.equal(d.links.length, 2);
+});
+
+test("a command whose rows all name no event draws its message and empty branches, never a refusal", () => {
+  const m = edited(K.quote, { commands: [["Close", "", "it is paid", ""], ["Close", "", "it is void", ""]], edges: [] });
+  const d = diagram(m, { shape: "flow", id: K.quote });
+  assert.equal(d.mermaid, ["sequenceDiagram", "  participant caller as Caller", "  participant n0 as Quote", "  caller->>n0: Close",
+    "  alt it is paid", "    Note over n0: —", "  else it is void", "    Note over n0: —", "  end"].join("\n"));
+  assert.deepEqual([d.links, d.nodes.length, d.edges], [[], 1, 0]);
+});
+
+test("one event two commands emit is two links, each labeled with its own command", () => {
+  const m = edited(K.quote, {
+    commands: [["Send quote", "Quote sent", "", ""], ["Resend quote", "Quote sent", "", ""]],
+    edges: [emits(K.quote, K.sent, "Send quote"), emits(K.quote, K.sent, "Resend quote")],
+  });
+  const d = diagram(m, { shape: "flow", id: K.quote });
+  assert.deepEqual(d.links, [{ from: "n0", to: "n1", label: "Send quote" }, { from: "n0", to: "n1", label: "Resend quote" }]);
+  assert.equal(d.nodes.length, 2);
+});
+
+test("one command naming the same event under two Whens draws two messages in its alt and two labeled links", () => {
+  const m = edited(K.quote, {
+    commands: [["Accept quote", "Quote accepted", "by the customer", ""], ["Accept quote", "Quote accepted", "by the agent", ""]],
+    edges: [emits(K.quote, K.accepted, "Accept quote", "by the customer"), emits(K.quote, K.accepted, "Accept quote", "by the agent")],
+  });
+  const d = diagram(m, { shape: "flow", id: K.quote });
+  assert.deepEqual(lines(d).slice(3), ["  caller->>n0: Accept quote", "  alt by the customer", "    n0--)caller: Quote accepted", "  else by the agent", "    n0--)caller: Quote accepted", "  end"]);
+  assert.deepEqual(d.links, [{ from: "n0", to: "n1", label: "Accept quote · by the customer" }, { from: "n0", to: "n1", label: "Accept quote · by the agent" }]);
+  assert.deepEqual([d.nodes.length, d.edges], [2, 2]);
+});
+
+test("a flow totalling exactly the cap is drawn", () => {
+  const commands = Array.from({ length: DIAGRAM_CAP - 2 }, (_, i) => [`Command ${i}`, "", "", ""]);
+  const d = diagram(edited(K.quote, { commands, edges: [] }), { shape: "flow", id: K.quote });
+  assert.deepEqual([d.shape, d.nodes.length], ["flow", 1]);
+});
+
+test("a flow or a lifecycle past the cap is refused as too large", () => {
+  // A flow counts the caller, each participant and each message, so fifty commands and one aggregate make fifty-two.
+  const commands = Array.from({ length: DIAGRAM_CAP }, (_, i) => [`Command ${i}`, "", "", ""]);
+  refused(() => diagram(edited(K.quote, { commands, edges: [] }), { shape: "flow", id: K.quote }), "cannot_draw", { shape: "flow", reason: "too_large", nodes: DIAGRAM_CAP + 2, limit: DIAGRAM_CAP });
+  const transitions = Array.from({ length: DIAGRAM_CAP + 1 }, (_, i) => ["", `Step ${i}`, `State ${i}`]);
+  refused(() => diagram(edited(K.quote, { transitions }), { shape: "lifecycle", id: K.quote }), "cannot_draw", { shape: "lifecycle", reason: "too_large", nodes: DIAGRAM_CAP + 1, limit: DIAGRAM_CAP });
+});
+
+test("a lifecycle draws the states, a blank From as the start and a state no step leaves as an end", () => {
+  const d = diagram(B, { shape: "lifecycle", id: K.quote });
+  assert.deepEqual([d.shape, d.title, d.edges, d.omitted, d.links, d.nodes], ["lifecycle", "Quote", 3, 0, [], [{ node: "n0", id: K.quote, title: "Quote", type: "aggregate" }]]);
+  assert.equal(d.mermaid, [
+    "stateDiagram-v2", '  state "Sent" as s0', '  state "Accepted" as s1', '  state "Expired" as s2',
+    "  [*] --> s0 : Send quote", "  s0 --> s1 : Accept quote", "  s0 --> s2", "  s1 --> [*]", "  s2 --> [*]",
+  ].join("\n"));
+  assert.deepEqual(d.transitions, [
+    { aggregate: "Quote", from: null, to: "Sent", command: "Send quote" },
+    { aggregate: "Quote", from: "Sent", to: "Accepted", command: "Accept quote" },
+    { aggregate: "Quote", from: "Sent", to: "Expired", command: null },
+  ]);
+});
+
+test("a context's lifecycle wraps each aggregate's states in a composite state under its name", () => {
+  const d = diagram(B, { shape: "lifecycle", id: CONTEXT_ID });
+  const one = lines(diagram(B, { shape: "lifecycle", id: K.quote })).slice(1).map((l) => `  ${l}`);
+  assert.deepEqual(lines(d), ["stateDiagram-v2", '  state "Quote" as n0 {', ...one, "  }"]);
+});
+
+test("a state named in two aggregates of one context is two states, one in each composite", () => {
+  const m = structuredClone(B);
+  const a = m.entities.find((x) => x.id === K.priceList);
+  a.sections.push({ heading: "State transitions", text: "", tables: [{ caption: null, columns: ["From", "Command", "To"], rows: [["", "Publish price list", "Sent"]] }] });
+  a.sections.at(-1).table = a.sections.at(-1).tables[0];
+  const d = diagram(m, { shape: "lifecycle", id: CONTEXT_ID });
+  const states = lines(d).filter((l) => l.includes('"Sent"'));
+  assert.deepEqual(states, ['    state "Sent" as s0', '    state "Sent" as s1']);
+  // Each "Sent" sits inside its own composite: between its opening line and the next closing brace.
+  const all = lines(d);
+  const open = all.map((l, i) => (/^  state ".*" as n\d+ \{$/.test(l) ? i : -1)).filter((i) => i >= 0);
+  assert.equal(open.length, 2);
+  open.forEach((from, k) => {
+    const to = all.indexOf("  }", from);
+    assert.deepEqual(all.slice(from, to).filter((l) => l.includes('"Sent"')), [`    state "Sent" as s${k}`]);
+  });
+  assert.deepEqual(d.nodes.map((n) => n.node), ["n0", "n1"]);
+  assert.equal(d.transitions.length, 4);
+});
+
+test("nothing to draw, or another type, is refused by the flow and the lifecycle", () => {
+  refused(() => diagram(B, { shape: "flow", id: K.archive }), "cannot_draw", { shape: "flow", reason: "empty", nodes: 0, limit: DIAGRAM_CAP });
+  refused(() => diagram(B, { shape: "lifecycle", id: K.priceList }), "cannot_draw", { shape: "lifecycle", reason: "empty", nodes: 0, limit: DIAGRAM_CAP });
+  for (const shape of ["flow", "lifecycle"]) {
+    refused(() => diagram(B, { shape, id: K.money }), "invalid_argument", { argument: "id", reason: "not an aggregate or a bounded-context" });
+    refused(() => diagram(B, { shape }), "invalid_argument", { argument: "id", reason: `needed by ${shape}` });
+    refused(() => diagram(s, { shape, id: "nothing/here" }), "unknown_type");
+  }
+});
+
+test("a When, a command and a state holding a quote, a colon and a semicolon are escaped", () => {
+  const odd = 'a "q": b; c';
+  const m = edited(K.quote, {
+    commands: [[odd, "Quote sent", odd, ""], [odd, "Quote accepted", "or not", ""]],
+    transitions: [[odd, odd, odd]],
+    edges: [emits(K.quote, K.sent, odd, odd), emits(K.quote, K.accepted, odd, "or not")],
+  });
+  const flow = diagram(m, { shape: "flow", id: K.quote }).mermaid;
+  const life = diagram(m, { shape: "lifecycle", id: K.quote }).mermaid;
+  const esc = "a #quot;q#quot;#58; b#59; c";
+  assert.ok(flow.includes(`caller->>n0: ${esc}`) && flow.includes(`alt ${esc}`), flow);
+  // A state's words sit inside quotes, where only the quote is escaped, as for every quoted label.
+  assert.ok(life.includes(`state "a #quot;q#quot;: b; c" as s0`) && life.includes(`s0 --> s0 : ${esc}`), life);
+  assert.ok(!/[^#]"q"|: b;/.test(flow), flow);
 });

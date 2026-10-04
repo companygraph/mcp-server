@@ -2,7 +2,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { readDir } from "../lib/read.mjs";
+import { readDir, readSchemas } from "../lib/read.mjs";
 import { buildSnapshot, parserTag } from "../lib/snapshot.mjs";
 
 const fixtures = path.join(path.dirname(fileURLToPath(import.meta.url)), "fixtures");
@@ -137,11 +137,14 @@ export function withBackFlows() {
 }
 
 // Bond names Glue with an As cell holding both a colon and a semicolon, the two characters an
-// association's unquoted text must escape that a quoted label does not.
+// association's unquoted text must escape that a quoted label does not. Quoted names Glue with an
+// As holding a quote and a semicolon, which must be mapped in one pass, since mapping after
+// `label()` would break its `#quot;`.
 export function withPunctuation() {
   const { files, schemas } = exampleFiles();
   files.set("concepts/bond.md", concept("Bond", [["Glue", "a: b; c"]]));
   files.set("concepts/glue.md", concept("Glue", []));
+  files.set("concepts/quoted.md", concept("Quoted", [["Glue", 'the "glue"; a']]));
   return built(files, schemas);
 }
 
@@ -172,4 +175,65 @@ export function packInstanceDir({ packs = ["software"] } = {}) {
   fs.writeFileSync(path.join(root, "model", "bounded-contexts", "quoting", "quoting.md"),
     `---\nid: ${CONTEXT_ID}\nsource: Local\nclassification: core\nrealizes:\n  - Pricing\n---\n\n# Quoting\n\n> Prices an order. Invoicing it is left to another context.\n\n## Responsibilities\n\n- Price an order before it is placed\n`);
   return root;
+}
+
+// Bounded contexts drawn as the software pack draws them: the pack instance with four contexts
+// beside Quoting and two aggregates inside it. Quoting conforms to Catalog and shares a kernel
+// with Invoicing, which names the kernel back, so the two rows draw one arrow; Ordering is
+// Quoting's customer; Archive relates to nothing. `disagree` has Catalog name Quoting as a
+// partner as well, which Quoting's own row contradicts. Quote holds a line, Money and a Discount
+// its root names no cardinality for, reaches a Customer it does not hold, and emits two events;
+// Price list holds Money too, so a context's aggregates share one Money. `crowd` adds that many
+// contexts conforming to Quoting and as many value objects Quote holds, to reach the cap.
+export const CONTEXT_IDS = {
+  catalog: "01a0ffff-0000-7000-8000-000000000101", invoicing: "01a0ffff-0000-7000-8000-000000000102",
+  ordering: "01a0ffff-0000-7000-8000-000000000103", archive: "01a0ffff-0000-7000-8000-000000000104",
+  quote: "01a0ffff-0000-7000-8000-000000000111", priceList: "01a0ffff-0000-7000-8000-000000000112",
+  quoteDesign: "01a0ffff-0000-7000-8000-000000000121", lineDesign: "01a0ffff-0000-7000-8000-000000000122",
+  money: "01a0ffff-0000-7000-8000-000000000123", discount: "01a0ffff-0000-7000-8000-000000000124",
+  customer: "01a0ffff-0000-7000-8000-000000000125", priceListDesign: "01a0ffff-0000-7000-8000-000000000126",
+  sent: "01a0ffff-0000-7000-8000-000000000131", accepted: "01a0ffff-0000-7000-8000-000000000132",
+};
+export const ODD_ATTRIBUTE = 'Note "a" #1: {x}';
+const C = CONTEXT_IDS;
+const table = (head, rows) => `| ${head.join(" | ")} |\n| ${head.map(() => "---").join(" | ")} |\n${rows.map((r) => `| ${r.join(" | ")} |`).join("\n")}\n`;
+const context = (id, name, classification, relationships) =>
+  `---\nid: ${id}\nsource: Local\nclassification: ${classification}\n---\n\n# ${name}\n\n> A context made for a test. What it leaves to another is not its point.\n\n## Responsibilities\n\n- Stand in a test\n${relationships.length ? `\n## Relationships\n\n${table(["Context", "Pattern"], relationships)}` : ""}`;
+const design = (id, name, kind, attributes, relations) =>
+  `---\nid: ${id}\nsource: Local\nkind: ${kind}\n---\n\n# ${name}\n\n> A term made for a test.\n${attributes.length ? `\n## Attributes\n\n${table(["Attribute", "Type"], attributes)}` : ""}${relations.length ? `\n## Relations\n\n${table(["Concept", "Cardinality"], relations)}` : ""}`;
+const aggregate = (id, name, root, members, commands = [], transitions = []) =>
+  `---\nid: ${id}\nsource: Local\nroot: ${root}\nmembers:\n${members.map((m) => `  - ${m}\n`).join("")}---\n\n# ${name}\n\n> What the test needs kept consistent.\n\n## Invariants\n\n${table(["Label", "Invariant"], [["INV-T1", "It holds after every change."]])}`
+  + (commands.length ? `\n## Handled commands\n\n${table(["Command", "Emits", "When", "Description"], commands)}` : "")
+  + (transitions.length ? `\n## State transitions\n\n${table(["From", "Command", "To"], transitions)}` : "");
+const event = (id, name, by) => `---\nid: ${id}\nsource: Local\nemitted-by: ${by}\n---\n\n# ${name}\n\n> Something happened in a test.\n`;
+
+export function withContexts({ disagree = false, crowd = 0 } = {}) {
+  const root = packInstanceDir();
+  const dir = (...p) => path.join(root, "model", "bounded-contexts", ...p);
+  const write = (file, text) => { fs.mkdirSync(path.dirname(file), { recursive: true }); fs.writeFileSync(file, text); };
+  write(dir("quoting", "quoting.md"), context(CONTEXT_ID, "Quoting", "core", [["Catalog", "conformist"], ["Invoicing", "shared kernel"]]));
+  write(dir("catalog", "catalog.md"), context(C.catalog, "Catalog", "supporting", disagree ? [["Quoting", "partnership"]] : []));
+  write(dir("invoicing", "invoicing.md"), context(C.invoicing, "Invoicing", "core", [["Quoting", "shared kernel"]]));
+  write(dir("ordering", "ordering.md"), context(C.ordering, "Ordering", "generic", [["Quoting", "customer/supplier"]]));
+  write(dir("archive", "archive.md"), context(C.archive, "Archive", "generic", []));
+  const crowded = Array.from({ length: crowd }, (_, i) => String(i).padStart(2, "0"));
+  for (const n of crowded) {
+    write(dir(`crowd-${n}`, `crowd-${n}.md`), context(`01a0ffff-0000-7000-8000-0000000002${n}`, `Crowd ${n}`, "generic", [["Quoting", "conformist"]]));
+    write(dir("quoting", "concept-designs", `part-${n}.md`), design(`01a0ffff-0000-7000-8000-0000000003${n}`, `Part ${n}`, "value object", [], []));
+  }
+  write(dir("quoting", "aggregates", "quote.md"), aggregate(C.quote, "Quote", "Quote", ["Quote line", "Money", "Discount", ...crowded.map((n) => `Part ${n}`)],
+    [["Send quote", "Quote sent", "", "Sends it to the customer"], ["Accept quote", "Quote accepted", "the customer signs before it expires", ""], ["Accept quote", "", "it has expired (INV-T1)", ""]],
+    [["", "Send quote", "Sent"], ["Sent", "Accept quote", "Accepted"], ["Sent", "", "Expired"]]));
+  write(dir("quoting", "aggregates", "price-list.md"), aggregate(C.priceList, "Price list", "Price list", ["Money"], [["Publish price list", "", "", ""]]));
+  write(dir("quoting", "concept-designs", "quote.md"), design(C.quoteDesign, "Quote", "entity",
+    [["Number", "string"], ["Total", "Money"], [ODD_ATTRIBUTE, "string"]], [["Quote line", "one to many"], ["Money", "one"], ["Customer", "maybe one"]]));
+  write(dir("quoting", "concept-designs", "quote-line.md"), design(C.lineDesign, "Quote line", "entity", [["Quantity", "number"]], [["Money", "one"]]));
+  write(dir("quoting", "concept-designs", "money.md"), design(C.money, "Money", "value object", [["Amount", "decimal"], ["Currency", "ISO 4217 code"]], []));
+  write(dir("quoting", "concept-designs", "discount.md"), design(C.discount, "Discount", "value object", [], []));
+  write(dir("quoting", "concept-designs", "customer.md"), design(C.customer, "Customer", "value object", [], []));
+  write(dir("quoting", "concept-designs", "price-list.md"), design(C.priceListDesign, "Price list", "entity", [], [["Money", "many"]]));
+  write(dir("quoting", "domain-events", "quote-sent.md"), event(C.sent, "Quote sent", "Quote"));
+  write(dir("quoting", "domain-events", "quote-accepted.md"), event(C.accepted, "Quote accepted", "Quote"));
+  return buildSnapshot({ files: readDir(path.join(root, "model")), schemas: readSchemas(path.join(root, "meta", "core")),
+    sub: "model/", core: "meta/core/", commit: COMMIT, repo: "companygraph/pack-instance", parserTag: PARSER });
 }

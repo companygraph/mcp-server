@@ -26,7 +26,7 @@ export type Drawing = {
     omitted: number;
 };
 /**
- * @import { Entity, Edge } from "companygraph-meta-model/instance"
+ * @import { Entity, Edge, Table } from "companygraph-meta-model/instance"
  * @import { Snapshot } from "./snapshot.mjs"
  * @import { Ref, ServedEdge } from "./model.mjs"
  */
@@ -85,7 +85,7 @@ export declare function diagram(s: Snapshot, { shape, id, domain, type }?: {
     links: DiagramLink[];
     edges: number;
     omitted: number;
-    shape: "concepts" | "neighborhood" | "process" | "schema" | undefined;
+    shape: "aggregate" | "concepts" | "context" | "flow" | "lifecycle" | "neighborhood" | "process" | "schema" | undefined;
     model: {
         commit: string | null;
         repo: string | null;

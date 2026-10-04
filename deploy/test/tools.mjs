@@ -110,4 +110,41 @@ export function registerToolsTests() {
     for (let i = 1; i < times.length; i++) assert.ok(times[i - 1] >= times[i], `${times[i - 1]} comes before the later ${times[i]}`);
     await client.close();
   });
+
+  // A context map reaches a deployment with a re-pin, so each holds it against the model it
+  // serves. An instance without the software pack is told so, and skips rather than fails.
+  test("every bounded context draws its map, contexts only, each arrow labeled by a pattern", async (t) => {
+    const contexts = s.entities.filter((e) => e.type === "bounded-context");
+    if (!contexts.length) return t.skip("this instance holds no bounded context");
+    const [a, b] = InMemoryTransport.createLinkedPair();
+    await createServer(s).connect(a);
+    const client = new Client({ name: "test", version: "0" });
+    await client.connect(b);
+    for (const c of contexts) {
+      const d = checkAnswer("diagram", await client.callTool({ name: "diagram", arguments: { shape: "context", id: c.id } }));
+      assert.ok(!d.error, `${c.name}: the map is drawn, not refused`);
+      assert.ok(d.nodes.every((/** @type {{ type: string }} */ n) => n.type === "bounded-context"), c.name);
+      for (const l of d.links) assert.match(l.label, /^(U → D · .+|partnership|shared kernel|separate ways)$/, `${c.name}: ${l.label}`);
+    }
+    await client.close();
+  });
+
+  // A flow and a lifecycle read tables an instance may not yet write, so a context whose aggregates
+  // hold none is refused as empty and every other answers in its shape.
+  test("every bounded context answers its flow and its lifecycle, or says it has nothing to draw", async (t) => {
+    const contexts = s.entities.filter((e) => e.type === "bounded-context");
+    if (!contexts.length) return t.skip("this instance holds no bounded context");
+    const [a, b] = InMemoryTransport.createLinkedPair();
+    await createServer(s).connect(a);
+    const client = new Client({ name: "test", version: "0" });
+    await client.connect(b);
+    for (const c of contexts) {
+      for (const shape of ["flow", "lifecycle"]) {
+        const d = checkAnswer("diagram", await client.callTool({ name: "diagram", arguments: { shape, id: c.id } }));
+        if (d.error) assert.deepEqual([d.error.code, d.error.details.reason], ["cannot_draw", "empty"], `${c.name} ${shape}`);
+        else assert.ok(d.mermaid.startsWith(shape === "flow" ? "sequenceDiagram" : "stateDiagram-v2"), `${c.name} ${shape}`);
+      }
+    }
+    await client.close();
+  });
 }

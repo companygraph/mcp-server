@@ -1,5 +1,5 @@
 import { z } from "zod";
-export declare const SHAPES: readonly ["concepts", "process", "neighborhood", "schema"];
+export declare const SHAPES: readonly ["concepts", "process", "neighborhood", "schema", "context", "aggregate", "flow", "lifecycle"];
 export declare const Model: z.ZodObject<{
     commit: z.ZodNullable<z.ZodString>;
     repo: z.ZodNullable<z.ZodString>;
@@ -495,7 +495,11 @@ export declare const OUTPUTS: {
     }, z.core.$strict>;
     diagram: z.ZodObject<{
         shape: z.ZodEnum<{
+            aggregate: "aggregate";
             concepts: "concepts";
+            context: "context";
+            flow: "flow";
+            lifecycle: "lifecycle";
             neighborhood: "neighborhood";
             process: "process";
             schema: "schema";
@@ -518,6 +522,12 @@ export declare const OUTPUTS: {
             via: z.ZodString;
             to: z.ZodString;
             multiplicity: z.ZodString;
+        }, z.core.$strict>>>;
+        transitions: z.ZodOptional<z.ZodArray<z.ZodObject<{
+            aggregate: z.ZodString;
+            from: z.ZodNullable<z.ZodString>;
+            to: z.ZodString;
+            command: z.ZodNullable<z.ZodString>;
         }, z.core.$strict>>>;
         edges: z.ZodNumber;
         omitted: z.ZodNumber;
@@ -565,7 +575,11 @@ export declare const DETAILS: {
     }, z.core.$strict>;
     cannot_draw: z.ZodObject<{
         shape: z.ZodEnum<{
+            aggregate: "aggregate";
             concepts: "concepts";
+            context: "context";
+            flow: "flow";
+            lifecycle: "lifecycle";
             neighborhood: "neighborhood";
             process: "process";
             schema: "schema";
