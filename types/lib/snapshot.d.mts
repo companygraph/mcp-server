@@ -1,7 +1,7 @@
 import type { Entity, Edge, GraphType, Files, Constraints } from "companygraph-meta-model/instance";
 import type { Rules } from "./rules.mjs";
 export type SnapshotEntity = Entity & {
-    markdown: string | undefined;
+    markdown: string;
 };
 export type CheckName = {
     name: string;

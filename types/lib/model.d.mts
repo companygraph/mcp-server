@@ -43,8 +43,9 @@ export declare const provenance: (s: Snapshot) => {
 /**
  * @param {Snapshot} s
  * @param {string} type
+ * @returns {Entity | undefined}
  */
-export declare const schemaOf: (s: Snapshot, type: string) => Entity;
+export declare const schemaOf: (s: Snapshot, type: string) => Entity | undefined;
 /**
  * @param {Snapshot} s
  * @param {string} type
@@ -665,7 +666,7 @@ export declare function fetchEntity(s: Snapshot, id: string): {
     title: string;
     type: string;
     url: string | null;
-    text: string | undefined;
+    text: string;
     model: {
         commit: string | null;
         repo: string | null;

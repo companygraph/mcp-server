@@ -1,8 +1,9 @@
 import { ModelError } from "./errors.mjs";
-import { SHAPES } from "./schemas.mjs";
+import { SHAPES, OUTPUTS } from "./schemas.mjs";
 import { relationsOf } from "./model.mjs";
 import type { Entity, Edge } from "companygraph-meta-model/instance";
 import type { Snapshot } from "./snapshot.mjs";
+import type { z } from "zod";
 export type DiagramKind = typeof SHAPES[number];
 export type Relation = ReturnType<typeof relationsOf>["relations"][number];
 export type DiagramNode = {
@@ -29,6 +30,7 @@ export type Drawing = {
  * @import { Entity, Edge, Table } from "companygraph-meta-model/instance"
  * @import { Snapshot } from "./snapshot.mjs"
  * @import { Ref, ServedEdge } from "./model.mjs"
+ * @import { z } from "zod"
  */
 /**
  * @typedef {typeof SHAPES[number]} DiagramKind
@@ -69,27 +71,24 @@ export declare function processDiagram(s: {
     entities: Entity[];
     edges: Edge[];
 }, id: string): Drawing;
+export type DiagramRequest = {
+    shape: Exclude<DiagramKind, "concepts" | "schema">;
+    id: string;
+} | {
+    shape: "concepts";
+    domain?: string | undefined;
+} | {
+    shape: "schema";
+    type?: string | undefined;
+};
+/**
+ * @typedef {{ shape: Exclude<DiagramKind, "concepts" | "schema">; id: string }
+ *   | { shape: "concepts"; domain?: string | undefined }
+ *   | { shape: "schema"; type?: string | undefined }} DiagramRequest
+ */
 /**
  * @param {Snapshot} s
- * @param {{ shape?: DiagramKind | undefined; id?: string | undefined; domain?: string | undefined; type?: string | undefined }} [options]
+ * @param {DiagramRequest} request
+ * @returns {z.infer<typeof OUTPUTS.diagram>}
  */
-export declare function diagram(s: Snapshot, { shape, id, domain, type }?: {
-    shape?: DiagramKind | undefined;
-    id?: string | undefined;
-    domain?: string | undefined;
-    type?: string | undefined;
-}): {
-    title: string | null;
-    mermaid: string;
-    nodes: DiagramNode[];
-    links: DiagramLink[];
-    edges: number;
-    omitted: number;
-    shape: "aggregate" | "concepts" | "context" | "flow" | "lifecycle" | "neighborhood" | "process" | "schema" | undefined;
-    model: {
-        commit: string | null;
-        repo: string | null;
-        core: string;
-        parser: string;
-    };
-};
+export declare function diagram(s: Snapshot, request: DiagramRequest): z.infer<typeof OUTPUTS.diagram>;
