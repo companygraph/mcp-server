@@ -12,6 +12,7 @@ import { pathToFileURL } from "node:url";
 import { DIST } from "./config.mjs";
 
 const http = createRequire(import.meta.url).resolve("../../bin/http.mjs");
+/** @param {string} n */
 const f = (n) => path.join(DIST, n);
 const flags = ["--snapshot", f("snapshot.json"), "--page-css", f("page.css"), "--page-icon", "favicon.svg",
   "--page-brand", "brand.html", "--robots", "robots.txt"];

@@ -41,6 +41,25 @@
 import fs from "node:fs";
 import { lastWeek, countBypasses, classify, requiredCount } from "../lib/bypasses.mjs";
 
+// GitHub's JSON is read as it comes and not described here beyond what this file reads of it, so a
+// body is `any` where it enters and every value taken out of it is named by the type it is used as.
+
+/**
+ * @typedef {{ full_name: string; default_branch: string }} Repository
+ */
+/**
+ * One rule's evaluation within a rule suite.
+ * @typedef {{ rule_type: string; result: string; enforcement?: string; details?: unknown; rule_source?: { type: string; id?: number | null } }} Evaluation
+ */
+/**
+ * A pull request that was merged, as the listing of a commit's pull requests gives it.
+ * @typedef {{ merged_at: string; merge_commit_sha: string; base?: { ref: string }; head: { sha: string } }} MergedPull
+ */
+/**
+ * A rule suite of a push, as the listing and the single read give it.
+ * @typedef {{ id: number; before_sha: string; after_sha: string; pushed_at: string; result: string }} Suite
+ */
+
 const { GITHUB_TOKEN: token, ORGANIZATION: organization, OUT: out } = process.env;
 const api = (process.env.GITHUB_API_URL || "https://api.github.com").replace(/\/$/, "");
 const missing = ["GITHUB_TOKEN", "ORGANIZATION", "OUT"].filter((name) => !process.env[name]);
@@ -56,12 +75,20 @@ if (Number.isNaN(now.getTime())) {
 }
 
 const headers = { authorization: `Bearer ${token}`, accept: "application/vnd.github+json", "x-github-api-version": "2022-11-28" };
+/** @param {string | null | undefined} link */
 const next = (link) => link?.split(",").map((part) => part.match(/<([^>]+)>;\s*rel="next"/)).find(Boolean)?.[1];
 
 // Every page of one listing, following the Link header GitHub sends while a next page exists. A
 // page answered with anything but 200 ends the listing with that status and no items, so a
 // repository refused half-way is unread rather than counted from its first page alone.
+/**
+ * @template T
+ * @param {string | undefined} url
+ * @param {(body: any) => T[]} itemsOf
+ * @returns {Promise<{ status: number; items: T[] }>}
+ */
 async function pages(url, itemsOf) {
+  /** @type {T[]} */
   const items = [];
   while (url) {
     const res = await fetch(url, { headers });
@@ -73,6 +100,10 @@ async function pages(url, itemsOf) {
 }
 
 // One request, with its body when it answered 200.
+/**
+ * @param {string} url
+ * @returns {Promise<{ status: number; body?: any }>}
+ */
 async function get(url) {
   const res = await fetch(url, { headers });
   if (res.status !== 200) { await res.body?.cancel(); return { status: res.status }; }
@@ -81,21 +112,25 @@ async function get(url) {
 
 // A branch name goes into a path segment by segment, so release/v1 keeps its slash the way
 // GitHub's branch paths expect it.
+/** @param {string} branch */
 const branchPath = (branch) => branch.split("/").map(encodeURIComponent).join("/");
 
 const { week, from, to } = lastWeek(now);
-const listing = await pages(`${api}/installation/repositories?per_page=100`, (body) => body.repositories);
+const listing = await pages(`${api}/installation/repositories?per_page=100`, (body) => /** @type {Repository[]} */ (body.repositories));
 if (listing.status !== 200) {
   console.error(`bypasses: listing the installation's repositories answered ${listing.status}`);
   process.exit(1);
 }
 const repositories = listing.items.map((r) => r.full_name);
 const branches = Object.fromEntries(listing.items.map((r) => [r.full_name, r.default_branch]));
+/** @type {Record<string, number>} */
 const statuses = {};
 
 // The contexts the default branch's rules require, read once per repository and null when the
 // rules cannot be read.
+/** @type {Record<string, string[] | null>} */
 const required = {};
+/** @param {string} repo */
 async function requiredOf(repo) {
   if (!(repo in required)) {
     const answer = await pages(`${api}/repos/${repo}/rules/branches/${branchPath(branches[repo])}?per_page=100`, (body) => body);
@@ -104,6 +139,10 @@ async function requiredOf(repo) {
   return required[repo];
 }
 
+/**
+ * @param {{ type: string; parameters?: { required_status_checks?: { context: string }[] } }[]} rules
+ * @returns {string[]}
+ */
 const contextsOf = (rules) => rules
   .filter((rule) => rule.type === "required_status_checks")
   .flatMap((rule) => rule.parameters?.required_status_checks ?? [])
@@ -111,16 +150,27 @@ const contextsOf = (rules) => rules
 
 // A ruleset's versions, listed once per ruleset, and a version's required contexts, read once per
 // version; each is null when GitHub refuses it.
+/** @type {Record<string, { updated_at: string; version_id: number }[] | null>} */
 const histories = {};
+/** @type {Record<string, string[] | null>} */
 const versionChecks = {};
+/**
+ * @param {string} repo
+ * @param {number} id
+ */
 async function historyOf(repo, id) {
   const key = `${repo}#${id}`;
   if (!(key in histories)) {
-    const answer = await pages(`${api}/repos/${repo}/rulesets/${id}/history?per_page=100`, (body) => body);
+    const answer = await pages(`${api}/repos/${repo}/rulesets/${id}/history?per_page=100`, (body) => /** @type {{ updated_at: string; version_id: number }[]} */ (body));
     histories[key] = answer.status === 200 ? answer.items : null;
   }
   return histories[key];
 }
+/**
+ * @param {string} repo
+ * @param {number} id
+ * @param {number} version
+ */
 async function contextsAt(repo, id, version) {
   const key = `${repo}#${id}#${version}`;
   if (!(key in versionChecks)) {
@@ -136,6 +186,11 @@ async function contextsAt(repo, id, version) {
 // the merge, since a mix of past and present rules would match neither. When any history or
 // version cannot be read, which is always the case with an App's installation token, the answer
 // is null, so the caller can count the checks the rule suite says were required instead.
+/**
+ * @param {string} repo
+ * @param {number[]} rulesets
+ * @param {string} merged_at
+ */
 async function requiredAt(repo, rulesets, merged_at) {
   if (!rulesets.length) return requiredOf(repo);
   const merged = new Date(merged_at);
@@ -172,9 +227,13 @@ const FALLBACK_WINDOW = 10 * 60 * 1000;
 // checks today's rules name, and when it cannot be parsed today's rules decide alone. A bypass the
 // failed rules already decide, because the rule suite cannot be read or a rule other than required
 // status checks was passed over, is classified at once and asks GitHub nothing more.
+/**
+ * @param {string} repo
+ * @param {Suite} suite
+ */
 async function kind(repo, suite) {
   const detail = await get(`${api}/repos/${repo}/rulesets/rule-suites/${suite.id}`);
-  const evaluations = detail.status === 200 ? detail.body.rule_evaluations ?? [] : [];
+  const evaluations = /** @type {Evaluation[]} */ (detail.status === 200 ? detail.body.rule_evaluations ?? [] : []);
   const failed = detail.status !== 200 ? null : evaluations
     .filter((e) => e.result === "fail" && e.enforcement !== "evaluate")
     .map((e) => e.rule_type);
@@ -182,13 +241,15 @@ async function kind(repo, suite) {
   if (!failed || failed.some((type) => type !== "required_status_checks")) return classify(none);
   const rulesets = [...new Set(evaluations
     .filter((e) => e.rule_type === "required_status_checks" && e.enforcement !== "evaluate" && e.rule_source?.type === "ruleset" && e.rule_source.id != null)
-    .map((e) => e.rule_source.id))];
+    .map((e) => (/** @type {{ id: number }} */ (e.rule_source)).id))];
   const pulls = await get(`${api}/repos/${repo}/commits/${suite.after_sha}/pulls`);
-  const merged = pulls.status === 200 ? pulls.body.filter((p) => p.merged_at) : [];
+  const merged = pulls.status === 200 ? /** @type {MergedPull[]} */ (/** @type {(MergedPull | { merged_at: null })[]} */ (pulls.body).filter((p) => p.merged_at)) : [];
+  /** @param {MergedPull} p */
+  // @ts-expect-error a Date subtracted from a Date is the milliseconds between them
   const near = (p) => Math.abs(new Date(p.merged_at) - new Date(suite.pushed_at)) <= FALLBACK_WINDOW;
   const pr = merged.find((p) => p.merge_commit_sha === suite.after_sha) ?? merged.find((p) => p.base?.ref === branches[repo] && near(p));
   if (!pr) return classify(none);
-  const runs = await pages(`${api}/repos/${repo}/commits/${pr.head.sha}/check-runs?filter=all&per_page=100`, (body) => body.check_runs);
+  const runs = await pages(`${api}/repos/${repo}/commits/${pr.head.sha}/check-runs?filter=all&per_page=100`, (body) => /** @type {import("../lib/bypasses.mjs").CheckRun[]} */ (body.check_runs));
   const comparison = await get(`${api}/repos/${repo}/compare/${pr.head.sha}...${suite.before_sha}?per_page=1`);
   const atMerge = await requiredAt(repo, rulesets, pr.merged_at);
   const count = atMerge === null ? requiredCount(evaluations) : null;
@@ -206,18 +267,19 @@ async function kind(repo, suite) {
 const result = await countBypasses({
   repositories, from, to, kind,
   suites: async (repo) => {
-    const answer = await pages(`${api}/repos/${repo}/rulesets/rule-suites?time_period=month&rule_suite_result=bypass&ref=refs/heads/${encodeURIComponent(branches[repo])}&per_page=100`, (body) => body);
+    const answer = await pages(`${api}/repos/${repo}/rulesets/rule-suites?time_period=month&rule_suite_result=bypass&ref=refs/heads/${encodeURIComponent(branches[repo])}&per_page=100`, (body) => /** @type {Suite[]} */ (body));
     statuses[repo] = answer.status;
     return answer;
   },
 });
 
-fs.writeFileSync(out, JSON.stringify({
+fs.writeFileSync(/** @type {string} */ (out), JSON.stringify({
   kpi: "Merges Past Their Checks", organization, week, from: from.toISOString(), to: to.toISOString(),
   bypasses: result.bypasses, past_checks: result.past_checks, behind_main: result.behind_main,
   repositories: result.repositories, unread: result.unread, read_at: new Date().toISOString(),
 }, null, 2) + "\n");
 
+/** @param {{ bypasses: number; past_checks: number; behind_main: number }} c */
 const line = (c) => `${c.bypasses} bypasses, ${c.past_checks} past their checks, ${c.behind_main} behind main`;
 console.log(`${organization} ${week}: ${line(result)}, ${Object.keys(result.repositories).length} read, ${result.unread.length} unread`);
 // Every repository read is printed with its counts, zeros included, so the log shows which

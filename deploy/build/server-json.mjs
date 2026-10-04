@@ -2,6 +2,11 @@
 // H1, the description is the identity's H1 and the vision's H1, and the version is the tag the
 // command passes. The registry caps a description at 100 characters and the build fails rather
 // than truncates, because a truncated sentence is a claim nobody made.
+/**
+ * @param {import("../../lib/snapshot.mjs").Snapshot} snapshot
+ * @param {{ name: string; url: string }} registry
+ * @param {string} version
+ */
 export function serverJson(snapshot, { name, url }, version) {
   const vision = snapshot.entities.find((e) => e.type === "vision");
   if (!vision) throw new Error("the model has no vision entity to write the description from");

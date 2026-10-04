@@ -60,10 +60,10 @@ export function registerPinTests() {
   test("the served page and the health body name the release package.json pins", async () => {
     const tag = pkg.dependencies["companygraph-mcp-server"].split("#")[1];
     const server = createHttpServer(snapshot());
-    await new Promise((r) => server.listen(0, "127.0.0.1", r));
+    await /** @type {Promise<void>} */ (new Promise((r) => server.listen(0, "127.0.0.1", r)));
     after(() => server.close());
-    const base = `http://127.0.0.1:${server.address().port}`;
-    const health = await (await fetch(`${base}/health`)).json();
+    const base = `http://127.0.0.1:${(/** @type {import("node:net").AddressInfo} */ (server.address())).port}`;
+    const health = /** @type {{ server: { name: string; version: string } }} */ (await (await fetch(`${base}/health`)).json());
     assert.equal(health.server.name, "companygraph-mcp-server");
     assert.equal("v" + health.server.version, tag, `the health body names ${health.server.version}; package.json pins ${tag}`);
     const html = await (await fetch(`${base}/`)).text();

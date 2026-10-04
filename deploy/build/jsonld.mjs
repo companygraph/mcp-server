@@ -16,7 +16,14 @@
 // family has. Its `@id` is this host's, not the identity's, because it is this host's thing.
 import { imageUrl } from "../../lib/model.mjs";
 
+/** @import { Snapshot } from "../../lib/snapshot.mjs" */
+
+/**
+ * @param {Snapshot} snapshot
+ * @param {{ repository: string }} deployment
+ */
 export function jsonld(snapshot, { repository }) {
+  /** @param {string} id */
   const byId = (id) => snapshot.entities.find((e) => e.id === id);
   const identity = byId(snapshot.rootId);
   if (!identity) throw new Error("the snapshot names no identity");
@@ -27,7 +34,7 @@ export function jsonld(snapshot, { repository }) {
     && String(e.fields?.["built-by"] ?? "").endsWith(`/${repository}`) && e.name.includes("MCP server"));
   if (!surface) return null;
   if (!surface.fields?.url) throw new Error("the model names no url for this surface");
-  const origin = surface.fields.url.replace(/\/$/, "");
+  const origin = /** @type {string} */ (surface.fields.url).replace(/\/$/, "");
   // The schema says a surface's url is where it is published, and for this one that is the
   // host. A url carrying a path is a pin left behind a model that has moved, and every address
   // below would be built on it — so it stops here rather than shipping `/mcp/mcp` to a crawler.
@@ -39,8 +46,8 @@ export function jsonld(snapshot, { repository }) {
   const alsoAt = holder.sections?.find((s) => s.heading === "Also at")?.tables?.[0];
   // Neither this host nor the subject's own url: `url` already carries the second, and a
   // `sameAs` repeating it says the subject is also themselves.
-  const home = identity.fields.url?.replace(/\/$/, "");
-  const sameAs = (alsoAt?.rows ?? []).map((r) => r[alsoAt.columns.indexOf("URL")])
+  const home = /** @type {string | undefined} */ (identity.fields.url)?.replace(/\/$/, "");
+  const sameAs = (alsoAt?.rows ?? []).map((r) => r[/** @type {NonNullable<typeof alsoAt>} */ (alsoAt).columns.indexOf("URL")])
     .filter((u) => u && !u.startsWith(origin) && u.replace(/\/$/, "") !== home);
   if (!sameAs.length) throw new Error(`the ${profile ? "profile" : "identity"}'s Also at holds no address`);
   const kind = profile ? "Person" : "Organization";
