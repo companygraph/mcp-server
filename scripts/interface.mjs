@@ -8,7 +8,7 @@ import fs from "node:fs";
 import { fileURLToPath } from "node:url";
 import { Client, InMemoryTransport } from "@modelcontextprotocol/client";
 import { createServer } from "../lib/server.mjs";
-import { exampleSnapshot, withOwnedNameTwice, idAt } from "../test/helpers.mjs";
+import { exampleSnapshot, withOwnedNameTwice, withContexts, CONTEXT_ID, idAt } from "../test/helpers.mjs";
 
 // The worked example, and each entity an example names, by where its page sits: the id a call
 // passes is the one the example's page carries, read off the snapshot as a client reads it off
@@ -17,7 +17,8 @@ const example = exampleSnapshot();
 const DDD = idAt(example, "skills/domain-driven-design");
 
 // Heading text → the call shown under it. `ambiguous` runs on the fixture in which two owners
-// each hold one title, which the worked example does not.
+// each hold one title, which the worked example does not. The two pictures of a context run on
+// the pack instance built for them, since the worked example takes no pack.
 export const EXAMPLES = {
   "`list_types`": { name: "list_types", arguments: {} },
   "`describe_schema`": { name: "describe_schema", arguments: { type: "skill" } },
@@ -35,6 +36,8 @@ export const EXAMPLES = {
   "`search` with `words`": { name: "search", arguments: { query: "decided the billing contexts", match: "words", limit: 2 } },
   "`fetch`": { name: "fetch", arguments: { id: DDD } },
   "`diagram`": { name: "diagram", arguments: { shape: "process", id: idAt(example, "processes/delivery") } },
+  "`diagram` of a context": { name: "diagram", contexts: true, arguments: { shape: "context", id: CONTEXT_ID } },
+  "`diagram` of its aggregates": { name: "diagram", contexts: true, arguments: { shape: "aggregate", id: CONTEXT_ID } },
   "A refusal": { name: "get_entity", ambiguous: true },
 };
 
@@ -55,10 +58,11 @@ export async function render(text) {
   const plain = await connect(example);
   const twice = withOwnedNameTwice();
   const ambiguous = await connect(twice.snapshot);
+  const contexts = await connect(withContexts());
   let out = text;
   for (const [heading, call] of Object.entries(EXAMPLES)) {
     const args = call.ambiguous ? { type: "experience", name: twice.title } : call.arguments;
-    const r = await (call.ambiguous ? ambiguous : plain).callTool({ name: call.name, arguments: args });
+    const r = await (call.contexts ? contexts : call.ambiguous ? ambiguous : plain).callTool({ name: call.name, arguments: args });
     const answer = abbreviate(r.structuredContent);
     answer.model = { ...answer.model, core: "0.0.0", parser: "v0.0.0" };
     const block = JSON.stringify({ tool: call.name, arguments: args, answer }, null, 2);
@@ -67,12 +71,13 @@ export async function render(text) {
     const open = out.indexOf("```json\n", at);
     const next = out.indexOf("\n### ", at + 1);
     if (open < 0 || (next > 0 && open > next)) throw new Error(`"### ${heading}" has no json fence of its own`);
-    const close = out.indexOf("\n```", open + 8);
+    const close = out.indexOf("\n```", open + 7);
     if (close < 0) throw new Error(`"### ${heading}" has no closing fence`);
-    out = out.slice(0, open + 8) + block + out.slice(close);
+    out = out.slice(0, open + 7) + "\n" + block + out.slice(close);
   }
   await plain.close();
   await ambiguous.close();
+  await contexts.close();
   return out;
 }
 

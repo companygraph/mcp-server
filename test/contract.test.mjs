@@ -11,7 +11,7 @@ import { CODES } from "../lib/errors.mjs";
 import { sampleCalls, checkAnswer } from "../lib/contract.mjs";
 import { words } from "../lib/words.mjs";
 import { createdOf } from "../lib/model.mjs";
-import { exampleSnapshot, instanceSnapshot, withOwnedNameTwice, withNothingToDraw, idAt } from "./helpers.mjs";
+import { exampleSnapshot, instanceSnapshot, withOwnedNameTwice, withNothingToDraw, withContexts, CONTEXT_ID, CONTEXT_IDS, idAt } from "./helpers.mjs";
 
 async function connect(s) {
   const [a, b] = InMemoryTransport.createLinkedPair();
@@ -124,6 +124,8 @@ for (const [label, s] of FIXTURES) {
       ["diagram", { shape: "process", id: "nothing/here" }, "unknown_entity", (d) => d.id === "nothing/here"],
       ["diagram", { shape: "neighborhood" }, "invalid_argument", (d) => d.argument === "id"],
       ["diagram", { shape: "graph" }, "invalid_argument", (d) => d.argument === "shape"],
+      ["diagram", { shape: "context", id: "nothing/here" }, "unknown_type", (d) => d.type === "bounded-context"],
+      ["diagram", { shape: "aggregate", id: "nothing/here" }, "unknown_type", (d) => d.type === "aggregate"],
       ["describe_rule", { rule: "R999" }, "unknown_rule", (d) => d.rule === "R999" && d.rules.includes("R4")],
       ["get_entity", {}, "invalid_argument", (d) => d.argument === "id"],
       ["search", { query: "   " }, "invalid_argument", (d) => d.argument === "query"],
@@ -190,6 +192,19 @@ test("a diagram with nothing to draw is refused by code, with what it would have
   const client = await connect(n);
   const { error } = checkAnswer("diagram", await client.callTool({ name: "diagram", arguments: { shape: "process", id: idAt(n, "processes/intake") } }));
   assert.deepEqual([error.code, error.details], ["cannot_draw", { shape: "process", reason: "empty", nodes: 0, limit: 50 }]);
+  reached.add(error.code);
+  await client.close();
+});
+
+test("a context map and an aggregate answer in the schema over an instance that takes the pack", async () => {
+  const b = withContexts();
+  const client = await connect(b);
+  const map = checkAnswer("diagram", await client.callTool({ name: "diagram", arguments: { shape: "context", id: CONTEXT_ID } }));
+  assert.deepEqual([map.shape, map.title, map.nodes.length], ["context", "Quoting", 4]);
+  const agg = checkAnswer("diagram", await client.callTool({ name: "diagram", arguments: { shape: "aggregate", id: CONTEXT_ID } }));
+  assert.deepEqual([agg.shape, agg.title, agg.nodes.length], ["aggregate", "Quoting", 7]);
+  const { error } = checkAnswer("diagram", await client.callTool({ name: "diagram", arguments: { shape: "aggregate", id: CONTEXT_IDS.archive } }));
+  assert.deepEqual([error.code, error.details], ["cannot_draw", { shape: "aggregate", reason: "empty", nodes: 0, limit: 50 }]);
   reached.add(error.code);
   await client.close();
 });
