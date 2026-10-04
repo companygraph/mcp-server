@@ -1,8 +1,9 @@
 import { ModelError } from "./errors.mjs";
-import { SHAPES, OUTPUTS } from "./schemas.mjs";
+import { SHAPES } from "./schemas.mjs";
 import { relationsOf } from "./model.mjs";
 import type { Entity, Edge } from "companygraph-meta-model/instance";
 import type { Snapshot } from "./snapshot.mjs";
+import type { OUTPUTS } from "./schemas.mjs";
 import type { z } from "zod";
 export type DiagramKind = typeof SHAPES[number];
 export type Relation = ReturnType<typeof relationsOf>["relations"][number];
@@ -30,6 +31,7 @@ export type Drawing = {
  * @import { Entity, Edge, Table } from "companygraph-meta-model/instance"
  * @import { Snapshot } from "./snapshot.mjs"
  * @import { Ref, ServedEdge } from "./model.mjs"
+ * @import { OUTPUTS } from "./schemas.mjs"
  * @import { z } from "zod"
  */
 /**

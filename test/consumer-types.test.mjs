@@ -9,7 +9,7 @@ import { fileURLToPath } from "node:url";
 
 // The declarations as a TypeScript consumer meets them: the package as `npm pack` writes it,
 // installed beside a strict NodeNext project with skipLibCheck off. `build:check` holds `types/`
-// to the JSDoc; this holds the tarball to the exports, every subpath resolving its `types`, and a
+// to the JSDoc; this holds the tarball to the exports, every subpath packed and resolving its `types`, and a
 // few public calls to the signature they promise. A `@ts-expect-error` that finds no error fails
 // the compile, so each wrong call below is a check that the type refuses it.
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -23,6 +23,8 @@ import { diagram } from "${pkg.name}/diagram";
 declare const s: Snapshot;
 
 const text: string = fetchEntity(s, "x").text;
+// @ts-expect-error text is a string, and nothing wider
+const notText: number = fetchEntity(s, "x").text;
 const schema = schemaOf(s, "x");
 // @ts-expect-error a type no schema declares has none
 schema.name;
@@ -31,6 +33,8 @@ const name: string | undefined = schema?.name;
 const drawn = diagram(s, { shape: "schema", type: "x" });
 const shape: "schema" | "process" | "concepts" | "neighborhood" | "context" | "aggregate" | "flow" | "lifecycle" = drawn.shape;
 const everyType: { via: string; to: string; multiplicity: string }[] | undefined = drawn.everyType;
+// @ts-expect-error everyType is a list, and nothing wider
+const notEveryType: number = drawn.everyType;
 diagram(s, { shape: "process", id: "x" });
 // @ts-expect-error a process is drawn of one
 diagram(s, { shape: "process" });
@@ -41,7 +45,7 @@ diagram(s, { shape: "map" });
 // @ts-expect-error an id is a string
 fetchEntity(s, 1);
 
-export { text, name, shape, everyType };
+export { text, notText, name, shape, everyType, notEveryType };
 `;
 
 test("a strict TypeScript consumer of the packed package types every subpath and refuses a wrong call", () => {
@@ -73,7 +77,8 @@ test("a strict TypeScript consumer of the packed package types every subpath and
 
     // Every subpath the package exports, and every one of them packed.
     for (const [k, v] of Object.entries(pkg.exports))
-      assert.ok(fs.existsSync(path.join(installed, v.types)), `${k} names ${v.types}, and the tarball holds no such file`);
+      for (const file of [v.types, v.default])
+        assert.ok(fs.existsSync(path.join(installed, file)), `${k} names ${file}, and the tarball holds no such file`);
     const checked = spawnSync(process.execPath, [tsc, "--project", dir], { cwd: dir, encoding: "utf8" });
     assert.equal(checked.status, 0, `${checked.stdout}${checked.stderr}`);
   } finally {
