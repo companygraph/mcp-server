@@ -126,6 +126,8 @@ for (const [label, s] of FIXTURES) {
       ["diagram", { shape: "graph" }, "invalid_argument", (d) => d.argument === "shape"],
       ["diagram", { shape: "context", id: "nothing/here" }, "unknown_type", (d) => d.type === "bounded-context"],
       ["diagram", { shape: "aggregate", id: "nothing/here" }, "unknown_type", (d) => d.type === "aggregate"],
+      ["diagram", { shape: "flow", id: "nothing/here" }, "unknown_type", (d) => d.type === "aggregate"],
+      ["diagram", { shape: "lifecycle", id: "nothing/here" }, "unknown_type", (d) => d.type === "aggregate"],
       ["describe_rule", { rule: "R999" }, "unknown_rule", (d) => d.rule === "R999" && d.rules.includes("R4")],
       ["get_entity", {}, "invalid_argument", (d) => d.argument === "id"],
       ["search", { query: "   " }, "invalid_argument", (d) => d.argument === "query"],
@@ -196,7 +198,7 @@ test("a diagram with nothing to draw is refused by code, with what it would have
   await client.close();
 });
 
-test("a context map and an aggregate answer in the schema over an instance that takes the pack", async () => {
+test("a context map, its aggregates, flow and lifecycle answer in the schema over an instance that takes the pack", async () => {
   const b = withContexts();
   const client = await connect(b);
   const map = checkAnswer("diagram", await client.callTool({ name: "diagram", arguments: { shape: "context", id: CONTEXT_ID } }));
@@ -206,6 +208,14 @@ test("a context map and an aggregate answer in the schema over an instance that 
   const { error } = checkAnswer("diagram", await client.callTool({ name: "diagram", arguments: { shape: "aggregate", id: CONTEXT_IDS.archive } }));
   assert.deepEqual([error.code, error.details], ["cannot_draw", { shape: "aggregate", reason: "empty", nodes: 0, limit: 50 }]);
   reached.add(error.code);
+  const flow = checkAnswer("diagram", await client.callTool({ name: "diagram", arguments: { shape: "flow", id: CONTEXT_ID } }));
+  assert.deepEqual([flow.shape, flow.title, flow.nodes.length, flow.links.length], ["flow", "Quoting", 4, 2]);
+  const life = checkAnswer("diagram", await client.callTool({ name: "diagram", arguments: { shape: "lifecycle", id: CONTEXT_ID } }));
+  assert.deepEqual([life.shape, life.title, life.nodes.length, life.transitions.length], ["lifecycle", "Quoting", 1, 3]);
+  for (const shape of ["flow", "lifecycle"]) {
+    const none = checkAnswer("diagram", await client.callTool({ name: "diagram", arguments: { shape, id: CONTEXT_IDS.archive } }));
+    assert.deepEqual([none.error.code, none.error.details], ["cannot_draw", { shape, reason: "empty", nodes: 0, limit: 50 }]);
+  }
   await client.close();
 });
 

@@ -530,6 +530,25 @@ test("one event two commands emit is two links, each labeled with its own comman
   assert.equal(d.nodes.length, 2);
 });
 
+test("one command naming the same event under two Whens draws two messages in its alt and two labeled links", () => {
+  const m = edited(K.quote, {
+    commands: [["Accept quote", "Quote accepted", "by the customer", ""], ["Accept quote", "Quote accepted", "by the agent", ""]],
+    edges: [emits(K.quote, K.accepted, "Accept quote", "by the customer"), emits(K.quote, K.accepted, "Accept quote", "by the agent")],
+  });
+  const d = diagram(m, { shape: "flow", id: K.quote });
+  assert.deepEqual(lines(d).slice(3), ["  caller->>n0: Accept quote", "  alt by the customer", "    n0--)caller: Quote accepted", "  else by the agent", "    n0--)caller: Quote accepted", "  end"]);
+  assert.deepEqual(d.links, [{ from: "n0", to: "n1", label: "Accept quote · by the customer" }, { from: "n0", to: "n1", label: "Accept quote · by the agent" }]);
+  assert.deepEqual([d.nodes.length, d.edges], [2, 2]);
+});
+
+test("a flow or a lifecycle past the cap is refused as too large", () => {
+  // A flow counts the caller, each participant and each message, so fifty commands and one aggregate make fifty-two.
+  const commands = Array.from({ length: DIAGRAM_CAP }, (_, i) => [`Command ${i}`, "", "", ""]);
+  refused(() => diagram(edited(K.quote, { commands, edges: [] }), { shape: "flow", id: K.quote }), "cannot_draw", { shape: "flow", reason: "too_large", nodes: DIAGRAM_CAP + 2, limit: DIAGRAM_CAP });
+  const transitions = Array.from({ length: DIAGRAM_CAP + 1 }, (_, i) => ["", `Step ${i}`, `State ${i}`]);
+  refused(() => diagram(edited(K.quote, { transitions }), { shape: "lifecycle", id: K.quote }), "cannot_draw", { shape: "lifecycle", reason: "too_large", nodes: DIAGRAM_CAP + 1, limit: DIAGRAM_CAP });
+});
+
 test("a lifecycle draws the states, a blank From as the start and a state no step leaves as an end", () => {
   const d = diagram(B, { shape: "lifecycle", id: K.quote });
   assert.deepEqual([d.shape, d.title, d.edges, d.omitted, d.links, d.nodes], ["lifecycle", "Quote", 3, 0, [], [{ node: "n0", id: K.quote, title: "Quote", type: "aggregate" }]]);
@@ -558,6 +577,14 @@ test("a state named in two aggregates of one context is two states, one in each 
   const d = diagram(m, { shape: "lifecycle", id: CONTEXT_ID });
   const states = lines(d).filter((l) => l.includes('"Sent"'));
   assert.deepEqual(states, ['    state "Sent" as s0', '    state "Sent" as s1']);
+  // Each "Sent" sits inside its own composite: between its opening line and the next closing brace.
+  const all = lines(d);
+  const open = all.map((l, i) => (/^  state ".*" as n\d+ \{$/.test(l) ? i : -1)).filter((i) => i >= 0);
+  assert.equal(open.length, 2);
+  open.forEach((from, k) => {
+    const to = all.indexOf("  }", from);
+    assert.deepEqual(all.slice(from, to).filter((l) => l.includes('"Sent"')), [`    state "Sent" as s${k}`]);
+  });
   assert.deepEqual(d.nodes.map((n) => n.node), ["n0", "n1"]);
   assert.equal(d.transitions.length, 4);
 });
