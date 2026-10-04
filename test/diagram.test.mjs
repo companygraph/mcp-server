@@ -6,7 +6,7 @@ import assert from "node:assert/strict";
 import { typeOfAddress } from "companygraph-meta-model/instance";
 import { diagram, processDiagram, label, plain, cannot, DIAGRAM_CAP } from "../lib/diagram.mjs";
 import { ModelError } from "../lib/errors.mjs";
-import { exampleSnapshot, instanceSnapshot, withHub, withLoops, withPunctuation, withNothingToDraw, withBackFlows, ODD, COMMIT, idAt } from "./helpers.mjs";
+import { exampleSnapshot, instanceSnapshot, withHub, withLoops, withPunctuation, withNothingToDraw, withBackFlows, withContexts, CONTEXT_ID, CONTEXT_IDS, ODD, COMMIT, idAt } from "./helpers.mjs";
 
 const s = exampleSnapshot();
 // The example's entities by where their pages sit, and the ids the snapshot gives them. A fixture
@@ -244,7 +244,7 @@ test("every link's ends are drawn nodes, and the link count matches the arrow li
 });
 
 test("the arguments each shape does not take, needs or cannot use are refused by name", () => {
-  refused(() => diagram(s, { shape: "graph" }), "invalid_argument", { argument: "shape", reason: "one of concepts, process, neighborhood, schema" });
+  refused(() => diagram(s, { shape: "graph" }), "invalid_argument", { argument: "shape", reason: "one of concepts, process, neighborhood, schema, context, aggregate" });
   refused(() => diagram(s, { shape: "schema", id: "core/phase" }), "invalid_argument", { argument: "id", reason: "not taken by schema" });
   refused(() => diagram(s, { shape: "concepts", type: "phase" }), "invalid_argument", { argument: "type", reason: "not taken by concepts" });
   refused(() => diagram(s, { shape: "schema", domain: I("domains/pricing") }), "invalid_argument", { argument: "domain", reason: "not taken by schema" });
@@ -335,4 +335,74 @@ test("a schema node links nowhere where the repository or the commit is not know
 test("the too-large hint for the schemas is to name a type, said only when none was given", () => {
   assert.match(cannot("schema", "too_large", 60).message, /name a type to draw part of it/);
   assert.doesNotMatch(cannot("schema", "too_large", 60, "phase").message, /name a type/);
+});
+
+// The software pack's pictures, over a pack instance built for them. A context map is drawn from
+// the Relationships rows on both sides of the context, one hop out.
+const B = withContexts();
+const K = CONTEXT_IDS;
+
+test("a context map draws its neighbours one hop out, upstream above downstream, each arrow labeled by its pattern", () => {
+  const d = diagram(B, { shape: "context", id: CONTEXT_ID });
+  assert.deepEqual([d.shape, d.title, d.edges, d.omitted], ["context", "Quoting", 4, 0]);
+  assert.deepEqual(lines(d), [
+    "flowchart TB",
+    '  n0["<small>«bounded-context» · core</small><br/><b>Quoting</b>"]',
+    '  n1["<small>«bounded-context» · supporting</small><br/>Catalog"]',
+    '  n2["<small>«bounded-context» · core</small><br/>Invoicing"]',
+    '  n3["<small>«bounded-context» · generic</small><br/>Ordering"]',
+    '  n1 -->|"U → D · conformist"| n0',
+    '  n0 <-->|"shared kernel"| n2',
+    '  n0 -->|"U → D · customer/supplier"| n3',
+  ]);
+  assert.deepEqual(ids(d), [["n0", CONTEXT_ID], ["n1", K.catalog], ["n2", K.invoicing], ["n3", K.ordering]]);
+  assert.deepEqual(d.nodes.map((n) => n.type), ["bounded-context", "bounded-context", "bounded-context", "bounded-context"]);
+  assert.deepEqual(d.links, [
+    { from: "n1", to: "n0", label: "U → D · conformist" },
+    { from: "n0", to: "n2", label: "shared kernel" },
+    { from: "n0", to: "n3", label: "U → D · customer/supplier" },
+  ]);
+});
+
+test("a symmetric pattern named from both sides is one arrow, from either side's map", () => {
+  const d = diagram(B, { shape: "context", id: K.invoicing });
+  assert.deepEqual([d.title, d.edges], ["Invoicing", 2]);
+  assert.deepEqual(lines(d).slice(1), [
+    '  n0["<small>«bounded-context» · core</small><br/><b>Invoicing</b>"]',
+    '  n1["<small>«bounded-context» · core</small><br/>Quoting"]',
+    '  n1 <-->|"shared kernel"| n0',
+  ]);
+});
+
+test("two rows that disagree each keep their own arrow", () => {
+  const d = diagram(withContexts({ disagree: true }), { shape: "context", id: CONTEXT_ID });
+  assert.equal(d.edges, 5);
+  assert.deepEqual(lines(d).slice(5), [
+    '  n1 -->|"U → D · conformist"| n0',
+    '  n0 <-->|"partnership"| n1',
+    '  n0 <-->|"shared kernel"| n2',
+    '  n0 -->|"U → D · customer/supplier"| n3',
+  ]);
+});
+
+test("a context with no relationship is a map of one node", () => {
+  const d = diagram(B, { shape: "context", id: K.archive });
+  assert.deepEqual([lines(d), d.links, d.edges], [["flowchart TB", '  n0["<small>«bounded-context» · generic</small><br/><b>Archive</b>"]'], [], 0]);
+});
+
+test("a context naming itself draws no arrow to itself", () => {
+  const self = structuredClone(B);
+  self.edges.push({ from: CONTEXT_ID, via: "Relationships.Context", to: CONTEXT_ID, attrs: { Pattern: "conformist" } });
+  assert.equal(diagram(self, { shape: "context", id: CONTEXT_ID }).mermaid, diagram(B, { shape: "context", id: CONTEXT_ID }).mermaid);
+});
+
+test("a context map holds fifty nodes, its middle among them, and refuses one more", () => {
+  assert.equal(diagram(withContexts({ crowd: 46 }), { shape: "context", id: CONTEXT_ID }).nodes.length, 50);
+  refused(() => diagram(withContexts({ crowd: 47 }), { shape: "context", id: CONTEXT_ID }), "cannot_draw", { shape: "context", reason: "too_large", nodes: 51, limit: DIAGRAM_CAP });
+});
+
+test("a context map is refused for an id of another type, and where the pack is not taken", () => {
+  refused(() => diagram(B, { shape: "context", id: K.quote }), "invalid_argument", { argument: "id", reason: "not a bounded-context" });
+  refused(() => diagram(B, { shape: "context" }), "invalid_argument", { argument: "id", reason: "needed by context" });
+  refused(() => diagram(s, { shape: "context", id: "nothing/here" }), "unknown_type");
 });
