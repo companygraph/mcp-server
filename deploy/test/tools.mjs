@@ -120,6 +120,7 @@ export function registerToolsTests() {
     await client.connect(b);
     for (const c of contexts) {
       const d = checkAnswer("diagram", await client.callTool({ name: "diagram", arguments: { shape: "context", id: c.id } }));
+      assert.ok(!d.error, `${c.name}: the map is drawn, not refused`);
       assert.ok(d.nodes.every((n) => n.type === "bounded-context"), c.name);
       for (const l of d.links) assert.match(l.label, /^(U → D · .+|partnership|shared kernel|separate ways)$/, `${c.name}: ${l.label}`);
     }

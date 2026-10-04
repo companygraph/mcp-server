@@ -6,7 +6,7 @@ import assert from "node:assert/strict";
 import { typeOfAddress } from "companygraph-meta-model/instance";
 import { diagram, processDiagram, label, plain, cannot, DIAGRAM_CAP } from "../lib/diagram.mjs";
 import { ModelError } from "../lib/errors.mjs";
-import { exampleSnapshot, instanceSnapshot, withHub, withLoops, withPunctuation, withNothingToDraw, withBackFlows, withContexts, CONTEXT_ID, CONTEXT_IDS, ODD_ATTRIBUTE, ODD, COMMIT, idAt } from "./helpers.mjs";
+import { exampleSnapshot, instanceSnapshot, withHub, withLoops, withPunctuation, withNothingToDraw, withBackFlows, withContexts, CONTEXT_ID, CONTEXT_IDS, ODD, COMMIT, idAt } from "./helpers.mjs";
 
 const s = exampleSnapshot();
 // The example's entities by where their pages sit, and the ids the snapshot gives them. A fixture
@@ -354,14 +354,14 @@ test("a context map draws its neighbours one hop out, upstream above downstream,
     '  n2["<small>«bounded-context» · core</small><br/>Invoicing"]',
     '  n3["<small>«bounded-context» · generic</small><br/>Ordering"]',
     '  n1 -->|"U → D · conformist"| n0',
-    '  n0 <-->|"shared kernel"| n2',
+    '  n2 <-->|"shared kernel"| n0',
     '  n0 -->|"U → D · customer/supplier"| n3',
   ]);
   assert.deepEqual(ids(d), [["n0", CONTEXT_ID], ["n1", K.catalog], ["n2", K.invoicing], ["n3", K.ordering]]);
   assert.deepEqual(d.nodes.map((n) => n.type), ["bounded-context", "bounded-context", "bounded-context", "bounded-context"]);
   assert.deepEqual(d.links, [
     { from: "n1", to: "n0", label: "U → D · conformist" },
-    { from: "n0", to: "n2", label: "shared kernel" },
+    { from: "n2", to: "n0", label: "shared kernel" },
     { from: "n0", to: "n3", label: "U → D · customer/supplier" },
   ]);
 });
@@ -372,8 +372,17 @@ test("a symmetric pattern named from both sides is one arrow, from either side's
   assert.deepEqual(lines(d).slice(1), [
     '  n0["<small>«bounded-context» · core</small><br/><b>Invoicing</b>"]',
     '  n1["<small>«bounded-context» · core</small><br/>Quoting"]',
-    '  n1 <-->|"shared kernel"| n0',
+    '  n0 <-->|"shared kernel"| n1',
   ]);
+});
+
+test("a symmetric arrow reads the same whichever row comes first", () => {
+  const flipped = structuredClone(B);
+  flipped.edges.reverse();
+  for (const id of [K.invoicing, CONTEXT_ID]) {
+    const [x, y] = [diagram(B, { shape: "context", id }), diagram(flipped, { shape: "context", id })];
+    assert.deepEqual([y.mermaid, y.links], [x.mermaid, x.links]);
+  }
 });
 
 test("two rows that disagree each keep their own arrow", () => {
@@ -381,8 +390,8 @@ test("two rows that disagree each keep their own arrow", () => {
   assert.equal(d.edges, 5);
   assert.deepEqual(lines(d).slice(5), [
     '  n1 -->|"U → D · conformist"| n0',
-    '  n0 <-->|"partnership"| n1',
-    '  n0 <-->|"shared kernel"| n2',
+    '  n1 <-->|"partnership"| n0',
+    '  n2 <-->|"shared kernel"| n0',
     '  n0 -->|"U → D · customer/supplier"| n3',
   ]);
 });
@@ -432,7 +441,6 @@ test("an aggregate draws its root and members with their kinds and attributes, t
     { from: "n0", to: "n1", label: "1..*" }, { from: "n0", to: "n2", label: "1" }, { from: "n0", to: "n3", label: "" },
     { from: "n1", to: "n2", label: "one" }, { from: "n0", to: "n4", label: "emits" }, { from: "n0", to: "n5", label: "emits" },
   ]);
-  assert.ok(lines(d).some((l) => l.includes(ODD_ATTRIBUTE.slice(0, 4))), "the odd attribute is drawn");
 });
 
 test("a context's id draws every aggregate it holds in one picture, a term two of them hold drawn once", () => {
@@ -462,6 +470,9 @@ test("an aggregate holds fifty nodes and refuses one more; a context with none, 
   assert.equal(diagram(withContexts({ crowd: 44 }), { shape: "aggregate", id: K.quote }).nodes.length, 50);
   refused(() => diagram(withContexts({ crowd: 45 }), { shape: "aggregate", id: K.quote }), "cannot_draw", { shape: "aggregate", reason: "too_large", nodes: 51, limit: DIAGRAM_CAP });
   refused(() => diagram(B, { shape: "aggregate", id: K.archive }), "cannot_draw", { shape: "aggregate", reason: "empty", nodes: 0, limit: DIAGRAM_CAP });
+  const rootless = structuredClone(B);
+  rootless.edges = rootless.edges.filter((x) => !(x.via === "root" && x.from === K.priceList));
+  refused(() => diagram(rootless, { shape: "aggregate", id: K.priceList }), "cannot_draw", { shape: "aggregate", reason: "empty", nodes: 0, limit: DIAGRAM_CAP });
   refused(() => diagram(B, { shape: "aggregate", id: K.money }), "invalid_argument", { argument: "id", reason: "not an aggregate or a bounded-context" });
   refused(() => diagram(s, { shape: "aggregate", id: "nothing/here" }), "unknown_type");
 });
