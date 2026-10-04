@@ -1109,9 +1109,9 @@ The same tool in its third mode. Beside `query` and `match` the answer carries `
 
 ### `diagram`
 
-A picture of part of the model as Mermaid source, built from its edges and never from prose, or of the schemas it is written in. `shape` is `concepts`, `process`, `neighborhood` or `schema`. `concepts` is a class diagram of every concept and the associations their Relations tables draw, each labeled with its Cardinality and its As; `domain`, a domain's id or address, narrows it to that domain's concepts and any concept outside it they reach, labeled with its own domain's name after its title. `process` takes the `id` of a process and draws its phases in the order of its Phases table, each with who executes it, and an arrow for each `gate-to`, labeled with the gate's approvers, then, where a phase's page holds an If not met table, one dashed arrow per target after it, labeled with the escalation authority and the outcomes that lead there, in table order; a row that leads nowhere is drawn into one Stop node instead, shared by every phase. `neighborhood` takes any `id` and draws that entity with everything one hop from it, one arrow for each `via` and far entity, labeled with the `via` and, where several edges stand behind it, how many; since its nodes mix types a title alone cannot tell apart, each one's first line names its type, `«type»`, set in `<small>` above the title. `schema` is a class diagram of the types the instance's core and the packs it takes declare, each named by its slug, with an association for each reference a schema declares to one type, from the type declaring it, labeled with its field or `Section.Column` and with its multiplicity at the far end, `1`, `0..1`, `0..*` or `1..*`, solid for `ref` and dashed for `ref?` and `qualifier`, and a composition from each owned type to its owner labeled `nested-in`; `type` narrows it to that type and every type it declares, is declared to or nests with, and to those declarations only. A reference whose type its row names is declared to no one type and is not drawn, and a field every other type declares to one type, as `source` is, would bury the rest, so it is drawn by none and named once in `everyType`, with its `via`, `to` and `multiplicity`; both are counted in `omitted`.
+A picture of part of the model as Mermaid source, built from its edges and never from prose, or of the schemas it is written in. `shape` is `concepts`, `process`, `neighborhood`, `schema`, `context` or `aggregate`. `concepts` is a class diagram of every concept and the associations their Relations tables draw, each labeled with its Cardinality and its As; `domain`, a domain's id or address, narrows it to that domain's concepts and any concept outside it they reach, labeled with its own domain's name after its title. `process` takes the `id` of a process and draws its phases in the order of its Phases table, each with who executes it, and an arrow for each `gate-to`, labeled with the gate's approvers, then, where a phase's page holds an If not met table, one dashed arrow per target after it, labeled with the escalation authority and the outcomes that lead there, in table order; a row that leads nowhere is drawn into one Stop node instead, shared by every phase. `neighborhood` takes any `id` and draws that entity with everything one hop from it, one arrow for each `via` and far entity, labeled with the `via` and, where several edges stand behind it, how many; since its nodes mix types a title alone cannot tell apart, each one's first line names its type, `«type»`, set in `<small>` above the title. `schema` is a class diagram of the types the instance's core and the packs it takes declare, each named by its slug, with an association for each reference a schema declares to one type, from the type declaring it, labeled with its field or `Section.Column` and with its multiplicity at the far end, `1`, `0..1`, `0..*` or `1..*`, solid for `ref` and dashed for `ref?` and `qualifier`, and a composition from each owned type to its owner labeled `nested-in`; `type` narrows it to that type and every type it declares, is declared to or nests with, and to those declarations only. `context` takes the `id` of a bounded context and draws its context map: that context, every context its Relationships names and every context naming it, one hop out, as a flowchart from top to bottom, each node's first line `«bounded-context»` and its classification. Each Relationships row is one arrow from the upstream context it names to the downstream context that wrote it, labeled `U → D · ` and the pattern; `partnership`, `shared kernel` and `separate ways` have no upstream side and are one arrow with a head at each end, labeled with the pattern, however many rows name it. `aggregate` takes the `id` of an aggregate, or of a bounded context to draw all its aggregates in one picture: a class per root and member, annotated with its kind and the root `aggregate root`, its Attributes as members, a composition from the root to each member with the cardinality the root's Relations gives it, `1`, `0..1`, `*` or `1..*`, other Relations rows between drawn terms as associations, and each event whose `emitted-by` names the aggregate as a class annotated `domain event`, reached by a dashed arrow labeled `emits`. A reference whose type its row names is declared to no one type and is not drawn, and a field every other type declares to one type, as `source` is, would bury the rest, so it is drawn by none and named once in `everyType`, with its `via`, `to` and `multiplicity`; both are counted in `omitted`.
 
-`nodes` says which entity each node of the source is, `n0` and on in the order drawn, so a client links a node without reading the source back; a node of `schema` is a type, with `id` its schema's address, the unit that declares it and the type, `core/phase` for a core type and `software/bounded-context` for a pack's, `type` `schema`, and `url` the schema's file at the served commit, null where that is not known; `links` says the same for each arrow, `from`, `to` and its `label` unescaped, one entry per arrow in the order drawn, so a client states a relation without decoding Mermaid; `title` is the name of what is drawn, null for every concept and for every type; `edges` counts the edges drawn and `omitted` those left out. A process's dashed arrow to a phase is an edge like the ones `gate-to` draws and is counted the same way, in `links` and in `edges`; its dashed arrow into the Stop node is not, since the Stop node is no entity and is never in `nodes`, so neither it nor an arrow into it is ever in `links` or counted in `edges`. A picture holds fifty nodes besides a neighborhood's middle. A neighborhood takes its groups of arrows smallest first, leaves out whole any group that does not fit, and names those on a last node, `more`, which is not in `nodes`. A concepts, process or schema diagram that would hold more is refused as `cannot_draw` with `reason: "too_large"`, and one with nothing to draw with `reason: "empty"`.
+`nodes` says which entity each node of the source is, `n0` and on in the order drawn, so a client links a node without reading the source back; a node of `schema` is a type, with `id` its schema's address, the unit that declares it and the type, `core/phase` for a core type and `software/bounded-context` for a pack's, `type` `schema`, and `url` the schema's file at the served commit, null where that is not known; `links` says the same for each arrow, `from`, `to` and its `label` unescaped, one entry per arrow in the order drawn, so a client states a relation without decoding Mermaid; `title` is the name of what is drawn, null for every concept and for every type; `edges` counts the edges drawn and `omitted` those left out. A process's dashed arrow to a phase is an edge like the ones `gate-to` draws and is counted the same way, in `links` and in `edges`; its dashed arrow into the Stop node is not, since the Stop node is no entity and is never in `nodes`, so neither it nor an arrow into it is ever in `links` or counted in `edges`. A picture holds fifty nodes besides a neighborhood's middle. A neighborhood takes its groups of arrows smallest first, leaves out whole any group that does not fit, and names those on a last node, `more`, which is not in `nodes`. A concepts, process, schema, context or aggregate diagram that would hold more is refused as `cannot_draw` with `reason: "too_large"`, and one with nothing to draw with `reason: "empty"`; a context's `aggregate` with no aggregate is `cannot_draw` with `reason: "empty"`.
 
 ```json
 {
@@ -1155,6 +1155,108 @@ A picture of part of the model as Mermaid source, built from its edges and never
     "model": {
       "commit": "0123456789abcdef0123456789abcdef01234567",
       "repo": "companygraph/meta-model",
+      "core": "0.0.0",
+      "parser": "v0.0.0"
+    }
+  }
+}
+```
+
+### `diagram` of a context
+
+```json
+{
+  "tool": "diagram",
+  "arguments": {
+    "shape": "context",
+    "id": "01a0ffff-0000-7000-8000-0000000000bc"
+  },
+  "answer": {
+    "shape": "context",
+    "title": "Quoting",
+    "mermaid": "flowchart TB\n  n0[\"<small>«bounded-context» · core</small><br/><b>Quoting</b>\"]\n  n1[\"<small>«bounded-context» · supporting</small><br/>Catalog\"]\n  n2[\"<small>«bounded-context» · core</small><br/>Invo…",
+    "nodes": [
+      {
+        "node": "n0",
+        "id": "01a0ffff-0000-7000-8000-0000000000bc",
+        "title": "Quoting",
+        "type": "bounded-context"
+      },
+      {
+        "node": "n1",
+        "id": "01a0ffff-0000-7000-8000-000000000101",
+        "title": "Catalog",
+        "type": "bounded-context"
+      }
+    ],
+    "links": [
+      {
+        "from": "n1",
+        "to": "n0",
+        "label": "U → D · conformist"
+      },
+      {
+        "from": "n0",
+        "to": "n2",
+        "label": "shared kernel"
+      }
+    ],
+    "edges": 4,
+    "omitted": 0,
+    "model": {
+      "commit": "0123456789abcdef0123456789abcdef01234567",
+      "repo": "companygraph/pack-instance",
+      "core": "0.0.0",
+      "parser": "v0.0.0"
+    }
+  }
+}
+```
+
+### `diagram` of its aggregates
+
+```json
+{
+  "tool": "diagram",
+  "arguments": {
+    "shape": "aggregate",
+    "id": "01a0ffff-0000-7000-8000-0000000000bc"
+  },
+  "answer": {
+    "shape": "aggregate",
+    "title": "Quoting",
+    "mermaid": "classDiagram\n  class n0[\"Price list\"] {\n    <<aggregate root>>\n  }\n  class n1[\"Money\"] {\n    <<value object>>\n    Amount : decimal\n    Currency : ISO 4217 code\n  }\n  class n2[\"Quote\"] {\n    <<aggregat…",
+    "nodes": [
+      {
+        "node": "n0",
+        "id": "01a0ffff-0000-7000-8000-000000000126",
+        "title": "Price list",
+        "type": "concept-design"
+      },
+      {
+        "node": "n1",
+        "id": "01a0ffff-0000-7000-8000-000000000123",
+        "title": "Money",
+        "type": "concept-design"
+      }
+    ],
+    "links": [
+      {
+        "from": "n0",
+        "to": "n1",
+        "label": "*"
+      },
+      {
+        "from": "n2",
+        "to": "n3",
+        "label": "1..*"
+      }
+    ],
+    "edges": 7,
+    "omitted": 0,
+    "model": {
+      "commit": "0123456789abcdef0123456789abcdef01234567",
+      "repo": "companygraph/pack-instance",
       "core": "0.0.0",
       "parser": "v0.0.0"
     }
