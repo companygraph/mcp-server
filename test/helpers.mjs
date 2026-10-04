@@ -201,8 +201,10 @@ const context = (id, name, classification, relationships) =>
   `---\nid: ${id}\nsource: Local\nclassification: ${classification}\n---\n\n# ${name}\n\n> A context made for a test. What it leaves to another is not its point.\n\n## Responsibilities\n\n- Stand in a test\n${relationships.length ? `\n## Relationships\n\n${table(["Context", "Pattern"], relationships)}` : ""}`;
 const design = (id, name, kind, attributes, relations) =>
   `---\nid: ${id}\nsource: Local\nkind: ${kind}\n---\n\n# ${name}\n\n> A term made for a test.\n${attributes.length ? `\n## Attributes\n\n${table(["Attribute", "Type"], attributes)}` : ""}${relations.length ? `\n## Relations\n\n${table(["Concept", "Cardinality"], relations)}` : ""}`;
-const aggregate = (id, name, root, members) =>
-  `---\nid: ${id}\nsource: Local\nroot: ${root}\nmembers:\n${members.map((m) => `  - ${m}\n`).join("")}---\n\n# ${name}\n\n> What the test needs kept consistent.\n\n## Invariants\n\n${table(["Label", "Invariant"], [["INV-T1", "It holds after every change."]])}`;
+const aggregate = (id, name, root, members, commands = [], transitions = []) =>
+  `---\nid: ${id}\nsource: Local\nroot: ${root}\nmembers:\n${members.map((m) => `  - ${m}\n`).join("")}---\n\n# ${name}\n\n> What the test needs kept consistent.\n\n## Invariants\n\n${table(["Label", "Invariant"], [["INV-T1", "It holds after every change."]])}`
+  + (commands.length ? `\n## Handled commands\n\n${table(["Command", "Emits", "When", "Description"], commands)}` : "")
+  + (transitions.length ? `\n## State transitions\n\n${table(["From", "Command", "To"], transitions)}` : "");
 const event = (id, name, by) => `---\nid: ${id}\nsource: Local\nemitted-by: ${by}\n---\n\n# ${name}\n\n> Something happened in a test.\n`;
 
 export function withContexts({ disagree = false, crowd = 0 } = {}) {
@@ -219,8 +221,10 @@ export function withContexts({ disagree = false, crowd = 0 } = {}) {
     write(dir(`crowd-${n}`, `crowd-${n}.md`), context(`01a0ffff-0000-7000-8000-0000000002${n}`, `Crowd ${n}`, "generic", [["Quoting", "conformist"]]));
     write(dir("quoting", "concept-designs", `part-${n}.md`), design(`01a0ffff-0000-7000-8000-0000000003${n}`, `Part ${n}`, "value object", [], []));
   }
-  write(dir("quoting", "aggregates", "quote.md"), aggregate(C.quote, "Quote", "Quote", ["Quote line", "Money", "Discount", ...crowded.map((n) => `Part ${n}`)]));
-  write(dir("quoting", "aggregates", "price-list.md"), aggregate(C.priceList, "Price list", "Price list", ["Money"]));
+  write(dir("quoting", "aggregates", "quote.md"), aggregate(C.quote, "Quote", "Quote", ["Quote line", "Money", "Discount", ...crowded.map((n) => `Part ${n}`)],
+    [["Send quote", "Quote sent", "", "Sends it to the customer"], ["Accept quote", "Quote accepted", "the customer signs before it expires", ""], ["Accept quote", "", "it has expired (INV-T1)", ""]],
+    [["", "Send quote", "Sent"], ["Sent", "Accept quote", "Accepted"], ["Sent", "", "Expired"]]));
+  write(dir("quoting", "aggregates", "price-list.md"), aggregate(C.priceList, "Price list", "Price list", ["Money"], [["Publish price list", "", "", ""]]));
   write(dir("quoting", "concept-designs", "quote.md"), design(C.quoteDesign, "Quote", "entity",
     [["Number", "string"], ["Total", "Money"], [ODD_ATTRIBUTE, "string"]], [["Quote line", "one to many"], ["Money", "one"], ["Customer", "maybe one"]]));
   write(dir("quoting", "concept-designs", "quote-line.md"), design(C.lineDesign, "Quote line", "entity", [["Quantity", "number"]], [["Money", "one"]]));
