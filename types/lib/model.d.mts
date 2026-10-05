@@ -68,6 +68,7 @@ export declare const place: (e: {
 }) => string;
 /** @param {unknown} id */
 export declare const createdOf: (id: unknown) => string | null;
+export type FieldKind = "array" | "ref" | "date" | "enum" | "number" | "string" | "image";
 /**
  * @template {Entity} E
  * @param {{ entities: E[]; edges: Edge[] }} s
@@ -349,11 +350,15 @@ export declare const ORDERS: readonly ["address", "newest", "oldest"];
 /**
  * @param {Snapshot} s
  * @param {string | undefined} type
- * @param {Paging & { owner?: string | undefined; order?: typeof ORDERS[number] | undefined }} [options]
+ * @param {Paging & { owner?: string | undefined; order?: typeof ORDERS[number] | undefined; fields?: string[] | undefined; on?: string | undefined; by?: string | undefined; where?: Record<string, unknown> | undefined }} [options]
  */
-export declare function listEntities(s: Snapshot, type: string | undefined, { owner, order, limit, cursor }?: Paging & {
+export declare function listEntities(s: Snapshot, type: string | undefined, { owner, order, fields: extra, on, by, where, limit, cursor }?: Paging & {
     owner?: string | undefined;
     order?: typeof ORDERS[number] | undefined;
+    fields?: string[] | undefined;
+    on?: string | undefined;
+    by?: string | undefined;
+    where?: Record<string, unknown> | undefined;
 }): {
     type: string | null;
     entities: ({
@@ -363,6 +368,7 @@ export declare function listEntities(s: Snapshot, type: string | undefined, { ow
         name: string;
         tagline: string;
         owner: string | null;
+        fields: Record<string, unknown>;
     } | {
         created?: never;
         id: string;
@@ -370,6 +376,7 @@ export declare function listEntities(s: Snapshot, type: string | undefined, { ow
         name: string;
         tagline: string;
         owner: string | null;
+        fields: Record<string, unknown>;
     })[];
     page: import("./paging.mjs").PageInfo;
     model: {

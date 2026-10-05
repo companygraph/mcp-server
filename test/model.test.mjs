@@ -35,7 +35,7 @@ test("list_entities lists one type, in the order of where their pages sit", () =
   const r = listEntities(s, "skill");
   assert.equal(r.type, "skill");
   assert.deepEqual(r.entities.map((e) => e.id), ["skills/domain-driven-design", "skills/java-programming", "skills/product-discovery"].map((a) => idAt(s, a)));
-  assert.deepEqual(Object.keys(r.entities[0]), ["id", "type", "name", "tagline", "owner", "created"]);
+  assert.deepEqual(Object.keys(r.entities[0]), ["id", "type", "name", "tagline", "owner", "created", "fields"]);
   assert.throws(() => listEntities(s, "person"), ModelError);
 });
 
@@ -365,4 +365,63 @@ test("a walk through newest meets every entity once, in the order one large page
 
 test("an order outside the three is refused, named", () => {
   assert.throws(() => listEntities(s, "skill", { order: "latest" }), (e) => e.code === "invalid_argument" && e.details.argument === "order");
+});
+
+// A list built from experiences, the one type core gives a period, so the facts and the dates are
+// the only thing a test varies. The schemas are the example's core, so which fields are single
+// values is read as a deployment reads it.
+const periods = (entries) => ({ ...s, entities: entries.map(([address, fields]) => ({ id: address, type: "experience", name: address, tagline: "", owner: null, address, fields: { id: address, source: "Local", ...fields }, sections: [] })) });
+const names = (r) => r.entities.map((e) => e.name);
+
+test("a listed entity carries the single-valued facts of its frontmatter, and no bookkeeping or array", () => {
+  const t = periods([["x/a", { kind: "Role", start: "2026-10", organization: "Example AG", role: "Architect", "source-id": "42", skills: ["API design"] }]]);
+  const [e] = listEntities(t, "experience").entities;
+  assert.deepEqual(e.fields, { kind: "Role", start: "2026-10", organization: "Example AG", role: "Architect" });
+  const asked = listEntities(t, "experience", { fields: ["skills"] }).entities[0].fields;
+  assert.deepEqual(asked.skills, ["API design"], "an array is listed where fields asks for it");
+  assert.throws(() => listEntities(t, "experience", { fields: ["nonsense"] }), (x) => x instanceof ModelError && x.code === "invalid_argument" && x.details.argument === "fields");
+  const real = listEntities(s, "experience", { limit: 200 }).entities;
+  assert.ok(real.length && real.every((x) => x.fields && !("id" in x.fields) && !("source" in x.fields) && !("skills" in x.fields)));
+  assert.ok(real.some((x) => typeof x.fields.start === "string"), "the example's own experiences carry their start");
+});
+
+test("on keeps the periods that hold a date, at any of the three precisions", () => {
+  const t = periods([
+    ["x/running", { start: "2026-10" }], ["x/ended", { start: "2026-01", end: "2026-09" }], ["x/later", { start: "2026-11-01" }],
+    ["x/day", { start: "2026-10-05", end: "2026-10-05" }], ["x/year", { start: "2026", end: "2026" }], ["x/old", { start: "2001", end: "2002" }],
+  ]);
+  assert.deepEqual(names(listEntities(t, "experience", { on: "2026-10-05" })), ["x/day", "x/running", "x/year"]);
+  assert.deepEqual(names(listEntities(t, "experience", { on: "2026-09" })), ["x/ended", "x/year"], "a month overlaps a period that ends in it");
+  assert.deepEqual(names(listEntities(t, "experience", { on: "2026" })), ["x/day", "x/ended", "x/later", "x/running", "x/year"]);
+  assert.equal(listEntities(t, "experience", { on: "2026-10-05" }).page.total, 3, "the page counts what was kept");
+  assert.throws(() => listEntities(t, "experience", { on: "05.10.2026" }), (x) => x.code === "invalid_argument" && x.details.argument === "on");
+  assert.throws(() => listEntities(s, "skill", { on: "2026" }), (x) => x.code === "invalid_argument" && x.details.argument === "on" && /experience/.test(x.message));
+  const every = listEntities(s, undefined, { on: "2026", limit: 200 }).entities;
+  assert.ok(every.every((x) => x.type === "experience"), "with no type, only types with a period are listed");
+});
+
+test("by orders by a date field, ties at the id, and what lacks it follows in address order", () => {
+  const t = periods([["x/b", { start: "2024-05" }], ["x/none", {}], ["x/a", { start: "2024-05-01" }], ["x/c", { start: "2025" }], ["x/early", { start: "2001" }]]);
+  assert.deepEqual(names(listEntities(t, "experience", { by: "start", order: "newest" })), ["x/c", "x/b", "x/a", "x/early", "x/none"]);
+  assert.deepEqual(names(listEntities(t, "experience", { by: "start", order: "oldest" })), ["x/early", "x/a", "x/b", "x/c", "x/none"]);
+  assert.throws(() => listEntities(t, "experience", { by: "start" }), (x) => x.code === "invalid_argument" && x.details.argument === "order");
+  assert.throws(() => listEntities(t, "experience", { by: "role", order: "newest" }), (x) => x.code === "invalid_argument" && x.details.argument === "by");
+});
+
+test("where keeps a value of a single-valued field, ignoring case, and refuses what it cannot reach", () => {
+  const t = periods([["x/a", { kind: "Role", organization: "Example AG" }], ["x/b", { kind: "Project", organization: "Example AG" }], ["x/c", { kind: "role" }]]);
+  assert.deepEqual(names(listEntities(t, "experience", { where: { kind: "ROLE" } })), ["x/a", "x/c"]);
+  assert.deepEqual(names(listEntities(t, "experience", { where: { kind: "role", organization: "example ag" } })), ["x/a"]);
+  assert.throws(() => listEntities(t, "experience", { where: { skills: "API design" } }), (x) => x.code === "invalid_argument" && x.details.argument === "where");
+  assert.throws(() => listEntities(t, "experience", { where: { nonsense: "x" } }), (x) => x.code === "invalid_argument" && x.details.argument === "where");
+  assert.throws(() => listEntities(t, "experience", { where: { kind: 3 } }), (x) => x.code === "invalid_argument" && x.details.argument === "where");
+});
+
+test("a walk through a narrowed list meets every kept entity once", () => {
+  const t = periods([["x/a", { kind: "Role", start: "2020" }], ["x/b", { kind: "Project", start: "2021" }], ["x/c", { kind: "Role", start: "2022" }], ["x/d", { kind: "Role", start: "2023" }]]);
+  const args = { where: { kind: "Role" }, by: "start", order: "newest" };
+  const walked = [];
+  let cursor;
+  do { const r = listEntities(t, "experience", { ...args, limit: 1, cursor }); walked.push(...names(r)); cursor = r.page.nextCursor ?? undefined; } while (cursor);
+  assert.deepEqual(walked, ["x/d", "x/c", "x/a"]);
 });
