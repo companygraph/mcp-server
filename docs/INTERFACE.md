@@ -602,24 +602,24 @@ Every type, the entity that came into the model last first: the ten newest entit
     "type": null,
     "entities": [
       {
-        "id": "01a10040-3005-7db7-a01b-d031d4bebf58",
-        "type": "kpi",
-        "name": "Review Escapes",
-        "tagline": "The changes that reached the default branch without the review its protection asks for.",
+        "id": "01a10523-7383-700a-9eec-4c21a13dfcb4",
+        "type": "stored-item",
+        "name": "theme",
+        "tagline": "Whether the visitor chose the light or the dark look, so the next page opens in it.",
         "owner": null,
-        "created": "2026-10-03T05:32:49.029Z"
+        "created": "2026-10-04T04:19:31.843Z"
       },
       {
-        "id": "01a0fb1b-b534-79e9-a261-eda408034315",
-        "type": "control",
-        "name": "Main requires a review",
-        "tagline": "The default branch refuses a merge that carries no approving review from someone other than its author.",
+        "id": "01a10523-733e-7f2e-beab-5a53c9c792b7",
+        "type": "processing-activity",
+        "name": "Invoice delivery",
+        "tagline": "Sending each customer the invoice its contract asks for, to the person who pays it.",
         "owner": null,
-        "created": "2026-10-02T05:34:52.212Z"
+        "created": "2026-10-04T04:19:31.774Z"
       }
     ],
     "page": {
-      "total": 80,
+      "total": 83,
       "returned": 2,
       "hasMore": true,
       "nextCursor": "eyJvIjoyLCJjIjoiMDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWYwMTIzNDU2NyJ9"
