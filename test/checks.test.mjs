@@ -4,6 +4,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { ModelError, listChecks } from "../lib/model.mjs";
+import { instanceChecks } from "companygraph-meta-model/checks";
 import { exampleSnapshot, COMMIT, EXAMPLE_CORE, PARSER } from "./helpers.mjs";
 
 const s = exampleSnapshot();
@@ -23,11 +24,17 @@ test("list_checks names every check the checker runs, with the rule it cites and
 // that fails.
 test("a check that only notes is listed as reporting a note, and every other as reporting a failure", () => {
   const { checks } = listChecks(s);
-  const noting = checks.filter((c) => c.reports === "note").map((c) => c.name);
-  assert.ok(noting.includes("a date that expires is noted once it has passed"), noting.join("; "));
-  assert.ok(noting.includes("a seat's required skill its holder does not claim is noted"), noting.join("; "));
+  const flagged = instanceChecks({ files: new Map(), fail() {} }).filter((c) => c.notes).map((c) => c.name);
+  assert.ok(flagged.length > 0);
+  assert.deepEqual(checks.filter((c) => c.reports === "note").map((c) => c.name).sort(), flagged.sort());
   for (const c of checks) assert.ok(c.reports === "note" || c.reports === "failure", JSON.stringify(c));
-  assert.ok(checks.filter((c) => c.reports === "failure").length > noting.length);
+});
+
+// A snapshot built before the checker flagged any check carries no flag, and none of its checks
+// notes, so each reads as one that fails.
+test("a snapshot whose checks carry no flag lists every check as reporting a failure", () => {
+  const old = { ...s, checks: s.checks.map(({ name, rule }) => ({ name, rule })) };
+  for (const c of listChecks(/** @type {any} */ (old)).checks) assert.equal(c.reports, "failure", c.name);
 });
 
 test("the answer says who runs them, since this server does not", () => {
