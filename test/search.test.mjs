@@ -12,7 +12,7 @@ const MIRA = idAt(s, "profiles/mira-halvorsen");
 
 test("list_entities pages, names each entry's type and keeps one owner's entities", () => {
   const all = listEntities(s, "skill");
-  assert.deepEqual(Object.keys(all.entities[0]), ["id", "type", "name", "tagline", "owner", "created"]);
+  assert.deepEqual(Object.keys(all.entities[0]), ["id", "type", "name", "tagline", "owner", "created", "fields"]);
   assert.deepEqual([all.entities[0].type, all.entities[0].owner], ["skill", null]);
   assert.equal(all.page.total, s.entities.filter((e) => e.type === "skill").length);
   const first = listEntities(s, "skill", { limit: 1 });

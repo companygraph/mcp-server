@@ -134,6 +134,10 @@ for (const [label, s] of FIXTURES) {
       ["search", { query: "… — ...", match: "words" }, "invalid_argument", (d) => d.argument === "query"],
       ["list_references", { direction: "out" }, "invalid_argument", (d) => d.argument === "direction"],
       ["describe_relations", { direction: "declares" }, "invalid_argument", (d) => d.argument === "direction"],
+      ["list_entities", { on: "not-a-date" }, "invalid_argument", (d) => d.argument === "on"],
+      ["list_entities", { type, by: "nonsense", order: "newest" }, "invalid_argument", (d) => d.argument === "by"],
+      ["list_entities", { type, where: { nonsense: "x" } }, "invalid_argument", (d) => d.argument === "where"],
+      ["list_entities", { type, fields: ["nonsense"] }, "invalid_argument", (d) => d.argument === "fields"],
       ["list_entities", { type, cursor: "not-a-cursor" }, "invalid_cursor", (d) => d.reason === "malformed"],
       ["list_entities", { type, cursor: theirs }, "invalid_cursor", (d) => d.reason === "other_commit"],
     ];
@@ -317,6 +321,21 @@ function withoutAt(good, path) {
   delete node[path[path.length - 1]];
   return clone;
 }
+
+// A list kept to a date, ordered by one and kept to a value answers in the schema like any
+// other, and an entity's facts are values and never an object.
+test("list_entities on a date, by a date and where a value answers in the schema, and fields holds no object", async () => {
+  const s = exampleSnapshot();
+  const client = await connect(s);
+  for (const args of [{ on: "2024-06" }, { type: "experience", by: "start", order: "newest" }, { type: "experience", where: { kind: "Role" } }, { type: "experience", fields: ["skills"] }]) {
+    const r = checkAnswer("list_entities", await client.callTool({ name: "list_entities", arguments: args }));
+    assert.ok(r.entities.length > 0, JSON.stringify(args));
+  }
+  const good = (await client.callTool({ name: "list_entities", arguments: { type: "experience", limit: 1 } })).structuredContent;
+  assert.ok(OUTPUTS.list_entities.safeParse(good).success);
+  assert.ok(!OUTPUTS.list_entities.safeParse(withAt(good, ["entities", 0, "fields", "start"], { at: "2022" })).success, "a fact that is an object is refused");
+  await client.close();
+});
 
 // A schema that accepts anything passes every test above. Each one is shown a real answer with a
 // required field gone, and one with a field of the wrong type, and has to refuse both — both at

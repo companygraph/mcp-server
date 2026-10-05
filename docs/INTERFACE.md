@@ -542,7 +542,7 @@ No argument. What a refused call looks like, for a client that reads only the pr
 
 ### `list_entities`
 
-Optional `type`, which keeps its entities and, left out, lists every type; optional `owner`, an id or an address, to keep one owner's entities; optional `order`; `limit` and `cursor`. `entities` and `page`, and `type`, the type named or null where none was. `order` is `address`, where the pages sit, by default, or `newest` or `oldest`, by `created` and then by the id, `newest` being `oldest` reversed. An entity carries `created` where its id is a UUID version 7: the moment the id was made, in ISO 8601 and UTC to the millisecond. Every id `companygraph id` makes is one, and `companygraph ids` gave each page written before ids existed one from its first commit, so `created` is when the entity came into the model. An entity whose id is not version 7 carries no `created` and, in `newest` or `oldest` order, follows the ones that do, in address order; a list where none carries one is refused as `no_creation_time`, and `address` order lists it.
+Optional `type`, which keeps its entities and, left out, lists every type; optional `owner`, an id or an address, to keep one owner's entities; optional `order`, `on`, `by`, `where` and `fields`; `limit` and `cursor`. `entities` and `page`, and `type`, the type named or null where none was. Every entity carries `fields`, the frontmatter facts its schema declares as one value, a date, an enum, a number, a string or a reference that is not an array, as its page writes them, a date at the precision the page states and a reference by the name it writes; `id`, `source`, `source-id` and an `image` are left out, and so is a field the page leaves out. Which fields those are is read from the schema's Frontmatter table, so a field core adds is listed without a release here. `fields`, an array of names, adds others, such as an array, and a name no listed type declares is refused as `invalid_argument`. `order` is `address`, where the pages sit, by default, or `newest` or `oldest`, by `created` and then by the id, `newest` being `oldest` reversed. An entity carries `created` where its id is a UUID version 7: the moment the id was made, in ISO 8601 and UTC to the millisecond. Every id `companygraph id` makes is one, and `companygraph ids` gave each page written before ids existed one from its first commit, so `created` is when the entity came into the model. An entity whose id is not version 7 carries no `created` and, in `newest` or `oldest` order, follows the ones that do, in address order; a list where none carries one is refused as `no_creation_time`, and `address` order lists it.
 
 ```json
 {
@@ -560,7 +560,10 @@ Optional `type`, which keeps its entities and, left out, lists every type; optio
         "name": "Domain-Driven Design",
         "tagline": "Modeling software around the language the business already speaks.",
         "owner": null,
-        "created": "2026-08-23T15:52:53.000Z"
+        "created": "2026-08-23T15:52:53.000Z",
+        "fields": {
+          "group": "Software Design"
+        }
       },
       {
         "id": "01a02f53-2408-76c1-aee5-cc97a65fcc78",
@@ -568,7 +571,10 @@ Optional `type`, which keeps its entities and, left out, lists every type; optio
         "name": "Java Programming",
         "tagline": "Building and maintaining server-side systems on the JVM.",
         "owner": null,
-        "created": "2026-08-23T15:52:53.000Z"
+        "created": "2026-08-23T15:52:53.000Z",
+        "fields": {
+          "group": "Programming Languages"
+        }
       }
     ],
     "page": {
@@ -607,7 +613,12 @@ Every type, the entity that came into the model last first: the ten newest entit
         "name": "theme",
         "tagline": "Whether the visitor chose the light or the dark look, so the next page opens in it.",
         "owner": null,
-        "created": "2026-10-04T04:19:31.843Z"
+        "created": "2026-10-04T04:19:31.843Z",
+        "fields": {
+          "mechanism": "local-storage",
+          "necessity": "optional",
+          "duration": "Until the visitor clears it"
+        }
       },
       {
         "id": "01a10523-733e-7f2e-beab-5a53c9c792b7",
@@ -615,7 +626,11 @@ Every type, the entity that came into the model last first: the ten newest entit
         "name": "Invoice delivery",
         "tagline": "Sending each customer the invoice its contract asks for, to the person who pays it.",
         "owner": null,
-        "created": "2026-10-04T04:19:31.774Z"
+        "created": "2026-10-04T04:19:31.774Z",
+        "fields": {
+          "legal-basis": "contract",
+          "retention": "Ten years after the invoice date, as business records"
+        }
       }
     ],
     "page": {
@@ -623,6 +638,63 @@ Every type, the entity that came into the model last first: the ten newest entit
       "returned": 2,
       "hasMore": true,
       "nextCursor": "eyJvIjoyLCJjIjoiMDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWYwMTIzNDU2NyJ9"
+    },
+    "model": {
+      "commit": "0123456789abcdef0123456789abcdef01234567",
+      "repo": "companygraph/meta-model",
+      "core": "0.0.0",
+      "parser": "v0.0.0"
+    }
+  }
+}
+```
+
+### `list_entities` on a date
+
+`on`, a date as `YYYY`, `YYYY-MM` or `YYYY-MM-DD`, keeps the entities whose period holds it. A period is a type that declares both `start` and `end`. A date coarser than a day stands for every day it covers, so a period holds the date where the two overlap, and a period with no `end` is still running and holds every date from its start. A named type with no period is refused as `invalid_argument`, naming the types that have one; with no type named, only those types are listed. `by` names a date field to order by, in the direction `order` gives, `newest` or `oldest`; a date compares by its first day, equal dates by their ids, and an entity without the field follows in address order. `by` beside `order: "address"`, or naming a field that is not a date, is refused. `where` keeps the entities whose single-valued field equals each value given, ignoring case, a reference by the name its page writes; a field that is not single-valued, or a value that is not a string, is refused. The cursor is an offset into the list these make, and `page.total` counts what they kept. The experiences running in June 2024:
+
+```json
+{
+  "tool": "list_entities",
+  "arguments": {
+    "type": "experience",
+    "on": "2024-06"
+  },
+  "answer": {
+    "type": "experience",
+    "entities": [
+      {
+        "id": "01a02f53-2408-7b1e-bad3-c39aa223228c",
+        "type": "experience",
+        "name": "Splitting the billing domain",
+        "tagline": "Ongoing. Taking one service that three teams edited and making it two, each owned by one team.",
+        "owner": "01a02f53-2408-7291-ac16-087fcdee4d71",
+        "created": "2026-08-23T15:52:53.000Z",
+        "fields": {
+          "kind": "Role",
+          "start": "2022-02",
+          "organization": "Beacon Systems"
+        }
+      },
+      {
+        "id": "01a03a2c-2de8-7b8e-bec7-3618c8fbf2de",
+        "type": "experience",
+        "name": "Deciding which billing goes first",
+        "tagline": "Ongoing. Choosing which of the two billing contexts serves customers first, and saying why.",
+        "owner": "01a03a2c-2de8-73b4-9058-8664caea919a",
+        "created": "2026-08-25T18:26:09.000Z",
+        "fields": {
+          "kind": "Role",
+          "start": "2022-02",
+          "organization": "Beacon Systems"
+        }
+      }
+    ],
+    "page": {
+      "total": 2,
+      "returned": 2,
+      "hasMore": false,
+      "nextCursor": null
     },
     "model": {
       "commit": "0123456789abcdef0123456789abcdef01234567",

@@ -111,6 +111,21 @@ export function registerToolsTests() {
     await client.close();
   });
 
+  // A listed entity's facts reach a deployment with a re-pin, so each holds them against the
+  // model it serves: every entity carries them, and none carries what says where a page is mastered.
+  test("list_entities gives every entity its short facts and no bookkeeping over this snapshot", async () => {
+    const [a, b] = InMemoryTransport.createLinkedPair();
+    await createServer(s).connect(a);
+    const client = new Client({ name: "test", version: "0" });
+    await client.connect(b);
+    const answer = checkAnswer("list_entities", await client.callTool({ name: "list_entities", arguments: { limit: 200 } }));
+    for (const e of answer.entities) {
+      assert.equal(typeof e.fields, "object", e.id);
+      for (const key of ["id", "source", "source-id"]) assert.ok(!(key in e.fields), `${e.id} carries ${key} in its fields`);
+    }
+    await client.close();
+  });
+
   // A context map reaches a deployment with a re-pin, so each holds it against the model it
   // serves. An instance without the software pack is told so, and skips rather than fails.
   test("every bounded context draws its map, contexts only, each arrow labeled by a pattern", async (t) => {

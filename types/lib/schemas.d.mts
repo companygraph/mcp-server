@@ -41,6 +41,7 @@ export declare const Page: z.ZodObject<{
     nextCursor: z.ZodNullable<z.ZodString>;
 }, z.core.$strict>;
 export declare const Created: z.ZodOptional<z.ZodISODateTime>;
+export declare const ListedFields: z.ZodRecord<z.ZodString, z.ZodUnion<readonly [z.ZodUnion<readonly [z.ZodString, z.ZodNumber, z.ZodBoolean]>, z.ZodArray<z.ZodUnion<readonly [z.ZodString, z.ZodNumber, z.ZodBoolean]>>]>>;
 export declare const Table: z.ZodObject<{
     columns: z.ZodArray<z.ZodString>;
     rows: z.ZodArray<z.ZodArray<z.ZodString>>;
@@ -301,6 +302,7 @@ export declare const OUTPUTS: {
             tagline: z.ZodString;
             owner: z.ZodNullable<z.ZodString>;
             created: z.ZodOptional<z.ZodISODateTime>;
+            fields: z.ZodRecord<z.ZodString, z.ZodUnion<readonly [z.ZodUnion<readonly [z.ZodString, z.ZodNumber, z.ZodBoolean]>, z.ZodArray<z.ZodUnion<readonly [z.ZodString, z.ZodNumber, z.ZodBoolean]>>]>>;
         }, z.core.$strict>>;
         page: z.ZodObject<{
             total: z.ZodNumber;
