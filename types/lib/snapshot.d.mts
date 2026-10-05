@@ -6,6 +6,7 @@ export type SnapshotEntity = Entity & {
 export type CheckName = {
     name: string;
     rule: string;
+    notes: boolean;
 };
 export type Snapshot = {
     commit: string | null;
