@@ -43,6 +43,12 @@ test("the tools, by their exact names", async () => {
   for (const t of tools) assert.ok(t.description.length > 20, t.name);
 });
 
+test("every tool says it only reads a closed model", async () => {
+  const client = await connect();
+  const { tools } = await client.listTools();
+  for (const t of tools) assert.deepEqual(t.annotations, { readOnlyHint: true, openWorldHint: false }, t.name);
+});
+
 test("every tool returns structured content carrying the model", async () => {
   const client = await connect();
   const calls = [
