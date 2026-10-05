@@ -288,7 +288,7 @@ No arguments. The vocabulary's conventions, not a company's own rules, which are
 
 ### `list_checks`
 
-No arguments. `checks` with each check's `name`, the `rule` it cites and that rule's `title`, and `ranBy`, which says who runs them. A list and no verdict.
+No arguments. `checks` with each check's `name`, the `rule` it cites, that rule's `title` and what it `reports`: `failure`, or `note` for a check that states a fact worth seeing and fails nothing. `ranBy` says who runs them. A list and no verdict.
 
 ```json
 {
@@ -299,15 +299,17 @@ No arguments. `checks` with each check's `name`, the `rule` it cites and that ru
       {
         "name": "the container holds what the types imply",
         "rule": "R6",
-        "title": "An entity that owns collections is a folder"
+        "title": "An entity that owns collections is a folder",
+        "reports": "failure"
       },
       {
         "name": "references resolve",
         "rule": "R4",
-        "title": "An unresolvable reference is an error"
+        "title": "An unresolvable reference is an error",
+        "reports": "failure"
       }
     ],
-    "ranBy": "The instance's own gate runs these on every change to it, with the checker release its manifest pins, and a commit reaches its main branch only when they pass. They are listed here and not run by this…",
+    "ranBy": "The instance's own gate runs these on every change to it, with the checker release its manifest pins, and a commit reaches its main branch only when every check that reports a failure passes; a check …",
     "model": {
       "commit": "0123456789abcdef0123456789abcdef01234567",
       "repo": "companygraph/meta-model",

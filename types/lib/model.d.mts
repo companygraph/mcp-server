@@ -695,6 +695,7 @@ export declare function listChecks(s: Snapshot): {
         name: string;
         rule: string;
         title: string | null;
+        reports: string;
     }[];
     ranBy: string;
     model: {

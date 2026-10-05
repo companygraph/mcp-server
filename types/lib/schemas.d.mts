@@ -283,6 +283,10 @@ export declare const OUTPUTS: {
             name: z.ZodString;
             rule: z.ZodString;
             title: z.ZodNullable<z.ZodString>;
+            reports: z.ZodEnum<{
+                failure: "failure";
+                note: "note";
+            }>;
         }, z.core.$loose>>;
         ranBy: z.ZodString;
     } & {
