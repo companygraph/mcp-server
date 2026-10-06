@@ -13,6 +13,10 @@ updates:
     # Family pins move with the resync, never with Dependabot: conventions/PINS.md, Dependabot.
     ignore:
       - dependency-name: "companygraph-meta-model"
+      # Node's types stay on the major the server runs on, engines' Node 22, so code cannot
+      # reach an API Node 22 lacks; companygraph/meta-model holds its own the same way.
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
     schedule:
       interval: "weekly"
     # Zero, stated, because Dependabot applies three days when the key is absent and then offers
