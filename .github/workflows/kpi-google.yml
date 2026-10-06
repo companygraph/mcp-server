@@ -56,7 +56,7 @@ jobs:
       # asks for those alone: Administration for the rule suites and the branch's rules, Pull
       # requests for the pull request that made a commit, Checks for its head's check runs and
       # Contents for the comparison with the default branch.
-      - uses: actions/create-github-app-token@v2
+      - uses: actions/create-github-app-token@v3
         id: app
         with:
           app-id: ${{ inputs.app-id }}
