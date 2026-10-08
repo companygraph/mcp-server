@@ -12,9 +12,9 @@ const find = (list, from, via) => list.find((x) => x.from === from && x.via === 
 test("a reference says how many of it a page may hold", () => {
   const { relations } = describeRelations(s);
   assert.deepEqual(find(relations, "phase", "gate-approvers"),
-    { from: "phase", via: "gate-approvers", to: "role", form: "ref", by: null, in: null, array: true, required: true, min: 1, max: null });
+    { from: "phase", via: "gate-approvers", to: "seat", form: "ref", by: null, in: null, array: true, required: true, min: 1, max: null });
   assert.deepEqual(find(relations, "phase", "owner"),
-    { from: "phase", via: "owner", to: "role", form: "ref", by: null, in: null, array: false, required: true, min: 1, max: 1 });
+    { from: "phase", via: "owner", to: "seat", form: "ref", by: null, in: null, array: false, required: true, min: 1, max: 1 });
   assert.deepEqual(find(relations, "experience", "organization"),
     { from: "experience", via: "organization", to: "identity", form: "ref?", by: null, in: null, array: false, required: false, min: 0, max: 1 });
   // A column is of a row, and nothing bounds the rows.
@@ -30,12 +30,12 @@ test("the joins and the list kinds are served for the whole vocabulary, each nam
   ]);
   assert.deepEqual(r.lists.find((l) => l.type === "phase" && l.section === "Activities"),
     { type: "phase", section: "Activities", kind: "Numbered", required: true, min: 1 });
-  assert.ok(r.lists.some((l) => l.type === "role" && l.section === "What it never does" && l.kind === "Bulleted"));
+  assert.ok(r.lists.some((l) => l.type === "seat" && l.section === "What it never does" && l.kind === "Bulleted"));
 });
 
 test("what min, max, a join and a list kind mean is said once, in the answer that uses them", () => {
   const { reading } = describeRelations(s);
-  assert.deepEqual(Object.keys(reading).sort(), ["by and in", "enums", "lists", "min and max", "required", "roles", "under"]);
+  assert.deepEqual(Object.keys(reading).sort(), ["as", "by and in", "enums", "lists", "min and max", "required", "under"]);
   for (const text of Object.values(reading)) assert.ok(text.length > 20);
 });
 
@@ -43,9 +43,9 @@ test("describe_schema carries its own type's joins and lists, and the bounds bot
   const profile = describeSchema(s, "profile").relations;
   assert.equal(profile.joins.length, 2);
   assert.deepEqual(profile.lists, []);
-  const role = describeSchema(s, "role").relations;
-  assert.deepEqual(role.lists, [{ section: "What it never does", kind: "Bulleted", required: true, min: 1 }]);
-  assert.deepEqual(role.referencedBy.find((x) => x.from === "phase" && x.via === "gate-approvers"),
+  const seat = describeSchema(s, "seat").relations;
+  assert.deepEqual(seat.lists, [{ section: "What it never does", kind: "Bulleted", required: true, min: 1 }]);
+  assert.deepEqual(seat.referencedBy.find((x) => x.from === "phase" && x.via === "gate-approvers"),
     { from: "phase", via: "gate-approvers", form: "ref", by: null, in: null, array: true, required: true, min: 1, max: null });
 });
 
@@ -65,9 +65,9 @@ test("an enum is served with the values it permits, a field's and a column's ali
   assert.deepEqual(describeSchema(s, "skill").relations.enums, []);
 });
 
-test("the table whose repeated references carry distinct roles is served as a join", () => {
-  assert.deepEqual(describeRelations(s).joins.filter((j) => j.kind === "roles"),
-    [{ type: "concept", kind: "roles", section: "Relations", column: "As", by: "Concept" }]);
+test("the table whose repeated references carry distinct values in a column is served as a join", () => {
+  assert.deepEqual(describeRelations(s).joins.filter((j) => j.kind === "as"),
+    [{ type: "concept", kind: "as", section: "Relations", column: "As", by: "Concept" }]);
 });
 
 test("a snapshot written before enums were kept is refused rather than read as having none", () => {

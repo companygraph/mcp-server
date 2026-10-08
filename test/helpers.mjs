@@ -19,10 +19,21 @@ export const COMMIT = "0123456789abcdef0123456789abcdef01234567";
 export const PARSER = parserTag();
 export const EXAMPLE_CORE = JSON.parse(fs.readFileSync(path.join(fixtureRoot, "core", "manifest.json"), "utf8")).version;
 export const INSTANCE_CORE = JSON.parse(fs.readFileSync(path.join(instanceRoot, "meta", "core", "manifest.json"), "utf8")).version;
-export const EXAMPLE_TYPES = fs.readdirSync(path.join(fixtureRoot, "core")).filter((f) => f.endsWith("-schema.md")).length;
+// The example has no manifest, so the packs it takes are named here, once (meta-model 0.86.0): the
+// organization pack, whose groups, group kinds and jobs the example holds. Its schemas ride along
+// with the core's the way readSchemas carries an instance's, under `<pack>/<file>`.
+export const EXAMPLE_PACKS = ["organization"];
+const schemaCount = (dir) => fs.readdirSync(dir).filter((f) => f.endsWith("-schema.md")).length;
+export const EXAMPLE_TYPES = schemaCount(path.join(fixtureRoot, "core"))
+  + EXAMPLE_PACKS.reduce((n, pack) => n + schemaCount(path.join(fixtureRoot, "packs", pack)), 0);
+
+// The folders of the pages the example holds for the packs it takes.
+export const EXAMPLE_PACK_FOLDERS = ["group-kinds", "groups", "jobs"];
 
 export function exampleFiles() {
-  return { files: readDir(path.join(fixtureRoot, "example", "model")), schemas: readDir(path.join(fixtureRoot, "core")) };
+  const schemas = readDir(path.join(fixtureRoot, "core"));
+  for (const pack of EXAMPLE_PACKS) for (const [file, text] of readDir(path.join(fixtureRoot, "packs", pack))) schemas.set(`${pack}/${file}`, text);
+  return { files: readDir(path.join(fixtureRoot, "example", "model")), schemas };
 }
 
 export function exampleSnapshot() {
@@ -171,11 +182,20 @@ export function packInstanceDir({ packs = ["software"] } = {}) {
   fs.cpSync(path.join(fixtureRoot, "core"), path.join(root, "meta", "core"), { recursive: true });
   for (const pack of packs) fs.cpSync(path.join(fixtureRoot, "packs", pack), path.join(root, "meta", pack), { recursive: true });
   fs.cpSync(path.join(fixtureRoot, "example", "model"), path.join(root, "model"), { recursive: true });
+  // The example holds the pages of the packs it takes; an instance that takes none of them
+  // holds none of those pages, which R13 would otherwise refuse.
+  if (!packs.includes("organization")) for (const folder of EXAMPLE_PACK_FOLDERS) fs.rmSync(path.join(root, "model", folder), { recursive: true, force: true });
+  if (!packs.includes("software")) return root;
   fs.mkdirSync(path.join(root, "model", "bounded-contexts", "quoting"), { recursive: true });
   fs.writeFileSync(path.join(root, "model", "bounded-contexts", "quoting", "quoting.md"),
     `---\nid: ${CONTEXT_ID}\nsource: Local\nclassification: core\nrealizes:\n  - Pricing\n---\n\n# Quoting\n\n> Prices an order. Invoicing it is left to another context.\n\n## Responsibilities\n\n- Price an order before it is placed\n`);
   return root;
 }
+
+// The example as a command line reads it: model/ beside a vendored core and the packs the example
+// takes, with the manifest that names them, since a directory of pages and a bare core is an
+// instance that takes no pack.
+export const exampleInstanceDir = () => packInstanceDir({ packs: EXAMPLE_PACKS });
 
 // Bounded contexts drawn as the software pack draws them: the pack instance with four contexts
 // beside Quoting and two aggregates inside it. Quoting conforms to Catalog and shares a kernel

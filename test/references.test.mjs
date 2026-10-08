@@ -43,7 +43,7 @@ test("a schema's own owner field is a reference via owner, and nesting is not am
   const byId = (id) => s.entities.find((e) => e.id === id);
   const owner = listReferences(s, { via: "owner", limit: 200 });
   assert.ok(owner.edges.length >= 1);
-  assert.ok(owner.edges.every((x) => x.to.type === "role"));
+  assert.ok(owner.edges.every((x) => x.to.type === "seat"));
   assert.ok(owner.edges.every((x) => byId(x.from.id).owner !== x.to.id));
   const nesting = s.entities.filter((e) => e.owner).length;
   const nestedIn = listReferences(s, { via: "nested-in", limit: 200 });

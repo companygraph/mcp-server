@@ -80,7 +80,7 @@ No arguments. `types` holds every type the schemas declare, with its `owner` typ
     "sections": [
       {
         "heading": "File Location",
-        "text": "`model/skills/*.md`\n\nA skill owns nothing, so it is a file. Nothing owns a skill either: a profile claims one and a role requires one, and it outlives both.",
+        "text": "`model/skills/*.md`\n\nA skill owns nothing, so it is a file. Nothing owns a skill either: a profile claims one and a seat requires one, and it outlives both.",
         "tables": []
       },
       {
@@ -213,7 +213,7 @@ Optional `type`, `direction` (`declares`, `declared-to` or `both`; needs `type`)
       "min and max": "How many of the reference one page may hold. A field holds one value or a list, and a required list carries at least one entry. A column and a heading are of a row, and nothing bounds how many rows a …",
       "under": "A join: the section's table and the one it stands under reference the same entities, both ways, so nothing here stands under something the other never names and nothing named there is left without a r…",
       "lists": "A join: the entity the column's cell names carries, in the named field, the entity the same row's `by` column names. A blank cell is held to nothing.",
-      "roles": "A join: where two rows of the section's table name the same entity in the `by` column, each carries a value in the named column and no two carry the same one, because that value is the only thing tell…",
+      "as": "A join: where two rows of the section's table name the same entity in the `by` column, each carries a value in the named column and no two carry the same one, because that value is the only thing tell…",
       "enums": "The values a field or a column typed enum permits, named by `via` as a reference is. A value outside them is an error; `required` reads as it does for a reference.",
       "by and in": "A reference whose type is read from its row (R9) rather than declared by the schema: the row's `by` column names the type and, where that type is owned, its `in` column names the owner. `to` is null, …"
     },
@@ -608,33 +608,26 @@ Every type, the entity that came into the model last first: the ten newest entit
     "type": null,
     "entities": [
       {
-        "id": "01a10523-7383-700a-9eec-4c21a13dfcb4",
-        "type": "stored-item",
-        "name": "theme",
-        "tagline": "Whether the visitor chose the light or the dark look, so the next page opens in it.",
+        "id": "01a1199f-e096-78eb-b8c2-76e01a6bf381",
+        "type": "job",
+        "name": "Product Engineer",
+        "tagline": "Builds product features from inside Product, to engineering's standard.",
         "owner": null,
-        "created": "2026-10-04T04:19:31.843Z",
-        "fields": {
-          "mechanism": "local-storage",
-          "necessity": "optional",
-          "duration": "Until the visitor clears it"
-        }
+        "created": "2026-10-08T03:47:50.550Z",
+        "fields": {}
       },
       {
-        "id": "01a10523-733e-7f2e-beab-5a53c9c792b7",
-        "type": "processing-activity",
-        "name": "Invoice delivery",
-        "tagline": "Sending each customer the invoice its contract asks for, to the person who pays it.",
+        "id": "01a1199f-e00b-7a2a-9466-9f6a96ffe718",
+        "type": "job",
+        "name": "Head of Product",
+        "tagline": "Leads Product and answers for what is built and why.",
         "owner": null,
-        "created": "2026-10-04T04:19:31.774Z",
-        "fields": {
-          "legal-basis": "contract",
-          "retention": "Ten years after the invoice date, as business records"
-        }
+        "created": "2026-10-08T03:47:50.411Z",
+        "fields": {}
       }
     ],
     "page": {
-      "total": 83,
+      "total": 93,
       "returned": 2,
       "hasMore": true,
       "nextCursor": "eyJvIjoyLCJjIjoiMDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWYwMTIzNDU2NyJ9"
@@ -976,11 +969,11 @@ Optional `entity`, an id or an address; `direction` (`out`, `in` or `both`, rela
           "owner": null
         }
       ],
-      "role": [
+      "seat": [
         {
           "from": {
             "id": "01a0a6b8-7e80-74e2-8c05-e4518d7679c9",
-            "type": "role",
+            "type": "seat",
             "name": "Reviewer"
           },
           "via": "requires",
@@ -1043,11 +1036,11 @@ Optional `entity`, an id or an address; `direction` (`out`, `in` or `both`, rela
       {
         "id": "01a0a6b8-7e80-7c97-aab2-32e4469383db",
         "title": "Backend Engineer",
-        "type": "role",
+        "type": "seat",
         "owner": null,
         "tagline": "The seat that keeps the services the product runs on correct, and answers for them when they are not.",
         "created": "2026-09-15T20:18:24.000Z",
-        "url": "https://github.com/companygraph/meta-model/blob/0123456789abcdef0123456789abcdef01234567/example/model/roles/backend-engineer.md",
+        "url": "https://github.com/companygraph/meta-model/blob/0123456789abcdef0123456789abcdef01234567/example/model/seats/backend-engineer.md",
         "matched": [
           {
             "where": "section",

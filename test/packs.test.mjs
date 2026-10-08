@@ -11,7 +11,7 @@ import { readDir, readSchemas, readGitHubSchemas } from "../lib/read.mjs";
 import { buildSnapshot } from "../lib/snapshot.mjs";
 import { listTypes, describeSchema, describeRelations, getEntityById } from "../lib/model.mjs";
 import { diagram } from "../lib/diagram.mjs";
-import { fixtureRoot, packInstanceDir, CONTEXT_ID, COMMIT, PARSER, exampleSnapshot } from "./helpers.mjs";
+import { fixtureRoot, packInstanceDir, CONTEXT_ID, COMMIT, PARSER, EXAMPLE_PACK_FOLDERS } from "./helpers.mjs";
 
 const PACK_TYPES = ["aggregate", "bounded-context", "concept-design", "domain-event", "feature-design"];
 const REPO = "companygraph/pack-instance";
@@ -35,8 +35,11 @@ test("a core with no instance around it, or one that takes no pack, is read exac
   assert.deepEqual(readSchemas(bare), readDir(bare));
   const plain = packInstanceDir({ packs: [] });
   assert.deepEqual(readSchemas(path.join(plain, "meta", "core")), readDir(path.join(plain, "meta", "core")));
-  const s = buildSnapshot({ files: readDir(path.join(fixtureRoot, "example", "model")), schemas: readSchemas(bare), sub: "example/model/", core: "core/", commit: COMMIT, repo: "companygraph/meta-model", parserTag: PARSER });
-  assert.deepEqual(s, exampleSnapshot());
+  // The example's pages for the packs it takes have no schema in a bare core, so they are left out.
+  const files = readDir(path.join(fixtureRoot, "example", "model"));
+  for (const key of [...files.keys()]) if (EXAMPLE_PACK_FOLDERS.some((folder) => key.startsWith(`${folder}/`))) files.delete(key);
+  const build = (schemas) => buildSnapshot({ files, schemas, sub: "example/model/", core: "core/", commit: COMMIT, repo: "companygraph/meta-model", parserTag: PARSER });
+  assert.deepEqual(build(readSchemas(bare)), build(readDir(bare)));
 });
 
 test("a pack the manifest names that is not there is an error naming it, never a silent core-only read", () => {

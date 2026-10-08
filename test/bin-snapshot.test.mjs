@@ -4,14 +4,15 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { execFileSync } from "node:child_process";
-import { fixtureRoot, EXAMPLE_CORE, exampleSnapshot } from "./helpers.mjs";
+import { fixtureRoot, exampleInstanceDir, EXAMPLE_CORE, exampleSnapshot } from "./helpers.mjs";
 
 const bin = new URL("../bin/snapshot.mjs", import.meta.url).pathname;
 
 test("writes a snapshot from two local directories", () => {
   const out = path.join(fs.mkdtempSync(path.join(os.tmpdir(), "snap-")), "snapshot.json");
-  const stdout = execFileSync("node", [bin, path.join(fixtureRoot, "example/model"), path.join(fixtureRoot, "core"),
-    "--commit", "abc123", "--repo", "companygraph/meta-model", "--sub", "example/model/", "--out", out], { encoding: "utf8" });
+  const root = exampleInstanceDir();
+  const stdout = execFileSync("node", [bin, path.join(root, "model"), path.join(root, "meta", "core"),
+    "--commit", "abc123", "--repo", "companygraph/meta-model", "--sub", "model/", "--out", out], { encoding: "utf8" });
   const s = JSON.parse(fs.readFileSync(out, "utf8"));
   assert.equal(s.commit, "abc123");
   assert.equal(s.core.version, EXAMPLE_CORE);
@@ -24,14 +25,15 @@ test("writes a snapshot from two local directories", () => {
 // keeps a place only when told one; from GitHub it reads the core by that very place.
 test("two local directories keep the core's place only when --core names it", () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "snap-"));
+  const root = exampleInstanceDir();
   const build = (extra, name) => {
     const out = path.join(dir, name);
-    execFileSync("node", [bin, path.join(fixtureRoot, "example/model"), path.join(fixtureRoot, "core"),
-      "--commit", "abc123", "--repo", "companygraph/meta-model", "--sub", "example/model/", ...extra, "--out", out], { encoding: "utf8" });
+    execFileSync("node", [bin, path.join(root, "model"), path.join(root, "meta", "core"),
+      "--commit", "abc123", "--repo", "companygraph/meta-model", "--sub", "model/", ...extra, "--out", out], { encoding: "utf8" });
     return JSON.parse(fs.readFileSync(out, "utf8"));
   };
   assert.equal(build([], "untold.json").core.path, null);
-  assert.equal(build(["--core", "core"], "told.json").core.path, "core/");
+  assert.equal(build(["--core", "meta/core"], "told.json").core.path, "meta/core/");
 });
 
 test("refuses to run without --out", () => {

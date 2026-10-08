@@ -315,7 +315,7 @@ test("a type narrows the schemas to itself, what it declares, what declares it a
   assert.deepEqual([d.title, d.edges, d.omitted], ["phase", 10, 1]);
   assert.deepEqual(lines(d), [
     "classDiagram",
-    '  class n0["phase"]', '  class n1["process"]', '  class n2["role"]', '  class n3["track"]',
+    '  class n0["phase"]', '  class n1["process"]', '  class n2["seat"]', '  class n3["track"]',
     '  n0 --> "0..*" n3 : Activities.Track', '  n0 --> "0..*" n0 : If not met.Leads to', '  n0 --> "1" n2 : escalation-authority', '  n0 --> "1..*" n2 : executed-by',
     '  n0 --> "1..*" n2 : gate-approvers', '  n0 --> "0..1" n0 : gate-to', '  n0 --> "1" n2 : owner',
     '  n0 --> "0..*" n2 : supported-by', '  n1 --> "0..*" n0 : Phases.Phase', "  n0 --* n1 : nested-in",

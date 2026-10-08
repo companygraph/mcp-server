@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import { parseInstance } from "companygraph-meta-model/instance";
 import { buildSnapshot, parserTag } from "../lib/snapshot.mjs";
-import { exampleFiles, exampleSnapshot, COMMIT, EXAMPLE_CORE, PARSER, EXAMPLE_TYPES } from "./helpers.mjs";
+import { exampleFiles, exampleSnapshot, COMMIT, EXAMPLE_CORE, EXAMPLE_PACKS, PARSER, EXAMPLE_TYPES } from "./helpers.mjs";
 
 test("the snapshot is the parser's graph plus provenance, schemas and source text", () => {
   const s = exampleSnapshot();
@@ -21,7 +21,8 @@ test("the snapshot is the parser's graph plus provenance, schemas and source tex
   assert.equal(s.schemas.length, EXAMPLE_TYPES);
   // core 0.66.0: a schema's id is the UUID its frontmatter carries, never `core/<type>`, but
   // its address still names the type, exactly as its id used to.
-  assert.ok(s.schemas.every((x) => x.address.startsWith("core/")));
+  // A pack's schema is addressed under the pack's name, beside the core's.
+  assert.ok(s.schemas.every((x) => x.address.startsWith("core/") || EXAMPLE_PACKS.some((pack) => x.address.startsWith(`${pack}/`))));
   assert.ok(s.schemas.every((x) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(x.id)), "a schema's id is a UUID");
   for (const e of s.entities) {
     assert.equal(e.markdown, files.get(e.path.slice("example/model/".length)));

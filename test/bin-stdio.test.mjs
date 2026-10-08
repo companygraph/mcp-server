@@ -6,13 +6,14 @@ import path from "node:path";
 import { execFileSync } from "node:child_process";
 import { Client } from "@modelcontextprotocol/client";
 import { StdioClientTransport } from "@modelcontextprotocol/client/stdio";
-import { fixtureRoot, EXAMPLE_CORE, EXAMPLE_TYPES, packInstanceDir } from "./helpers.mjs";
+import { fixtureRoot, EXAMPLE_CORE, EXAMPLE_TYPES, EXAMPLE_PACK_FOLDERS, exampleInstanceDir, packInstanceDir } from "./helpers.mjs";
 import { TOOLS } from "../lib/tools.mjs";
 
 const bin = new URL("../bin/stdio.mjs", import.meta.url).pathname;
 
 test("the stdio server lists every tool and answers with the model", async () => {
-  const transport = new StdioClientTransport({ command: "node", args: [bin, path.join(fixtureRoot, "example/model"), path.join(fixtureRoot, "core"), "--sub", "example/model/"] });
+  const root = exampleInstanceDir();
+  const transport = new StdioClientTransport({ command: "node", args: [bin, path.join(root, "model"), path.join(root, "meta", "core"), "--sub", "model/"] });
   const client = new Client({ name: "test", version: "0" });
   await client.connect(transport);
   const { tools } = await client.listTools();
@@ -45,6 +46,8 @@ async function commitOf(modelDir) {
 test("a dirty tree reports no commit; a clean one reports HEAD", async () => {
   const modelDir = fs.mkdtempSync(path.join(os.tmpdir(), "stdio-dirty-"));
   fs.cpSync(path.join(fixtureRoot, "example/model"), modelDir, { recursive: true });
+  // The core beside it is bare, so the pages of the packs the example takes have no schema.
+  for (const folder of EXAMPLE_PACK_FOLDERS) fs.rmSync(path.join(modelDir, folder), { recursive: true, force: true });
   const git = (...args) => execFileSync("git", ["-C", modelDir, ...args], { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] });
   git("init", "-q");
   git("-c", "user.email=test@example.com", "-c", "user.name=Test", "add", "-A");
