@@ -19,7 +19,7 @@ test("describe_relations serves every declared reference with its form, as data"
   assert.deepEqual(find(r.relations, "experience", "organization"),
     { from: "experience", via: "organization", to: "identity", form: "ref?", by: null, in: null, array: false, required: false, min: 0, max: 1 });
   assert.deepEqual(find(r.relations, "phase", "gate-approvers"),
-    { from: "phase", via: "gate-approvers", to: "role", form: "ref", by: null, in: null, array: true, required: true, min: 1, max: null });
+    { from: "phase", via: "gate-approvers", to: "seat", form: "ref", by: null, in: null, array: true, required: true, min: 1, max: null });
   assert.deepEqual(find(r.relations, "profile", "Skills.Level"),
     { from: "profile", via: "Skills.Level", to: "proficiency-level", form: "qualifier", by: null, in: null, array: false, required: true, min: 0, max: null });
   assert.deepEqual(find(r.relations, "profile", "Evidence.Experience"),
@@ -33,8 +33,8 @@ test("ownership is served apart from references, because it is nesting and not a
   assert.ok(r.ownership.some((x) => x.owner === "profile" && x.owned === "experience"));
   assert.ok(r.ownership.some((x) => x.owner === "process" && x.owned === "track"));
   assert.equal(r.relations.filter((x) => x.via === "owner" && x.form === undefined).length, 0, "no owner line among the references");
-  // A process's `owner` field is a reference to a role, and stays one.
-  assert.equal(find(r.relations, "process", "owner").to, "role");
+  // A process's `owner` field is a reference to a seat, and stays one.
+  assert.equal(find(r.relations, "process", "owner").to, "seat");
 });
 
 test("the forms are explained once, in the answer that uses them", () => {
@@ -44,13 +44,13 @@ test("the forms are explained once, in the answer that uses them", () => {
 });
 
 test("describe_schema carries the type's relations both ways, read from the declarations", () => {
-  const role = describeSchema(s, "role").relations;
-  assert.equal(role.owner, null);
+  const seat = describeSchema(s, "seat").relations;
+  assert.equal(seat.owner, null);
   // `source` is on every type, and the declarations say so where a schema's prose may not.
-  assert.deepEqual(role.references.map((x) => x.via).sort(), ["requires", "source"]);
-  assert.deepEqual(role.references.find((x) => x.via === "requires"), { via: "requires", to: "skill", form: "ref", by: null, in: null, array: true, required: false, min: 0, max: null });
-  const into = role.referencedBy.map((x) => `${x.from}.${x.via}`);
-  for (const edge of ["profile.roles", "process.owner", "process.supported-by", "phase.owner", "phase.executed-by", "phase.gate-approvers", "phase.escalation-authority"])
+  assert.deepEqual(seat.references.map((x) => x.via).sort(), ["requires", "source"]);
+  assert.deepEqual(seat.references.find((x) => x.via === "requires"), { via: "requires", to: "skill", form: "ref", by: null, in: null, array: true, required: false, min: 0, max: null });
+  const into = seat.referencedBy.map((x) => `${x.from}.${x.via}`);
+  for (const edge of ["profile.seats", "process.owner", "process.supported-by", "phase.owner", "phase.executed-by", "phase.gate-approvers", "phase.escalation-authority"])
     assert.ok(into.includes(edge), edge);
 
   const identity = describeSchema(s, "identity").relations;
@@ -82,7 +82,7 @@ test("every relation names declared types, in the instance's own core too", () =
 test("a snapshot written before the declarations were kept is refused, never answered empty", () => {
   const { schemaEdges, ...old } = s;
   assert.throws(() => describeRelations(old), (e) => e instanceof ModelError && /rebuil/.test(e.message));
-  assert.throws(() => describeSchema(old, "role"), (e) => e instanceof ModelError && /rebuil/.test(e.message));
+  assert.throws(() => describeSchema(old, "seat"), (e) => e instanceof ModelError && /rebuil/.test(e.message));
 });
 
 // The deployment serves a snapshot written to a file, so what the queries read has to survive it.
@@ -94,23 +94,23 @@ test("the declarations and the rules survive the snapshot being written out and 
 });
 
 // A relation with `to: null` reads its type from its own row and may point at any type (R9's
-// `by`/`in` form), so it stands on the declared-to side of every type, "role" included.
+// `by`/`in` form), so it stands on the declared-to side of every type, "seat" included.
 const readsAny = (x) => x.to === null && x.by !== null;
 
 test("a type keeps the declarations it stands in, and a side keeps one half of them", () => {
   const whole = describeRelations(s);
-  const role = describeRelations(s, { type: "role" });
-  assert.ok(role.relations.length > 0 && role.relations.length < whole.relations.length);
-  assert.ok(role.relations.every((x) => x.from === "role" || x.to === "role" || readsAny(x)));
-  const declares = describeRelations(s, { type: "role", direction: "declares" });
+  const seat = describeRelations(s, { type: "seat" });
+  assert.ok(seat.relations.length > 0 && seat.relations.length < whole.relations.length);
+  assert.ok(seat.relations.every((x) => x.from === "seat" || x.to === "seat" || readsAny(x)));
+  const declares = describeRelations(s, { type: "seat", direction: "declares" });
   assert.deepEqual(declares.relations.map((x) => x.via).sort(), ["requires", "source"]);
-  const into = describeRelations(s, { type: "role", direction: "declared-to" });
-  assert.ok(into.relations.length > 0 && into.relations.every((x) => x.to === "role" || readsAny(x)));
-  assert.equal(role.relations.length, declares.relations.length + into.relations.length);
-  assert.deepEqual(describeRelations(s, { type: "role", direction: "both" }).relations, role.relations);
+  const into = describeRelations(s, { type: "seat", direction: "declared-to" });
+  assert.ok(into.relations.length > 0 && into.relations.every((x) => x.to === "seat" || readsAny(x)));
+  assert.equal(seat.relations.length, declares.relations.length + into.relations.length);
+  assert.deepEqual(describeRelations(s, { type: "seat", direction: "both" }).relations, seat.relations);
 });
 
-// `declares + into === both` held for "role" above, but a by/in relation stands on both sides at
+// `declares + into === both` held for "seat" above, but a by/in relation stands on both sides at
 // once for the type that draws it: a question may rest on another question, so `question`'s own
 // Rests on.Entity is both declared by it (from: "question") and declared to it (readsAny), and
 // `both` lists it once where `declares` and `into` each list it and so double-count it.
@@ -161,7 +161,7 @@ test("via keeps one field or column, among the references and the enums", () => 
 test("a side with no type, an unknown side and an unknown type are refused by code", () => {
   const code = (args) => { try { describeRelations(s, args); } catch (e) { return [e.code, e.details.argument ?? e.details.type]; } assert.fail("not refused"); };
   assert.deepEqual(code({ direction: "declares" }), ["invalid_argument", "direction"]);
-  assert.deepEqual(code({ type: "role", direction: "out" }), ["invalid_argument", "direction"]);
+  assert.deepEqual(code({ type: "seat", direction: "out" }), ["invalid_argument", "direction"]);
   assert.deepEqual(code({ type: "person" }), ["unknown_type", "person"]);
 });
 

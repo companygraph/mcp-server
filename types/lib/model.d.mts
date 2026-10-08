@@ -146,7 +146,7 @@ export declare const relationsOf: (s: Snapshot) => {
         field: string;
         by: string;
     } | {
-        kind: "roles";
+        kind: "as";
         section: string;
         column: string;
         by: string;
@@ -205,7 +205,7 @@ export declare function describeRelations(s: Snapshot, { type, direction, via }?
         field: string;
         by: string;
     } | {
-        kind: "roles";
+        kind: "as";
         section: string;
         column: string;
         by: string;
@@ -228,7 +228,7 @@ export declare function describeRelations(s: Snapshot, { type, direction, via }?
         "min and max": string;
         under: string;
         lists: string;
-        roles: string;
+        as: string;
         enums: string;
         "by and in": string;
     };
@@ -294,7 +294,7 @@ export declare function describeSchema(s: Snapshot, type: string): {
             field: string;
             by: string;
         } | {
-            kind: "roles";
+            kind: "as";
             section: string;
             column: string;
             by: string;

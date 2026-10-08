@@ -128,7 +128,7 @@ test("a rule is listed and fetched like any entity, with its Applies to edges an
   const applies = r.entity.references.filter((x) => x.via === "Applies to.Entity");
   assert.deepEqual(applies.map((x) => x.to), [
     { id: idAt(s, "processes/delivery/phases/release"), type: "phase", name: "Release" },
-    { id: idAt(s, "roles/reviewer"), type: "role", name: "Reviewer" },
+    { id: idAt(s, "seats/reviewer"), type: "seat", name: "Reviewer" },
   ]);
   const field = (via) => r.entity.references.filter((x) => x.via === via).map((x) => [x.to.type, x.to.name]);
   assert.deepEqual(field("protects"), [["value", "Craftsmanship"]]);
@@ -185,7 +185,7 @@ test("find_evidence groups every edge into the skill by the referencing type, at
   assert.deepEqual(findEvidence(s, DDD), r, "an id reaches the same skill");
   assert.deepEqual(findEvidence(s, "skills/domain-driven-design"), r, "and so does its address");
   assert.deepEqual(r.skill, { id: DDD, type: "skill", name: "Domain-Driven Design", tagline: s.entities.find((e) => e.id === DDD).tagline });
-  assert.deepEqual(Object.keys(r.evidence).sort(), ["experience", "profile", "role"]);
+  assert.deepEqual(Object.keys(r.evidence).sort(), ["experience", "profile", "seat"]);
   const mira = r.evidence.profile.find((x) => x.from.id === MIRA && x.via === "Skills.Skill");
   assert.equal(mira.attrs.Level.name, "Competent");
   assert.equal(mira.owner, null);
@@ -374,9 +374,9 @@ const periods = (entries) => ({ ...s, entities: entries.map(([address, fields]) 
 const names = (r) => r.entities.map((e) => e.name);
 
 test("a listed entity carries the single-valued facts of its frontmatter, and no bookkeeping or array", () => {
-  const t = periods([["x/a", { kind: "Role", start: "2026-10", organization: "Example AG", role: "Architect", "source-id": "42", skills: ["API design"] }]]);
+  const t = periods([["x/a", { kind: "Role", start: "2026-10", organization: "Example AG", capacity: "Architect", "source-id": "42", skills: ["API design"] }]]);
   const [e] = listEntities(t, "experience").entities;
-  assert.deepEqual(e.fields, { kind: "Role", start: "2026-10", organization: "Example AG", role: "Architect" });
+  assert.deepEqual(e.fields, { kind: "Role", start: "2026-10", organization: "Example AG", capacity: "Architect" });
   const asked = listEntities(t, "experience", { fields: ["skills"] }).entities[0].fields;
   assert.deepEqual(asked.skills, ["API design"], "an array is listed where fields asks for it");
   assert.throws(() => listEntities(t, "experience", { fields: ["nonsense"] }), (x) => x instanceof ModelError && x.code === "invalid_argument" && x.details.argument === "fields");
@@ -397,7 +397,7 @@ test("on keeps the periods that hold a date, at any of the three precisions", ()
   assert.throws(() => listEntities(t, "experience", { on: "05.10.2026" }), (x) => x.code === "invalid_argument" && x.details.argument === "on");
   assert.throws(() => listEntities(s, "skill", { on: "2026" }), (x) => x.code === "invalid_argument" && x.details.argument === "on" && /experience/.test(x.message));
   const every = listEntities(s, undefined, { on: "2026", limit: 200 }).entities;
-  assert.ok(every.every((x) => x.type === "experience"), "with no type, only types with a period are listed");
+  assert.deepEqual([...new Set(every.map((x) => x.type))].sort(), ["experience", "group"], "with no type, only types with a period are listed: an experience, and a group since the organization pack");
 });
 
 test("by orders by a date field, ties at the id, and what lacks it follows in address order", () => {
@@ -405,7 +405,7 @@ test("by orders by a date field, ties at the id, and what lacks it follows in ad
   assert.deepEqual(names(listEntities(t, "experience", { by: "start", order: "newest" })), ["x/c", "x/b", "x/a", "x/early", "x/none"]);
   assert.deepEqual(names(listEntities(t, "experience", { by: "start", order: "oldest" })), ["x/early", "x/a", "x/b", "x/c", "x/none"]);
   assert.throws(() => listEntities(t, "experience", { by: "start" }), (x) => x.code === "invalid_argument" && x.details.argument === "order");
-  assert.throws(() => listEntities(t, "experience", { by: "role", order: "newest" }), (x) => x.code === "invalid_argument" && x.details.argument === "by");
+  assert.throws(() => listEntities(t, "experience", { by: "capacity", order: "newest" }), (x) => x.code === "invalid_argument" && x.details.argument === "by");
 });
 
 test("where keeps a value of a single-valued field, ignoring case, and refuses what it cannot reach", () => {

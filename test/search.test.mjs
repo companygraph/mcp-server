@@ -183,21 +183,21 @@ test("a possessive asks for its noun, so the apostrophe narrows nothing", () => 
 });
 
 test("an entity whose name matched stands first, before every entity that only mentions it, and the rest keep their order", () => {
-  const REVIEWER = idAt(s, "roles/reviewer");
+  const REVIEWER = idAt(s, "seats/reviewer");
   for (const match of ["words", "text"]) {
     const r = search(s, "Reviewer", { match });
-    // The name tier holds the role alone in text mode; in words mode "Reviewer" asks for the stem
+    // The name tier holds the seat alone in text mode; in words mode "Reviewer" asks for the stem
     // "review", which core 0.53.0's control and rule carry in their names too, and so does the example's
     // KPI Review Escapes since meta-model v0.72.0.
     const tier = r.results.filter((x) => x.matched[0].where === "name");
-    assert.deepEqual(tier.map((x) => x.type), match === "words" ? ["control", "kpi", "role", "rule"] : ["role"], match);
+    assert.deepEqual(tier.map((x) => x.type), match === "words" ? ["control", "kpi", "rule", "seat"] : ["seat"], match);
     assert.ok(tier.some((x) => x.id === REVIEWER), match);
     assert.deepEqual(r.results.slice(0, tier.length), tier, `${match}: the name tier stands first`);
     const rest = r.results.slice(tier.length);
     assert.ok(rest.length > 1 && rest.every((x) => x.matched[0].where !== "name"), match);
     const order = (a, b) => (a.type < b.type ? -1 : a.type > b.type ? 1 : a.title < b.title ? -1 : a.title > b.title ? 1 : a.id < b.id ? -1 : 1);
     assert.deepEqual(rest.map((x) => x.id), [...rest].sort(order).map((x) => x.id), `${match}: past the name tier, type then name then id`);
-    // Without the tier the role would stand among the roles, after the phases and the processes.
+    // Without the tier the seat would stand among the seats, after the phases and the processes.
     assert.ok([...r.results].sort(order).findIndex((x) => x.id === REVIEWER) > 0);
   }
 });
