@@ -675,7 +675,10 @@ test("the company is its units in the line, in rank order, a box per person and 
     ["g3", "Product", "group"], ["n5", "Tomas Reyes", "profile"], ["n6", "Head of Product", "job"],
   ]);
   assert.deepEqual(d.nodes[0], { node: "g0", id: G("Management"), title: "Management", type: "group" });
-  assert.deepEqual(d.links, [["n0", "n1"], ["n0", "n2"], ["n0", "n3"], ["n0", "n5"]].map(([from, to]) => ({ from, to, label: "" })));
+  // A line carries the model's own word for what it draws, and the source holds none: the dashed
+  // line to a staff person is their place, the one to a staff unit its kind's field, and an arrow
+  // between units the field that hangs one under the other.
+  assert.deepEqual(d.links, [["n0", "n1", "Staff"], ["n0", "n2", "staff"], ["n0", "n3", "part-of"], ["n0", "n5", "part-of"]].map(([from, to, label]) => ({ from, to, label })));
 });
 
 test("a team named by its id draws its people, its agents in a frame of their own below them", () => {
@@ -758,6 +761,21 @@ test("a model whose only groups are teams draws them for the company, and a grou
   const titles = diagram(ended, { shape: "organization" }).nodes.filter((n) => n.type === "group").map((n) => n.title);
   assert.deepEqual(titles, ["Management", "Legal", "Engineering"]);
   refused(() => diagram(ended, { shape: "organization", id: G("Product") }), "cannot_draw", { shape: "organization", reason: "empty", nodes: 0, limit: DIAGRAM_CAP });
+});
+
+test("a group is drawn from the first day its start covers, as it is drawn until the last day its end covers", () => {
+  const year = Number(today.slice(0, 4)), month = today.slice(0, 7);
+  const titles = (m) => diagram(m, { shape: "organization" }).nodes.filter((n) => n.type === "group").map((n) => n.title);
+  const next = org({ Product: (e) => { e.fields.start = String(year + 1); } });
+  assert.deepEqual(titles(next), ["Management", "Legal", "Engineering"]);
+  refused(() => diagram(next, { shape: "organization", id: G("Product") }), "cannot_draw", { shape: "organization", reason: "empty", nodes: 0, limit: DIAGRAM_CAP });
+  // Today, this month and this year have all begun; a month or a year that has not is left out.
+  const begun = org({ Product: (e) => { e.fields.start = today; }, Legal: (e) => { e.fields.start = month; }, Engineering: (e) => { e.fields.start = String(year); } });
+  assert.deepEqual(titles(begun), ["Management", "Legal", "Engineering", "Product"]);
+  const later = new Date(Date.UTC(year, Number(today.slice(5, 7)), 1)).toISOString().slice(0, 7);
+  assert.deepEqual(titles(org({ Legal: (e) => { e.fields.start = later; } })), ["Management", "Engineering", "Product"]);
+  // A start that is no date in R9's forms is ignored, as a malformed end is.
+  assert.deepEqual(titles(org({ Legal: (e) => { e.fields.start = "soon"; } })), ["Management", "Legal", "Engineering", "Product"]);
 });
 
 test("the organization refuses what it cannot draw, and a title is never read as a mark", () => {
