@@ -729,7 +729,7 @@ test("people stand Lead, Deputy, Member, Staff; agents side by side; a unit with
     "Billing Run Team": (e) => setRows(e, "People", [["AI Agent", "", "Member"], ["Jonas Whitcombe", "", "Member"], ["Review Agent", "", "Member"], ["Tomas Reyes", "Head of Product", "Deputy"], ["Mira Halvorsen", "Backend Engineer", "Lead"]]),
   }, [agent, group(OPS, "Operations", { kind: "Department", rank: "40", "part-of": "Management" })]);
   const team = lines(diagram(m, { shape: "organization", id: G("Billing Run Team") }));
-  assert.deepEqual(team.slice(1, 13), [
+  assert.deepEqual(team.slice(1, 14), [
     '  subgraph g0 ["Billing Run Team"]',
     '    n0["fak:fa-human <b>Mira Halvorsen</b><br/><small>Backend Engineer</small>"]:::lead',
     '    n1["fak:fa-human <b>Tomas Reyes</b><br/><small>Head of Product</small>"]',
@@ -738,6 +738,7 @@ test("people stand Lead, Deputy, Member, Staff; agents side by side; a unit with
     "      direction LR",
     '      n3["fak:fa-agent <b>AI Agent</b>"]',
     '      n4["fak:fa-agent <b>Review Agent</b>"]',
+    "      n3 ~~~ n4",
     "    end",
     "    n0 ~~~ n1",
     "    n0 ~~~ n2",
@@ -767,9 +768,14 @@ test("the organization refuses what it cannot draw, and a title is never read as
   assert.match(whole.message, /name a group to draw part of it/);
   refused(() => diagram(s, { shape: "organization", id: I("concepts/invoice") }), "invalid_argument", { argument: "id", reason: "not a group" });
   refused(() => diagram(instanceSnapshot(), { shape: "organization" }), "unknown_type");
-  const odd = diagram(org({ Legal: (e) => { e.name = "Ops fas:fa-x"; } }), { shape: "organization" });
-  assert.ok(lines(odd).includes('  subgraph g1 ["Ops fas#58;fa-x"]'), odd.mermaid);
-  assert.equal(label("sofa:fa-bed and a: colon"), "sofa#58;fa-bed and a: colon");
+  // A frame's title and a box's label alike: a name holding `fas:fa-x` is never read as a mark.
+  const odd = diagram(org({
+    Legal: (e) => { e.name = "Ops fas:fa-x"; },
+    Engineering: (e) => setRows(e, "People", [["Mira Halvorsen", "Lead fab:fa-x", "Lead"]]),
+  }), { shape: "organization" });
+  assert.ok(lines(odd).includes('  subgraph g1 ["Ops fas:#8203;fa-x"]'), odd.mermaid);
+  assert.ok(lines(odd).includes('    n3["fak:fa-human <b>Mira Halvorsen</b><br/><small>Lead fab:#8203;fa-x</small>"]:::lead'), odd.mermaid);
+  assert.equal(label("sofa:fa-bed and a: colon"), "sofa:#8203;fa-bed and a: colon");
 });
 
 test("a part-of loop the checks refuse, or a rank that is no number, still draws and never hangs", () => {
