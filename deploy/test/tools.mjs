@@ -145,7 +145,8 @@ export function registerToolsTests() {
   });
 
   // An org chart reaches a deployment with a re-pin, so each draws its own company. An instance
-  // without the organization pack is told so, and skips rather than fails.
+  // without the organization pack is told so, and skips rather than fails; one whose company draws
+  // more than fifty boxes is refused as too_large, which is legitimate.
   test("the organization draws people, openings and groups only", async (t) => {
     if (!s.entities.some((e) => e.type === "group")) return t.skip("this instance holds no group");
     const [a, b] = InMemoryTransport.createLinkedPair();
@@ -153,8 +154,10 @@ export function registerToolsTests() {
     const client = new Client({ name: "test", version: "0" });
     await client.connect(b);
     const d = checkAnswer("diagram", await client.callTool({ name: "diagram", arguments: { shape: "organization" } }));
-    if (d.error) assert.deepEqual([d.error.code, d.error.details.reason], ["cannot_draw", "empty"]);
-    else assert.ok(d.nodes.every((/** @type {{ type: string }} */ n) => ["profile", "job", "group"].includes(n.type)), d.mermaid);
+    if (d.error) {
+      assert.equal(d.error.code, "cannot_draw");
+      assert.ok(["empty", "too_large"].includes(d.error.details.reason), `unexpected reason: ${d.error.details.reason}`);
+    } else assert.ok(d.nodes.every((/** @type {{ type: string }} */ n) => ["profile", "job", "group"].includes(n.type)), d.mermaid);
     await client.close();
   });
 
