@@ -608,26 +608,30 @@ Every type, the entity that came into the model last first: the ten newest entit
     "type": null,
     "entities": [
       {
-        "id": "01a1199f-e096-78eb-b8c2-76e01a6bf381",
+        "id": "01a11fec-8800-7f1d-aefb-030f2f1a31f8",
         "type": "job",
-        "name": "Product Engineer",
-        "tagline": "Builds product features from inside Product, to engineering's standard.",
+        "name": "Managing Director",
+        "tagline": "Leads Beacon Systems and answers for its direction, its results and the departments that carry them out.",
         "owner": null,
-        "created": "2026-10-08T03:47:50.550Z",
+        "created": "2026-10-09T09:09:17.440Z",
         "fields": {}
       },
       {
-        "id": "01a1199f-e00b-7a2a-9466-9f6a96ffe718",
-        "type": "job",
-        "name": "Head of Product",
-        "tagline": "Leads Product and answers for what is built and why.",
+        "id": "01a11fec-87c0-7d80-8aa2-fa64547264dc",
+        "type": "profile",
+        "name": "Jonas Whitcombe",
+        "tagline": "Executive assistant who keeps the managing director's calendar and papers, so that what is decided is also prepared and followed up.",
         "owner": null,
-        "created": "2026-10-08T03:47:50.411Z",
-        "fields": {}
+        "created": "2026-10-09T09:09:17.376Z",
+        "fields": {
+          "nature": "human",
+          "email": "jonas@example.invalid",
+          "location": "Zurich"
+        }
       }
     ],
     "page": {
-      "total": 93,
+      "total": 100,
       "returned": 2,
       "hasMore": true,
       "nextCursor": "eyJvIjoyLCJjIjoiMDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWYwMTIzNDU2NyJ9"
