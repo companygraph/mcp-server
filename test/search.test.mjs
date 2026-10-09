@@ -79,8 +79,8 @@ test("what search cannot take is refused by code", () => {
 
 // The two headlines the owner put to the chat, on a fixture built the way withSharedName builds
 // its own, so the case waits on no re-pin of the reference instance. The example's words are
-// counted: "in" and "open" fall short of half of its entities and are required, so both
-// experiences carry them, and only one carries "ideas".
+// counted: "open" falls short of half of its entities and is required, "in" stands in more than
+// half and is common, so both experiences carry what is required, and only one carries "ideas".
 function withHeadlines() {
   const { files, schemas } = exampleFiles();
   files.set("values/decide-well-over-build-fast.md", "---\nsource: Local\n---\n\n# Decide well over build fast\n\n> A choice made once beats a feature shipped twice.\n\n## In practice\n\nWe write the decision down before the code.\n");
@@ -120,9 +120,10 @@ test("validated in the open finds the experience whose bullets hold validation, 
   // question-kind and fourth question grow the example past that boundary again, and "in" falls
   // back to required; meta-model 0.65.0's example adds the entity-id format, whose tagline says
   // "written in", and "in" stands in more than half again; core 0.53.0's rule, risk and control
-  // grow it past that boundary once more, and "in" is required. A common or required word is
-  // reported the same way, so the results below are unmoved either way.
-  assert.deepEqual(r.words.map((w) => w.common), [false, false, true, false, false]);
+  // grow it past that boundary once more, and "in" is required; meta-model 0.88.0's group, jobs
+  // and profiles take it to 53 of 104, past half, and "in" is common. A common or required word
+  // is reported the same way, so the results below are unmoved either way.
+  assert.deepEqual(r.words.map((w) => w.common), [false, true, true, false, false]);
   // withHeadlines() adds pages with no `id:`, so each one's id is its address.
   assert.deepEqual(r.results.map((x) => x.id), ["profiles/nils-aker/experiences/2024-open-review"]);
   assert.deepEqual(r.results[0].matched, [{ where: "name", key: null }, { where: "section", key: "Achievements" }], "open in the name, the rest in the bullets");
