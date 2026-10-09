@@ -144,6 +144,20 @@ export function registerToolsTests() {
     await client.close();
   });
 
+  // An org chart reaches a deployment with a re-pin, so each draws its own company. An instance
+  // without the organization pack is told so, and skips rather than fails.
+  test("the organization draws people, openings and groups only", async (t) => {
+    if (!s.entities.some((e) => e.type === "group")) return t.skip("this instance holds no group");
+    const [a, b] = InMemoryTransport.createLinkedPair();
+    await createServer(s).connect(a);
+    const client = new Client({ name: "test", version: "0" });
+    await client.connect(b);
+    const d = checkAnswer("diagram", await client.callTool({ name: "diagram", arguments: { shape: "organization" } }));
+    if (d.error) assert.deepEqual([d.error.code, d.error.details.reason], ["cannot_draw", "empty"]);
+    else assert.ok(d.nodes.every((/** @type {{ type: string }} */ n) => ["profile", "job", "group"].includes(n.type)), d.mermaid);
+    await client.close();
+  });
+
   // A flow and a lifecycle read tables an instance may not yet write, so a context whose aggregates
   // hold none is refused as empty and every other answers in its shape.
   test("every bounded context answers its flow and its lifecycle, or says it has nothing to draw", async (t) => {

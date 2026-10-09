@@ -1434,6 +1434,46 @@ A picture of part of the model as Mermaid source, built from its edges and never
 }
 ```
 
+### `diagram` of the organization
+
+```json
+{
+  "tool": "diagram",
+  "arguments": {
+    "shape": "organization",
+    "id": "01a1152c-3863-79ba-8430-755ed2dec49c"
+  },
+  "answer": {
+    "shape": "organization",
+    "title": "Billing Run Team",
+    "mermaid": "flowchart TB\n  subgraph g0 [\"Billing Run Team\"]\n    n0[\"fak:fa-human <b>Mira Halvorsen</b><br/><small>Backend Engineer</small>\"]:::lead\n    subgraph g0a [\" \"]\n      n1[\"fak:fa-agent <b>AI Agent</b>\"]\n…",
+    "nodes": [
+      {
+        "node": "g0",
+        "id": "01a1152c-3863-79ba-8430-755ed2dec49c",
+        "title": "Billing Run Team",
+        "type": "group"
+      },
+      {
+        "node": "n0",
+        "id": "01a02f53-2408-7291-ac16-087fcdee4d71",
+        "title": "Mira Halvorsen",
+        "type": "profile"
+      }
+    ],
+    "links": [],
+    "edges": 0,
+    "omitted": 0,
+    "model": {
+      "commit": "0123456789abcdef0123456789abcdef01234567",
+      "repo": "companygraph/meta-model",
+      "core": "0.0.0",
+      "parser": "v0.0.0"
+    }
+  }
+}
+```
+
 ## Paging
 
 `list_entities`, `list_references`, `find_evidence` and `search` take `limit`, 50 by default, at least 1 and 200 at most, and `cursor`. A limit outside the range is served at the nearest bound and not refused, so `limit: 0` returns one entry and `limit: 1000` returns 200; `page.returned` says how many came back. Both arguments say so themselves in every paged tool's input schema. Follow `page.nextCursor` while `page.hasMore`. The order of each list is fixed and a served model never changes, so a walk neither repeats nor skips.
