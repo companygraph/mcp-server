@@ -246,7 +246,7 @@ test("every link's ends are drawn nodes, and the link count matches the arrow li
 });
 
 test("the arguments each shape does not take, needs or cannot use are refused by name", () => {
-  refused(() => diagram(s, { shape: "graph" }), "invalid_argument", { argument: "shape", reason: "one of concepts, process, neighborhood, schema, context, aggregate, flow, lifecycle" });
+  refused(() => diagram(s, { shape: "graph" }), "invalid_argument", { argument: "shape", reason: "one of concepts, process, neighborhood, schema, context, aggregate, flow, lifecycle, organization" });
   refused(() => diagram(s, { shape: "schema", id: "core/phase" }), "invalid_argument", { argument: "id", reason: "not taken by schema" });
   refused(() => diagram(s, { shape: "concepts", type: "phase" }), "invalid_argument", { argument: "type", reason: "not taken by concepts" });
   refused(() => diagram(s, { shape: "schema", domain: I("domains/pricing") }), "invalid_argument", { argument: "domain", reason: "not taken by schema" });
@@ -619,4 +619,166 @@ test("a When, a command and a state holding a quote, a colon and a semicolon are
   // A state's words sit inside quotes, where only the quote is escaped, as for every quoted label.
   assert.ok(life.includes(`state "a #quot;q#quot;: b; c" as s0`) && life.includes(`s0 --> s0 : ${esc}`), life);
   assert.ok(!/[^#]"q"|: b;/.test(flow), flow);
+});
+
+// The organization: the example's Beacon Systems holds four units in the line, a team outside it,
+// a staff person, a staff unit with only an opening, an opening for two and an open Lead beside a
+// lead who stays. Fixtures edit the example's groups in place: the shape reads entities alone.
+const today = new Date().toISOString().slice(0, 10);
+const G = (name) => s.entities.find((e) => e.type === "group" && e.name === name).id;
+// The example with its groups changed: `edit` takes each group by name and may change it in place,
+// and `add` brings new entities, a group or a profile, in the shape the parser gives one.
+const org = (edit = {}, add = []) => {
+  const m = structuredClone(s);
+  for (const e of m.entities) if (e.type === "group" && edit[e.name]) edit[e.name](e);
+  m.entities.push(...add);
+  return m;
+};
+// A section table as the parser gives one, under both names a section carries it by.
+const table = (heading, columns, rows) => { const t = { columns, rows }; return { heading, tables: [t], table: t }; };
+const group = (id, name, fields, sections = []) => ({ id, type: "group", name, fields: { id, source: "Local", ...fields }, sections });
+const setRows = (e, heading, rows) => { const sec = e.sections.find((x) => x.heading === heading); sec.tables[0].rows = rows; sec.table = sec.tables[0]; };
+const BEACON = [
+  "flowchart TB",
+  '  subgraph g0 ["Management"]',
+  '    n0["fak:fa-human <b>Ines Marchetti</b><br/><small>Managing Director</small>"]:::lead',
+  '    n1["fak:fa-human <b>Jonas Whitcombe</b><br/><small>Executive Assistant</small>"]',
+  "    n0 -.- n1",
+  "  end",
+  '  subgraph g1 ["Legal"]',
+  '    n2["<b>Legal Counsel</b>"]:::open',
+  "  end",
+  '  subgraph g2 ["Engineering"]',
+  '    n3["fak:fa-human <b>Mira Halvorsen</b><br/><small>Engineering Lead</small>"]:::lead',
+  '    n4["<b>Backend Engineer</b><br/><small>× 2</small>"]:::open',
+  "    n3 ~~~ n4",
+  "  end",
+  '  subgraph g3 ["Product"]',
+  '    n5["fak:fa-human <b>Tomas Reyes</b><br/><small>Head of Product</small>"]:::lead',
+  '    n6["<b>Head of Product</b>"]:::open',
+  "  end",
+  "  n0 -.- n2",
+  "  n0 --> n3",
+  "  n0 --> n5",
+  "  classDef lead stroke-width:2px",
+  "  classDef open stroke-dasharray:5 4",
+];
+
+test("the company is its units in the line, in rank order, a box per person and per opening, the leads joined", () => {
+  const d = diagram(s, { shape: "organization" });
+  assert.deepEqual([d.shape, d.title, d.edges, d.omitted, d.model.commit], ["organization", null, 4, 1, COMMIT]);
+  assert.deepEqual(lines(d), BEACON);
+  assert.deepEqual(d.nodes.map((n) => [n.node, n.title, n.type]), [
+    ["g0", "Management", "group"], ["n0", "Ines Marchetti", "profile"], ["n1", "Jonas Whitcombe", "profile"],
+    ["g1", "Legal", "group"], ["n2", "Legal Counsel", "job"],
+    ["g2", "Engineering", "group"], ["n3", "Mira Halvorsen", "profile"], ["n4", "Backend Engineer", "job"],
+    ["g3", "Product", "group"], ["n5", "Tomas Reyes", "profile"], ["n6", "Head of Product", "job"],
+  ]);
+  assert.deepEqual(d.nodes[0], { node: "g0", id: G("Management"), title: "Management", type: "group" });
+  assert.deepEqual(d.links, [["n0", "n1"], ["n0", "n2"], ["n0", "n3"], ["n0", "n5"]].map(([from, to]) => ({ from, to, label: "" })));
+});
+
+test("a team named by its id draws its people, its agents in a frame of their own below them", () => {
+  const d = diagram(s, { shape: "organization", id: G("Billing Run Team") });
+  assert.deepEqual([d.title, d.edges, d.omitted, d.links], ["Billing Run Team", 0, 0, []]);
+  assert.deepEqual(lines(d), [
+    "flowchart TB",
+    '  subgraph g0 ["Billing Run Team"]',
+    '    n0["fak:fa-human <b>Mira Halvorsen</b><br/><small>Backend Engineer</small>"]:::lead',
+    '    subgraph g0a [" "]',
+    '      n1["fak:fa-agent <b>AI Agent</b>"]',
+    "    end",
+    "    n0 ~~~ g0a",
+    "  end",
+    "  class g0a agents",
+    "  classDef lead stroke-width:2px",
+    "  classDef agents stroke-dasharray:2 3",
+  ]);
+});
+
+test("a unit named by its id draws every unit under it, however deep, and not the one above", () => {
+  const PLATFORM = "01a0ffff-0000-7000-8000-0000000000d1";
+  const m = org({}, [group(PLATFORM, "Platform", { kind: "Department", rank: "25", "part-of": "Engineering" },
+    [table("Openings", ["Job", "Place", "Count", "Since"], [["Backend Engineer", "Lead", "", ""]])])]);
+  const d = diagram(m, { shape: "organization", id: G("Engineering") });
+  assert.deepEqual([d.title, d.edges, d.omitted], ["Engineering", 1, 0]);
+  assert.deepEqual(lines(d), [
+    "flowchart TB",
+    '  subgraph g0 ["Engineering"]',
+    '    n0["fak:fa-human <b>Mira Halvorsen</b><br/><small>Engineering Lead</small>"]:::lead',
+    '    n1["<b>Backend Engineer</b><br/><small>× 2</small>"]:::open',
+    "    n0 ~~~ n1",
+    "  end",
+    '  subgraph g1 ["Platform"]',
+    '    n2["<b>Backend Engineer</b>"]:::open',
+    "  end",
+    "  n0 --> n2",
+    "  classDef lead stroke-width:2px",
+    "  classDef open stroke-dasharray:5 4",
+  ]);
+  // One job open in two units is two boxes, each naming the job.
+  assert.deepEqual([d.nodes[2].id, d.nodes[4].id], [d.nodes[2].id, d.nodes[2].id]);
+  // The whole company draws Platform too, under Engineering's lead, after it in rank order.
+  assert.ok(lines(diagram(m, { shape: "organization" })).includes("  n3 --> n5"));
+});
+
+test("people stand Lead, Deputy, Member, Staff; agents side by side; a unit with no lead is reached at its frame", () => {
+  const AGENT = "01a0ffff-0000-7000-8000-0000000000d2", OPS = "01a0ffff-0000-7000-8000-0000000000d3";
+  const agent = { id: AGENT, type: "profile", name: "Review Agent", fields: { id: AGENT, source: "Local", nature: "agent" }, sections: [] };
+  const m = org({
+    "Billing Run Team": (e) => setRows(e, "People", [["AI Agent", "", "Member"], ["Jonas Whitcombe", "", "Member"], ["Review Agent", "", "Member"], ["Tomas Reyes", "Head of Product", "Deputy"], ["Mira Halvorsen", "Backend Engineer", "Lead"]]),
+  }, [agent, group(OPS, "Operations", { kind: "Department", rank: "40", "part-of": "Management" })]);
+  const team = lines(diagram(m, { shape: "organization", id: G("Billing Run Team") }));
+  assert.deepEqual(team.slice(1, 13), [
+    '  subgraph g0 ["Billing Run Team"]',
+    '    n0["fak:fa-human <b>Mira Halvorsen</b><br/><small>Backend Engineer</small>"]:::lead',
+    '    n1["fak:fa-human <b>Tomas Reyes</b><br/><small>Head of Product</small>"]',
+    '    n2["fak:fa-human <b>Jonas Whitcombe</b>"]',
+    '    subgraph g0a [" "]',
+    "      direction LR",
+    '      n3["fak:fa-agent <b>AI Agent</b>"]',
+    '      n4["fak:fa-agent <b>Review Agent</b>"]',
+    "    end",
+    "    n0 ~~~ n1",
+    "    n0 ~~~ n2",
+    "    n2 ~~~ g0a",
+  ]);
+  // Operations has no one in it and nothing open: it draws no box, and the arrow ends at its frame.
+  assert.ok(lines(diagram(m, { shape: "organization" })).includes("  n0 --> g4"));
+});
+
+test("a model whose only groups are teams draws them for the company, and a group that has ended is left out", () => {
+  const teams = org({ Management: (e) => { e.fields.kind = "Team"; }, Legal: (e) => { e.fields.kind = "Team"; }, Engineering: (e) => { e.fields.kind = "Team"; }, Product: (e) => { e.fields.kind = "Team"; } });
+  const d = diagram(teams, { shape: "organization" });
+  assert.deepEqual([d.omitted, d.nodes.filter((n) => n.type === "group").map((n) => n.title)], [0, ["Management", "Legal", "Engineering", "Product", "Billing Run Team"]]);
+  // A person in two teams is a box in each, since every box is a node of its own.
+  assert.equal(d.nodes.filter((n) => n.title === "Mira Halvorsen").length, 2);
+  const ended = org({ Product: (e) => { e.fields.end = "2020-01"; }, Legal: (e) => { e.fields.end = today; } });
+  const titles = diagram(ended, { shape: "organization" }).nodes.filter((n) => n.type === "group").map((n) => n.title);
+  assert.deepEqual(titles, ["Management", "Legal", "Engineering"]);
+  refused(() => diagram(ended, { shape: "organization", id: G("Product") }), "cannot_draw", { shape: "organization", reason: "empty", nodes: 0, limit: DIAGRAM_CAP });
+});
+
+test("the organization refuses what it cannot draw, and a title is never read as a mark", () => {
+  const crowd = org({ Engineering: (e) => setRows(e, "Openings", Array.from({ length: DIAGRAM_CAP }, () => ["Backend Engineer", "Member", "", ""])) });
+  refused(() => diagram(crowd, { shape: "organization" }), "cannot_draw", { shape: "organization", reason: "too_large", nodes: DIAGRAM_CAP + 6, limit: DIAGRAM_CAP });
+  let whole;
+  try { diagram(crowd, { shape: "organization" }); } catch (e) { whole = e; }
+  assert.match(whole.message, /name a group to draw part of it/);
+  refused(() => diagram(s, { shape: "organization", id: I("concepts/invoice") }), "invalid_argument", { argument: "id", reason: "not a group" });
+  refused(() => diagram(instanceSnapshot(), { shape: "organization" }), "unknown_type");
+  const odd = diagram(org({ Legal: (e) => { e.name = "Ops fas:fa-x"; } }), { shape: "organization" });
+  assert.ok(lines(odd).includes('  subgraph g1 ["Ops fas#58;fa-x"]'), odd.mermaid);
+  assert.equal(label("sofa:fa-bed and a: colon"), "sofa#58;fa-bed and a: colon");
+});
+
+test("a part-of loop the checks refuse, or a rank that is no number, still draws and never hangs", () => {
+  const m = org({ Management: (e) => { e.fields["part-of"] = "Product"; e.fields.rank = "first"; } });
+  const d = diagram(m, { shape: "organization", id: G("Engineering") });
+  assert.deepEqual(d.nodes.filter((n) => n.type === "group").map((n) => n.title), ["Engineering"]);
+  const whole = diagram(m, { shape: "organization" });
+  // Management has no rank it can be ordered by, so it comes after the ranked units.
+  assert.deepEqual(whole.nodes.filter((n) => n.type === "group").map((n) => n.title), ["Legal", "Engineering", "Product", "Management"]);
+  const top = diagram(m, { shape: "organization", id: G("Management") });
+  assert.deepEqual(top.nodes.filter((n) => n.type === "group").map((n) => n.title).sort(), ["Engineering", "Legal", "Management", "Product"]);
 });

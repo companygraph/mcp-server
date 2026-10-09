@@ -1,5 +1,5 @@
 import { z } from "zod";
-export declare const SHAPES: readonly ["concepts", "process", "neighborhood", "schema", "context", "aggregate", "flow", "lifecycle"];
+export declare const SHAPES: readonly ["concepts", "process", "neighborhood", "schema", "context", "aggregate", "flow", "lifecycle", "organization"];
 export declare const Model: z.ZodObject<{
     commit: z.ZodNullable<z.ZodString>;
     repo: z.ZodNullable<z.ZodString>;
@@ -507,6 +507,7 @@ export declare const OUTPUTS: {
             flow: "flow";
             lifecycle: "lifecycle";
             neighborhood: "neighborhood";
+            organization: "organization";
             process: "process";
             schema: "schema";
         }>;
@@ -587,6 +588,7 @@ export declare const DETAILS: {
             flow: "flow";
             lifecycle: "lifecycle";
             neighborhood: "neighborhood";
+            organization: "organization";
             process: "process";
             schema: "schema";
         }>;

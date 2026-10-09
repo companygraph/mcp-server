@@ -74,8 +74,11 @@ export declare function processDiagram(s: {
     edges: Edge[];
 }, id: string): Drawing;
 export type DiagramRequest = {
-    shape: Exclude<DiagramKind, "concepts" | "schema">;
+    shape: Exclude<DiagramKind, "concepts" | "schema" | "organization">;
     id: string;
+} | {
+    shape: "organization";
+    id?: string | undefined;
 } | {
     shape: "concepts";
     domain?: string | undefined;
@@ -84,7 +87,8 @@ export type DiagramRequest = {
     type?: string | undefined;
 };
 /**
- * @typedef {{ shape: Exclude<DiagramKind, "concepts" | "schema">; id: string }
+ * @typedef {{ shape: Exclude<DiagramKind, "concepts" | "schema" | "organization">; id: string }
+ *   | { shape: "organization"; id?: string | undefined }
  *   | { shape: "concepts"; domain?: string | undefined }
  *   | { shape: "schema"; type?: string | undefined }} DiagramRequest
  */
