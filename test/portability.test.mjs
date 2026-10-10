@@ -10,7 +10,10 @@ const sources = ["lib", "bin"].flatMap((d) => fs.readdirSync(path.join(root, d))
 
 test("lib/ and bin/ name no entity of the example and no fact of the reference instance", () => {
   const names = (snap) => snap.entities.map((e) => e.name).filter((n) => n.length > 3);
-  const forbidden = [...names(exampleSnapshot()), ...names(instanceSnapshot()), "blust.ch", "mental-model"];
+  // "Page" is the product kind of meta-model 0.89.0's example, and also the name of the paging
+  // object every list answers with: a word the code needs for its own sake, not a fact of the example.
+  const generic = new Set(["Page"]);
+  const forbidden = [...names(exampleSnapshot()), ...names(instanceSnapshot()), "blust.ch", "mental-model"].filter((n) => !generic.has(n));
   for (const file of sources) {
     const text = fs.readFileSync(path.join(root, file), "utf8");
     for (const word of forbidden) assert.ok(!text.includes(word), `${file} names "${word}"`);

@@ -20,15 +20,20 @@ export const PARSER = parserTag();
 export const EXAMPLE_CORE = JSON.parse(fs.readFileSync(path.join(fixtureRoot, "core", "manifest.json"), "utf8")).version;
 export const INSTANCE_CORE = JSON.parse(fs.readFileSync(path.join(instanceRoot, "meta", "core", "manifest.json"), "utf8")).version;
 // The example has no manifest, so the packs it takes are named here, once (meta-model 0.86.0): the
-// organization pack, whose groups, group kinds and jobs the example holds. Its schemas ride along
+// organization pack, whose groups, group kinds and jobs the example holds, and (0.89.0) the
+// landscape pack, whose systems, system kinds, data objects and services it holds. Their schemas ride along
 // with the core's the way readSchemas carries an instance's, under `<pack>/<file>`.
-export const EXAMPLE_PACKS = ["organization"];
+export const EXAMPLE_PACKS = ["organization", "landscape"];
 const schemaCount = (dir) => fs.readdirSync(dir).filter((f) => f.endsWith("-schema.md")).length;
 export const EXAMPLE_TYPES = schemaCount(path.join(fixtureRoot, "core"))
   + EXAMPLE_PACKS.reduce((n, pack) => n + schemaCount(path.join(fixtureRoot, "packs", pack)), 0);
 
 // The folders of the pages the example holds for the packs it takes.
-export const EXAMPLE_PACK_FOLDERS = ["group-kinds", "groups", "jobs"];
+export const PACK_FOLDERS = {
+  organization: ["group-kinds", "groups", "jobs"],
+  landscape: ["data-objects", "services", "system-kinds", "systems"],
+};
+export const EXAMPLE_PACK_FOLDERS = Object.values(PACK_FOLDERS).flat();
 
 export function exampleFiles() {
   const schemas = readDir(path.join(fixtureRoot, "core"));
@@ -184,7 +189,7 @@ export function packInstanceDir({ packs = ["software"] } = {}) {
   fs.cpSync(path.join(fixtureRoot, "example", "model"), path.join(root, "model"), { recursive: true });
   // The example holds the pages of the packs it takes; an instance that takes none of them
   // holds none of those pages, which R13 would otherwise refuse.
-  if (!packs.includes("organization")) for (const folder of EXAMPLE_PACK_FOLDERS) fs.rmSync(path.join(root, "model", folder), { recursive: true, force: true });
+  for (const [pack, folders] of Object.entries(PACK_FOLDERS)) if (!packs.includes(pack)) for (const folder of folders) fs.rmSync(path.join(root, "model", folder), { recursive: true, force: true });
   if (!packs.includes("software")) return root;
   fs.mkdirSync(path.join(root, "model", "bounded-contexts", "quoting"), { recursive: true });
   fs.writeFileSync(path.join(root, "model", "bounded-contexts", "quoting", "quoting.md"),

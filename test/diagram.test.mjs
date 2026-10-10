@@ -157,22 +157,28 @@ test("a phase with no If not met section, as on an older core, draws exactly tod
 });
 
 test("a neighborhood draws one hop both ways, the smallest groups first", () => {
+  // The landscape pack's example (meta-model 0.89.0) holds the concept in two places the
+  // neighborhood now draws: a data object that realizes it and two systems that hold it.
   const d = diagram(s, { shape: "neighborhood", id: I("concepts/invoice") });
-  assert.deepEqual([d.title, d.edges, d.omitted], ["Invoice", 8, 0]);
+  assert.deepEqual([d.title, d.edges, d.omitted], ["Invoice", 11, 0]);
   assert.deepEqual(lines(d), [
     "flowchart LR",
     '  n0["<small>«concept»</small><br/><b>Invoice</b>"]', '  n1["<small>«domain»</small><br/>Invoicing"]', '  n2["<small>«source»</small><br/>Local"]',
-    '  n3["<small>«concept»</small><br/>Credit note"]', '  n4["<small>«feature»</small><br/>Billing run"]', '  n5["<small>«feature»</small><br/>Credit notes"]',
-    '  n6["<small>«concept»</small><br/>Billing period"]', '  n7["<small>«concept»</small><br/>Customer"]', '  n8["<small>«concept»</small><br/>Invoice line"]',
-    '  n0 -->|"domain"| n1', '  n0 -->|"source"| n2', '  n3 -->|"Relations.Concept"| n0', '  n4 -->|"concepts"| n0',
-    '  n5 -->|"concepts"| n0', '  n0 -->|"Relations.Concept"| n6', '  n0 -->|"Relations.Concept"| n7', '  n0 -->|"Relations.Concept"| n8',
+    '  n3["<small>«concept»</small><br/>Credit note"]', '  n4["<small>«data-object»</small><br/>Invoice record"]', '  n5["<small>«system»</small><br/>Billing service"]',
+    '  n6["<small>«system»</small><br/>Invoice mailer"]', '  n7["<small>«feature»</small><br/>Billing run"]', '  n8["<small>«feature»</small><br/>Credit notes"]',
+    '  n9["<small>«concept»</small><br/>Billing period"]', '  n10["<small>«concept»</small><br/>Customer"]', '  n11["<small>«concept»</small><br/>Invoice line"]',
+    '  n0 -->|"domain"| n1', '  n0 -->|"source"| n2', '  n3 -->|"Relations.Concept"| n0', '  n4 -->|"realizes"| n0',
+    '  n5 -->|"Holds.Concept"| n0', '  n6 -->|"Holds.Concept"| n0', '  n7 -->|"concepts"| n0', '  n8 -->|"concepts"| n0',
+    '  n0 -->|"Relations.Concept"| n9', '  n0 -->|"Relations.Concept"| n10', '  n0 -->|"Relations.Concept"| n11',
   ]);
   assert.deepEqual(d.nodes[0], { node: "n0", id: I("concepts/invoice"), title: "Invoice", type: "concept" });
   assert.deepEqual(d.links, [
     { from: "n0", to: "n1", label: "domain" }, { from: "n0", to: "n2", label: "source" },
-    { from: "n3", to: "n0", label: "Relations.Concept" }, { from: "n4", to: "n0", label: "concepts" },
-    { from: "n5", to: "n0", label: "concepts" }, { from: "n0", to: "n6", label: "Relations.Concept" },
-    { from: "n0", to: "n7", label: "Relations.Concept" }, { from: "n0", to: "n8", label: "Relations.Concept" },
+    { from: "n3", to: "n0", label: "Relations.Concept" }, { from: "n4", to: "n0", label: "realizes" },
+    { from: "n5", to: "n0", label: "Holds.Concept" }, { from: "n6", to: "n0", label: "Holds.Concept" },
+    { from: "n7", to: "n0", label: "concepts" }, { from: "n8", to: "n0", label: "concepts" },
+    { from: "n0", to: "n9", label: "Relations.Concept" }, { from: "n0", to: "n10", label: "Relations.Concept" },
+    { from: "n0", to: "n11", label: "Relations.Concept" },
   ]);
   assert.ok(d.links.every((l) => l.from === "n0" || l.to === "n0"), "every link of the neighborhood touches the middle");
 });

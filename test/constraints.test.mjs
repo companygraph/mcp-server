@@ -67,7 +67,9 @@ test("an enum is served with the values it permits, a field's and a column's ali
 
 test("the table whose repeated references carry distinct values in a column is served as a join", () => {
   assert.deepEqual(describeRelations(s).joins.filter((j) => j.kind === "as"),
-    [{ type: "concept", kind: "as", section: "Relations", column: "As", by: "Concept" }]);
+    [{ type: "concept", kind: "as", section: "Relations", column: "As", by: "Concept" },
+      // the landscape pack's Connects to table (meta-model 0.89.0) joins its rows by an As column
+      { type: "system", kind: "as", section: "Connects to", column: "As", by: "System" }]);
 });
 
 test("a snapshot written before enums were kept is refused rather than read as having none", () => {
