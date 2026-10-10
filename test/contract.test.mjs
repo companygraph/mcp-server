@@ -237,6 +237,25 @@ test("an organization answers in the schema over the example, and is refused whe
   await without.close();
 });
 
+test("a system and what it holds answer in the schema over the example, and are refused where no system is written", async () => {
+  const s = exampleSnapshot();
+  const client = await connect(s);
+  const id = idAt(s, "systems/billing-service");
+  const sys = checkAnswer("diagram", await client.callTool({ name: "diagram", arguments: { shape: "system", id } }));
+  assert.deepEqual([sys.shape, sys.title, sys.nodes.length, sys.links.length], ["system", "Billing service", 10, 9]);
+  const held = checkAnswer("diagram", await client.callTool({ name: "diagram", arguments: { shape: "holds", id } }));
+  assert.deepEqual([held.shape, held.title, held.nodes.map((/** @type {{ type: string }} */ n) => n.type).filter((t) => t === "system").length], ["holds", "Billing service", 2]);
+  const { error } = checkAnswer("diagram", await client.callTool({ name: "diagram", arguments: { shape: "holds", id: idAt(s, "systems/beacon-cluster") } }));
+  assert.deepEqual([error.code, error.details], ["cannot_draw", { shape: "holds", reason: "empty", nodes: 0, limit: 50 }]);
+  await client.close();
+  const without = await connect(instanceSnapshot());
+  for (const shape of ["system", "holds"]) {
+    const r = checkAnswer("diagram", await without.callTool({ name: "diagram", arguments: { shape, id: "nothing/here" } }));
+    assert.deepEqual([r.error.code, r.error.details.type], ["unknown_type", "system"]);
+  }
+  await without.close();
+});
+
 test("a snapshot that predates what a tool reads is refused by code", async () => {
   const { checks, ...old } = exampleSnapshot();
   const client = await connect(old);
