@@ -122,8 +122,8 @@ test("validated in the open finds the experience whose bullets hold validation, 
   // "written in", and "in" stands in more than half again; core 0.53.0's rule, risk and control
   // grow it past that boundary once more, and "in" is required; meta-model 0.88.0's group, jobs
   // and profiles take it to 53 of 104, past half, and "in" is common; 0.89.0's product kinds,
-  // systems, data object and service grow it again, "in" falls back to half or fewer of the
-  // entities, and it is required. "the" stays common. A common or required word is reported
+  // systems, data object and service grow it again (the pin is 0.90.0), "in" falls back to half
+  // or fewer of the entities, and it is required. "the" stays common. A common or required word is reported
   // the same way, so the results below are unmoved either way.
   assert.deepEqual(r.words.map((w) => w.common), [false, false, true, false, false]);
   // withHeadlines() adds pages with no `id:`, so each one's id is its address.

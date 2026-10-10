@@ -1,3 +1,4 @@
+import { PACKS } from "companygraph-meta-model/checks";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -23,17 +24,17 @@ export const INSTANCE_CORE = JSON.parse(fs.readFileSync(path.join(instanceRoot, 
 // organization pack, whose groups, group kinds and jobs the example holds, and (0.89.0) the
 // landscape pack, whose systems, system kinds, data objects and services it holds. Their schemas ride along
 // with the core's the way readSchemas carries an instance's, under `<pack>/<file>`.
+// Mirrors meta-model's verify/example.mjs (not shipped in the package); extended when the example takes another pack.
 export const EXAMPLE_PACKS = ["organization", "landscape"];
 const schemaCount = (dir) => fs.readdirSync(dir).filter((f) => f.endsWith("-schema.md")).length;
 export const EXAMPLE_TYPES = schemaCount(path.join(fixtureRoot, "core"))
   + EXAMPLE_PACKS.reduce((n, pack) => n + schemaCount(path.join(fixtureRoot, "packs", pack)), 0);
 
 // The folders of the pages the example holds for the packs it takes.
-export const PACK_FOLDERS = {
-  organization: ["group-kinds", "groups", "jobs"],
-  landscape: ["data-objects", "services", "system-kinds", "systems"],
-};
-export const EXAMPLE_PACK_FOLDERS = Object.values(PACK_FOLDERS).flat();
+// The folders each pack's types sit in, read from the release's own table of them, the first
+// segment of a row's folder (`bounded-contexts/<bounded-context>` sits in `bounded-contexts`).
+export const PACK_FOLDERS = Object.fromEntries(Object.entries(PACKS).map(([pack, rows]) => [pack, [...new Set(rows.map((r) => r.folder.split("/")[0]))]]));
+export const EXAMPLE_PACK_FOLDERS = EXAMPLE_PACKS.flatMap((pack) => PACK_FOLDERS[pack]);
 
 export function exampleFiles() {
   const schemas = readDir(path.join(fixtureRoot, "core"));

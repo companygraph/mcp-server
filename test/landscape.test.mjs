@@ -18,6 +18,8 @@ test("list_types and describe_schema show the landscape types, each in its pack'
   for (const t of LANDSCAPE) assert.ok(types.includes(t), t);
   for (const t of LANDSCAPE) assert.match(describeSchema(s, t).url, /\/landscape\/[a-z-]+-schema\.md$/, t);
   assert.ok(types.includes("product-kind"), "the core's product kind, which a product now declares");
+  const kind = describeSchema(s, "product").relations.references.find((r) => r.via === "kind");
+  assert.ok(kind && kind.to === "product-kind" && kind.required === true, JSON.stringify(kind));
 });
 
 test("get_entity on a system returns its Connects to and Holds rows with the qualifiers resolved", () => {
@@ -31,8 +33,7 @@ test("get_entity on a system returns its Connects to and Holds rows with the qua
     Via: "REST",
   });
   const held = ref(mailer, "Holds.Concept", "Invoice");
-  assert.ok(held);
-  assert.ok(Object.keys(held.attrs).includes("Access") && "Data object" in held.attrs);
+  assert.deepEqual(held.attrs, { "Data object": { id: I("data-objects/invoice-record"), type: "data-object", name: "Invoice record" }, Access: "reads" });
   const billing = getEntityById(s, I("systems/billing-service")).entity;
   assert.deepEqual(ref(billing, "Holds.Concept", "Invoice").attrs["Data object"], { id: I("data-objects/invoice-record"), type: "data-object", name: "Invoice record" });
   assert.equal(ref(billing, "Holds.Concept", "Invoice").attrs.Access, "master");
@@ -45,9 +46,12 @@ test("list_references shows a feature's inverse edge from the system that realiz
 
 test("the diagram tool, which names its shapes and packs, still draws the example that takes a third pack", () => {
   const schemas = diagram(s, { shape: "schema" });
-  for (const t of LANDSCAPE) assert.ok(schemas.nodes.some((n) => n.title === t || n.id === t || String(n.title).includes(t)), `the schema diagram draws ${t}`);
+  for (const t of LANDSCAPE) assert.ok(schemas.nodes.some((n) => n.title === t), `the schema diagram draws ${t}`);
   const org = diagram(s, { shape: "organization" });
   assert.ok(org.edges > 0, "the organization shape is unmoved");
   const hood = diagram(s, { shape: "neighborhood", id: I("systems/billing-service") });
-  assert.ok(hood.nodes.some((n) => n.type === "feature") && hood.nodes.some((n) => n.type === "concept"));
+  const name = (node) => hood.nodes.find((n) => n.node === node).title;
+  const drawn = hood.links.map((l) => [name(l.from), l.label, name(l.to)]);
+  assert.ok(drawn.some((e) => e[0] === "Billing service" && e[1] === "realizes" && e[2] === "Billing run"), JSON.stringify(drawn));
+  assert.ok(drawn.some((e) => e[0] === "Billing service" && e[1] === "Holds.Concept" && e[2] === "Invoice"), JSON.stringify(drawn));
 });
