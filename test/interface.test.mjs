@@ -35,4 +35,8 @@ test("an example is a real call: its answer is never an empty object", async () 
 test("the diagram paragraph names every shape", () => {
   const list = SHAPES.map((x) => `\`${x}\``);
   assert.ok(text.includes(`\`shape\` is ${list.slice(0, -1).join(", ")} or ${list.at(-1)}.`), "the shape sentence lists every value of SHAPES");
+  // The refusal paragraph names the shapes a cap or an empty picture refuses: every shape but the
+  // neighborhood can be too large, and every one that can draw nothing can be empty.
+  assert.ok(text.includes("A concepts, process, schema, context, aggregate, flow, lifecycle, organization, system or holds diagram that would hold more is refused"), "the too-large sentence names every shape but neighborhood");
+  assert.ok(text.includes("a concepts, process, schema, aggregate, flow, lifecycle, organization or holds diagram with nothing to draw"), "the empty sentence names every shape that can be empty");
 });

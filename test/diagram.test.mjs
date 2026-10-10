@@ -992,3 +992,22 @@ test("a planned or retiring middle keeps its heavier border and takes its lifecy
   const h = diagram(land({ "Invoice mailer": (e) => { e.fields.lifecycle = "retiring"; } }), { shape: "holds", id: S("Invoice mailer") });
   assert.ok(lines(h).includes("  class n0 retiring") && lines(h).includes("  classDef retiring stroke-dasharray:2 3"), h.mermaid);
 });
+
+test("holds reads a row's concept as system does: a blank concept cell beside a data object still joins the systems that hold it", () => {
+  // The Billing service masters the Invoice record under a blank concept cell; the mailer's picture
+  // still shows the master's heavy arrow, and a middle whose only row is such a row is drawn, not refused.
+  const m = land({
+    "Billing service": (e) => { const t = e.sections.find((x) => x.heading === "Holds").tables[0]; t.rows[0] = ["", "Invoice record", "master"]; },
+    "Invoice mailer": (e) => { const t = e.sections.find((x) => x.heading === "Holds").tables[0]; t.rows = [["", "Invoice record", "reads"]]; },
+  });
+  const d = diagram(m, { shape: "holds", id: S("Invoice mailer") });
+  assert.deepEqual(lines(d), [
+    "flowchart LR",
+    '  n0["fak:fa-application-component <b>Invoice mailer</b><br/><small>«SaaS»</small>"]:::middle',
+    '  n1[("Invoice record<br/><small>Invoice</small>")]',
+    '  n0 -.->|"reads"| n1',
+    '  n2["fak:fa-application-component <b>Billing service</b><br/><small>«Service»</small>"]',
+    '  n2 ==>|"master"| n1',
+    "  classDef middle stroke-width:2px",
+  ]);
+});
