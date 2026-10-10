@@ -18,7 +18,7 @@ const DDD = idAt(example, "skills/domain-driven-design");
 
 // Heading text → the call shown under it. `ambiguous` runs on the fixture in which two owners
 // each hold one title, which the worked example does not. The pictures of a context run on
-// the pack instance built for them, since the worked example takes the organization pack alone.
+// the pack instance built for them, since the worked example takes the organization and landscape packs.
 export const EXAMPLES = {
   "`list_types`": { name: "list_types", arguments: {} },
   "`describe_schema`": { name: "describe_schema", arguments: { type: "skill" } },

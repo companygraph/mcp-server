@@ -608,30 +608,28 @@ Every type, the entity that came into the model last first: the ten newest entit
     "type": null,
     "entities": [
       {
-        "id": "01a11fec-8800-7f1d-aefb-030f2f1a31f8",
-        "type": "job",
-        "name": "Managing Director",
-        "tagline": "Leads Beacon Systems and answers for its direction, its results and the departments that carry them out.",
+        "id": "01a1226b-c65b-7c27-a96f-dbfb10db9c15",
+        "type": "service",
+        "name": "Invoice feed",
+        "tagline": "The feed of finished invoices the Billing service exposes to whoever delivers or shows one.",
         "owner": null,
-        "created": "2026-10-09T09:09:17.440Z",
+        "created": "2026-10-09T20:47:30.907Z",
         "fields": {}
       },
       {
-        "id": "01a11fec-87c0-7d80-8aa2-fa64547264dc",
-        "type": "profile",
-        "name": "Jonas Whitcombe",
-        "tagline": "Executive assistant who keeps the managing director's calendar and papers, so that what is decided is also prepared and followed up.",
+        "id": "01a1226b-c617-7a13-9570-6f418579c6dc",
+        "type": "data-object",
+        "name": "Invoice record",
+        "tagline": "The row set the Billing service writes for each issued invoice, with its lines and totals, kept in the billing database.",
         "owner": null,
-        "created": "2026-10-09T09:09:17.376Z",
+        "created": "2026-10-09T20:47:30.839Z",
         "fields": {
-          "nature": "human",
-          "email": "jonas@example.invalid",
-          "location": "Zurich"
+          "realizes": "Invoice"
         }
       }
     ],
     "page": {
-      "total": 100,
+      "total": 111,
       "returned": 2,
       "hasMore": true,
       "nextCursor": "eyJvIjoyLCJjIjoiMDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWYwMTIzNDU2NyJ9"
