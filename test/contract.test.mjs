@@ -223,6 +223,20 @@ test("a context map, its aggregates, flow and lifecycle answer in the schema ove
   await client.close();
 });
 
+test("an organization answers in the schema over the example, and is refused where no group is written", async () => {
+  const s = exampleSnapshot();
+  const client = await connect(s);
+  const whole = checkAnswer("diagram", await client.callTool({ name: "diagram", arguments: { shape: "organization" } }));
+  assert.deepEqual([whole.shape, whole.title, whole.nodes.length, whole.links.length, whole.omitted], ["organization", null, 11, 4, 1]);
+  const team = checkAnswer("diagram", await client.callTool({ name: "diagram", arguments: { shape: "organization", id: idAt(s, "groups/billing-run-team") } }));
+  assert.deepEqual([team.title, team.nodes.map((/** @type {{ type: string }} */ n) => n.type)], ["Billing Run Team", ["group", "profile", "profile"]]);
+  await client.close();
+  const without = await connect(instanceSnapshot());
+  const { error } = checkAnswer("diagram", await without.callTool({ name: "diagram", arguments: { shape: "organization" } }));
+  assert.deepEqual([error.code, error.details.type], ["unknown_type", "group"]);
+  await without.close();
+});
+
 test("a snapshot that predates what a tool reads is refused by code", async () => {
   const { checks, ...old } = exampleSnapshot();
   const client = await connect(old);

@@ -41,6 +41,7 @@ export const EXAMPLES = {
   "`diagram` of its aggregates": { name: "diagram", contexts: true, arguments: { shape: "aggregate", id: CONTEXT_ID } },
   "`diagram` of its flow": { name: "diagram", contexts: true, arguments: { shape: "flow", id: CONTEXT_ID } },
   "`diagram` of its lifecycle": { name: "diagram", contexts: true, arguments: { shape: "lifecycle", id: CONTEXT_ID } },
+  "`diagram` of the organization": { name: "diagram", arguments: { shape: "organization", id: idAt(example, "groups/billing-run-team") } },
   "A refusal": { name: "get_entity", ambiguous: true },
 };
 
