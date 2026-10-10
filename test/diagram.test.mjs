@@ -915,11 +915,11 @@ test("a planned system is dashed, a bare connection row is an unlabeled arrow, a
   assert.deepEqual(got.slice(-2), ["  classDef middle stroke-width:2px", "  classDef planned stroke-dasharray:5 4"]);
   assert.equal(d.nodes.filter((n) => n.title === "Beacon cluster").length, 1);
   assert.deepEqual(d.links.slice(0, 4), [{ from: "n0", to: "n1", label: "part-of" }, { from: "n1", to: "n0", label: "Node metrics" }, { from: "n0", to: "n2", label: "Invoice · SFTP" }, { from: "n0", to: "n1", label: "" }]);
-  // The middle keeps its own class whatever its lifecycle; a retired neighbor is dashed finer.
+  // The middle keeps its heavier border whatever its lifecycle, and a retired system's finer dash besides.
   const retired = diagram(land({ "Billing service": (e) => { e.fields.lifecycle = "retired"; } }), { shape: "system", id: S("Invoice mailer") });
   assert.ok(lines(retired).includes("  classDef retiring stroke-dasharray:2 3") && lines(retired)[2].endsWith(":::retiring"), retired.mermaid);
   const middleRetired = diagram(land({ "Invoice mailer": (e) => { e.fields.lifecycle = "retired"; } }), { shape: "system", id: S("Invoice mailer") });
-  assert.ok(lines(middleRetired)[1].endsWith(":::middle") && !middleRetired.mermaid.includes("retiring"), middleRetired.mermaid);
+  assert.ok(lines(middleRetired)[1].endsWith(":::middle") && lines(middleRetired).includes("  class n0 retiring"), middleRetired.mermaid);
 });
 
 test("a kind that resolves to no page draws the name alone, and a held row that resolves to nothing is skipped", () => {
@@ -968,4 +968,27 @@ test("the two shapes refuse what they cannot draw, and a name is never read as a
   // The host is renamed, and the field that names it with it, since the shape resolves by name.
   const odd = diagram(land({ "Beacon cluster": (e) => { e.name = "Node fas:fa-x"; }, "Billing service": (e) => { e.fields["part-of"] = "Node fas:fa-x"; } }), { shape: "system", id: S("Billing service") });
   assert.ok(lines(odd).includes('  n1["fak:fa-node <b>Node fas:#8203;fa-x</b><br/><small>«Platform»</small>"]'), odd.mermaid);
+});
+
+// Hardening the review asked for: a cell a checked model never leaves blank or outside its enum
+// still arrives in a served snapshot, since the checker flags and does not block.
+test("a blank access, an element outside the six, and a data object beside a blank concept draw without empty labels or stray marks", () => {
+  const m = land({
+    "Invoice mailer": (e) => { const t = e.sections.find((x) => x.heading === "Holds").tables[0]; t.rows = [["Invoice", "Invoice record", ""], ["", "Invoice record", "reads"]]; },
+  });
+  for (const k of m.entities) if (k.type === "system-kind" && k.name === "SaaS") k.fields.element = "Node x";
+  const d = diagram(m, { shape: "system", id: S("Invoice mailer") });
+  assert.equal(lines(d)[1], '  n0["<b>Invoice mailer</b><br/><small>«SaaS»</small>"]:::middle', "an element outside the six draws no mark, and the kind still stands");
+  assert.ok(lines(d).includes("  n0 --> n2"), d.mermaid);
+  assert.ok(!d.mermaid.includes('|""|') && !d.mermaid.includes("<small></small>"), d.mermaid);
+  assert.ok(lines(d).includes('  n2[("Invoice record<br/><small>Invoice</small>")]'), "a blank concept cell falls back to the data object's own realizes");
+  assert.deepEqual(d.links.filter((l) => l.to === "n2").map((l) => l.label), ["", "reads"]);
+});
+
+test("a planned or retiring middle keeps its heavier border and takes its lifecycle's dash too", () => {
+  const d = diagram(land({ "Invoice mailer": (e) => { e.fields.lifecycle = "planned"; } }), { shape: "system", id: S("Invoice mailer") });
+  assert.ok(lines(d)[1].endsWith(":::middle"), d.mermaid);
+  assert.ok(lines(d).includes("  class n0 planned") && lines(d).includes("  classDef planned stroke-dasharray:5 4"), d.mermaid);
+  const h = diagram(land({ "Invoice mailer": (e) => { e.fields.lifecycle = "retiring"; } }), { shape: "holds", id: S("Invoice mailer") });
+  assert.ok(lines(h).includes("  class n0 retiring") && lines(h).includes("  classDef retiring stroke-dasharray:2 3"), h.mermaid);
 });

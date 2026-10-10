@@ -6,6 +6,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import { render, EXAMPLES } from "../scripts/interface.mjs";
 import { TOOLS } from "../lib/tools.mjs";
+import { SHAPES } from "../lib/schemas.mjs";
 import { CODES } from "../lib/errors.mjs";
 
 const file = new URL("../docs/INTERFACE.md", import.meta.url);
@@ -27,4 +28,11 @@ test("an example is a real call: its answer is never an empty object", async () 
   const blocks = [...(await render(text)).matchAll(/```json\n([\s\S]*?)\n```/g)].map((m) => JSON.parse(m[1]));
   assert.equal(blocks.length, Object.keys(EXAMPLES).length);
   for (const b of blocks) assert.ok(Object.keys(b.answer).length > 1, JSON.stringify(b.arguments));
+});
+
+// The sentence a client reads its enum from names every shape the server takes, in the server's
+// own order; the script fills only the fences, so the sentence is held here.
+test("the diagram paragraph names every shape", () => {
+  const list = SHAPES.map((x) => `\`${x}\``);
+  assert.ok(text.includes(`\`shape\` is ${list.slice(0, -1).join(", ")} or ${list.at(-1)}.`), "the shape sentence lists every value of SHAPES");
 });
