@@ -608,6 +608,17 @@ Every type, the entity that came into the model last first: the ten newest entit
     "type": null,
     "entities": [
       {
+        "id": "01a12659-d295-7969-b17f-fbae284c2391",
+        "type": "profile",
+        "name": "Build Agent",
+        "tagline": "Whichever agent writes the change at Beacon Systems today, in the Backend Engineer seat, and hands it to the Reviewer.",
+        "owner": null,
+        "created": "2026-10-10T15:06:23.253Z",
+        "fields": {
+          "nature": "agent"
+        }
+      },
+      {
         "id": "01a1226b-c65b-7c27-a96f-dbfb10db9c15",
         "type": "service",
         "name": "Invoice feed",
@@ -615,21 +626,10 @@ Every type, the entity that came into the model last first: the ten newest entit
         "owner": null,
         "created": "2026-10-09T20:47:30.907Z",
         "fields": {}
-      },
-      {
-        "id": "01a1226b-c617-7a13-9570-6f418579c6dc",
-        "type": "data-object",
-        "name": "Invoice record",
-        "tagline": "The row set the Billing service writes for each issued invoice, with its lines and totals, kept in the billing database.",
-        "owner": null,
-        "created": "2026-10-09T20:47:30.839Z",
-        "fields": {
-          "realizes": "Invoice"
-        }
       }
     ],
     "page": {
-      "total": 111,
+      "total": 112,
       "returned": 2,
       "hasMore": true,
       "nextCursor": "eyJvIjoyLCJjIjoiMDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWYwMTIzNDU2NyJ9"
@@ -1444,7 +1444,7 @@ A picture of part of the model as Mermaid source, built from its edges and never
   "answer": {
     "shape": "organization",
     "title": "Billing Run Team",
-    "mermaid": "flowchart TB\n  subgraph g0 [\"Billing Run Team\"]\n    n0[\"fak:fa-human <b>Mira Halvorsen</b><br/><small>Backend Engineer</small>\"]:::lead\n    subgraph g0a [\" \"]\n      n1[\"fak:fa-agent <b>AI Agent</b>\"]\n…",
+    "mermaid": "flowchart TB\n  subgraph g0 [\"Billing Run Team\"]\n    n0[\"fak:fa-human <b>Mira Halvorsen</b><br/><small>Backend Engineer</small>\"]:::lead\n    n1[\"fak:fa-human <b>Tomas Reyes</b><br/><small>Head of Produ…",
     "nodes": [
       {
         "node": "g0",
@@ -1459,8 +1459,14 @@ A picture of part of the model as Mermaid source, built from its edges and never
         "type": "profile"
       }
     ],
-    "links": [],
-    "edges": 0,
+    "links": [
+      {
+        "from": "n0",
+        "to": "n3",
+        "label": "directs"
+      }
+    ],
+    "edges": 1,
     "omitted": 0,
     "model": {
       "commit": "0123456789abcdef0123456789abcdef01234567",
