@@ -41,6 +41,8 @@ test("the tools, by their exact names", async () => {
   const { tools } = await client.listTools();
   assert.deepEqual(tools.map((t) => t.name).sort(), ["describe_errors", "describe_relations", "describe_rule", "describe_schema", "diagram", "fetch", "find_evidence", "get_entity", "list_checks", "list_entities", "list_references", "list_rules", "list_types", "search"]);
   for (const t of tools) assert.ok(t.description.length > 20, t.name);
+  const diagram = tools.find((t) => t.name === "diagram")?.description ?? "";
+  assert.ok(diagram.includes("landscape"), "a client asked for a landscape finds the shape by that word");
 });
 
 test("every tool says it only reads a closed model", async () => {
