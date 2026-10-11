@@ -252,7 +252,7 @@ test("every link's ends are drawn nodes, and the link count matches the arrow li
 });
 
 test("the arguments each shape does not take, needs or cannot use are refused by name", () => {
-  refused(() => diagram(s, { shape: "graph" }), "invalid_argument", { argument: "shape", reason: "one of concepts, process, neighborhood, schema, context, aggregate, flow, lifecycle, organization" });
+  refused(() => diagram(s, { shape: "graph" }), "invalid_argument", { argument: "shape", reason: "one of concepts, process, neighborhood, schema, context, aggregate, flow, lifecycle, organization, system, holds" });
   refused(() => diagram(s, { shape: "schema", id: "core/phase" }), "invalid_argument", { argument: "id", reason: "not taken by schema" });
   refused(() => diagram(s, { shape: "concepts", type: "phase" }), "invalid_argument", { argument: "type", reason: "not taken by concepts" });
   refused(() => diagram(s, { shape: "schema", domain: I("domains/pricing") }), "invalid_argument", { argument: "domain", reason: "not taken by schema" });
@@ -811,4 +811,203 @@ test("a part-of loop the checks refuse, or a rank that is no number, still draws
   assert.deepEqual(whole.nodes.filter((n) => n.type === "group").map((n) => n.title), ["Legal", "Engineering", "Product", "Management"]);
   const top = diagram(m, { shape: "organization", id: G("Management") });
   assert.deepEqual(top.nodes.filter((n) => n.type === "group").map((n) => n.title).sort(), ["Engineering", "Legal", "Management", "Product"]);
+});
+
+// The landscape: the example's Billing service runs on the Beacon cluster, feeds the Invoice
+// mailer over one interface, provides the Invoice feed and holds six concepts, one of them as a
+// data object. Fixtures edit the example's systems in place: the shapes read entities alone.
+const S = (name) => s.entities.find((e) => e.type === "system" && e.name === name).id;
+const land = (edit = {}, add = []) => {
+  const m = structuredClone(s);
+  for (const e of m.entities) if (e.type === "system" && edit[e.name]) edit[e.name](e);
+  m.entities.push(...add);
+  return m;
+};
+const CONNECTS = ["System", "As", "Service", "Carries", "Via"];
+const system = (id, name, fields, sections = []) => ({ id, type: "system", name, fields: { id, source: "Local", ...fields }, sections });
+const BILLING = [
+  "flowchart LR",
+  '  n0["fak:fa-application-component <b>Billing service</b><br/><small>«Service»</small>"]:::middle',
+  '  n1["fak:fa-node <b>Beacon cluster</b><br/><small>«Platform»</small>"]',
+  "  n0 -.- n1",
+  '  n2["fak:fa-application-component <b>Invoice mailer</b><br/><small>«SaaS»</small>"]',
+  '  n0 -->|"Feed endpoint · Invoice · REST"| n2',
+  '  n3(["Invoice feed"])',
+  "  n0 --o n3",
+  '  n4[("Invoice record<br/><small>Invoice</small>")]',
+  '  n0 ==>|"master"| n4',
+  '  n5[("Invoice line")]',
+  '  n0 ==>|"master"| n5',
+  '  n6[("Credit note")]',
+  '  n0 ==>|"master"| n6',
+  '  n7[("Pricing rule")]',
+  '  n0 ==>|"master"| n7',
+  '  n8[("Customer")]',
+  '  n0 -.->|"reads"| n8',
+  '  n9[("Usage record")]',
+  '  n0 -.->|"reads"| n9',
+  "  classDef middle stroke-width:2px",
+];
+
+test("a system is drawn in its landscape: its host, what takes its data, its service and what it holds", () => {
+  const d = diagram(s, { shape: "system", id: S("Billing service") });
+  assert.deepEqual([d.shape, d.title, d.edges, d.omitted, d.model.commit], ["system", "Billing service", 9, 0, COMMIT]);
+  assert.deepEqual(lines(d), BILLING);
+  assert.deepEqual(d.nodes.map((n) => [n.node, n.title, n.type]), [
+    ["n0", "Billing service", "system"], ["n1", "Beacon cluster", "system"], ["n2", "Invoice mailer", "system"], ["n3", "Invoice feed", "service"],
+    ["n4", "Invoice record", "data-object"], ["n5", "Invoice line", "concept"], ["n6", "Credit note", "concept"], ["n7", "Pricing rule", "concept"],
+    ["n8", "Customer", "concept"], ["n9", "Usage record", "concept"],
+  ]);
+  assert.deepEqual(d.nodes[0], { node: "n0", id: S("Billing service"), title: "Billing service", type: "system" });
+  assert.equal(d.nodes[4].id, I("data-objects/invoice-record"));
+  assert.deepEqual(d.links, [
+    { from: "n0", to: "n1", label: "part-of" }, { from: "n0", to: "n2", label: "Feed endpoint · Invoice · REST" }, { from: "n0", to: "n3", label: "provided-by" },
+    { from: "n0", to: "n4", label: "master" }, { from: "n0", to: "n5", label: "master" }, { from: "n0", to: "n6", label: "master" }, { from: "n0", to: "n7", label: "master" },
+    { from: "n0", to: "n8", label: "reads" }, { from: "n0", to: "n9", label: "reads" },
+  ]);
+});
+
+test("a system whose data arrives draws the arrow in, and one that only hosts draws its part", () => {
+  const mailer = diagram(s, { shape: "system", id: S("Invoice mailer") });
+  assert.deepEqual(lines(mailer), [
+    "flowchart LR",
+    '  n0["fak:fa-application-component <b>Invoice mailer</b><br/><small>«SaaS»</small>"]:::middle',
+    '  n1["fak:fa-application-component <b>Billing service</b><br/><small>«Service»</small>"]',
+    '  n1 -->|"Feed endpoint · Invoice · REST"| n0',
+    '  n2[("Invoice record<br/><small>Invoice</small>")]',
+    '  n0 -.->|"reads"| n2',
+    '  n3[("Customer")]',
+    '  n0 -.->|"reads"| n3',
+    "  classDef middle stroke-width:2px",
+  ]);
+  assert.deepEqual(mailer.links[0], { from: "n1", to: "n0", label: "Feed endpoint · Invoice · REST" });
+  const cluster = diagram(s, { shape: "system", id: S("Beacon cluster") });
+  assert.deepEqual(lines(cluster), [
+    "flowchart LR",
+    '  n0["fak:fa-node <b>Beacon cluster</b><br/><small>«Platform»</small>"]:::middle',
+    '  n1["fak:fa-application-component <b>Billing service</b><br/><small>«Service»</small>"]',
+    "  n1 -.- n0",
+    "  classDef middle stroke-width:2px",
+  ]);
+  assert.deepEqual([cluster.edges, cluster.links], [1, [{ from: "n1", to: "n0", label: "part-of" }]]);
+});
+
+test("a planned system is dashed, a bare connection row is an unlabeled arrow, and a system reached three ways is one box", () => {
+  const ARCHIVE = "01a0ffff-0000-7000-8000-0000000000e1";
+  const m = land({
+    // The cluster also feeds the service, over an interface alone, and takes a bare row from it.
+    "Billing service": (e) => e.sections.push({ heading: "Connects to", tables: [{ columns: CONNECTS, rows: [["Beacon cluster", "Node metrics", "", "", ""]] }] }),
+    "Beacon cluster": (e) => { e.sections.push({ heading: "Connects to", tables: [{ columns: CONNECTS, rows: [["Billing service", "", "", "", ""]] }] }); },
+  }, [system(ARCHIVE, "Archive", { kind: "SaaS", lifecycle: "planned" }, [{ heading: "Connects to", tables: [{ columns: CONNECTS, rows: [["Billing service", "", "", "Invoice", "SFTP"]] }] }])]);
+  const d = diagram(m, { shape: "system", id: S("Billing service") });
+  const got = lines(d);
+  // Takers stand in name order, so the planned Archive comes before the cluster's bare row.
+  assert.deepEqual(got.slice(0, 8), [
+    "flowchart LR",
+    '  n0["fak:fa-application-component <b>Billing service</b><br/><small>«Service»</small>"]:::middle',
+    '  n1["fak:fa-node <b>Beacon cluster</b><br/><small>«Platform»</small>"]',
+    "  n0 -.- n1",
+    '  n1 -->|"Node metrics"| n0',
+    '  n2["fak:fa-application-component <b>Archive</b><br/><small>«SaaS»</small>"]:::planned',
+    '  n0 -->|"Invoice · SFTP"| n2',
+    "  n0 --> n1",
+  ]);
+  assert.deepEqual(got.slice(-2), ["  classDef middle stroke-width:2px", "  classDef planned stroke-dasharray:5 4"]);
+  assert.equal(d.nodes.filter((n) => n.title === "Beacon cluster").length, 1);
+  assert.deepEqual(d.links.slice(0, 4), [{ from: "n0", to: "n1", label: "part-of" }, { from: "n1", to: "n0", label: "Node metrics" }, { from: "n0", to: "n2", label: "Invoice · SFTP" }, { from: "n0", to: "n1", label: "" }]);
+  // The middle keeps its heavier border whatever its lifecycle, and a retired system's finer dash besides.
+  const retired = diagram(land({ "Billing service": (e) => { e.fields.lifecycle = "retired"; } }), { shape: "system", id: S("Invoice mailer") });
+  assert.ok(lines(retired).includes("  classDef retiring stroke-dasharray:2 3") && lines(retired)[2].endsWith(":::retiring"), retired.mermaid);
+  const middleRetired = diagram(land({ "Invoice mailer": (e) => { e.fields.lifecycle = "retired"; } }), { shape: "system", id: S("Invoice mailer") });
+  assert.ok(lines(middleRetired)[1].endsWith(":::middle") && lines(middleRetired).includes("  class n0 retiring"), middleRetired.mermaid);
+});
+
+test("a kind that resolves to no page draws the name alone, and a held row that resolves to nothing is skipped", () => {
+  const m = land({ "Invoice mailer": (e) => { e.fields.kind = "Nowhere"; e.sections.find((x) => x.heading === "Holds").tables[0].rows.push(["Ghost", "", "reads"]); } });
+  const d = diagram(m, { shape: "system", id: S("Invoice mailer") });
+  assert.equal(lines(d)[1], '  n0["<b>Invoice mailer</b>"]:::middle');
+  assert.ok(!d.mermaid.includes("Ghost") && !d.mermaid.includes("undefined"), d.mermaid);
+  assert.equal(d.nodes.length, 4);
+});
+
+test("what a system holds is drawn among the systems that hold the same, the master heavy", () => {
+  const d = diagram(s, { shape: "holds", id: S("Invoice mailer") });
+  assert.deepEqual([d.shape, d.title, d.edges, d.omitted], ["holds", "Invoice mailer", 4, 0]);
+  assert.deepEqual(lines(d), [
+    "flowchart LR",
+    '  n0["fak:fa-application-component <b>Invoice mailer</b><br/><small>«SaaS»</small>"]:::middle',
+    '  n1[("Invoice record<br/><small>Invoice</small>")]',
+    '  n0 -.->|"reads"| n1',
+    '  n2[("Customer")]',
+    '  n0 -.->|"reads"| n2',
+    '  n3["fak:fa-application-component <b>Billing service</b><br/><small>«Service»</small>"]',
+    '  n3 ==>|"master"| n1',
+    '  n3 -.->|"reads"| n2',
+    "  classDef middle stroke-width:2px",
+  ]);
+  assert.deepEqual(d.nodes.map((n) => [n.node, n.type]), [["n0", "system"], ["n1", "data-object"], ["n2", "concept"], ["n3", "system"]]);
+  assert.deepEqual(d.links, [{ from: "n0", to: "n1", label: "reads" }, { from: "n0", to: "n2", label: "reads" }, { from: "n3", to: "n1", label: "master" }, { from: "n3", to: "n2", label: "reads" }]);
+  const billing = diagram(s, { shape: "holds", id: S("Billing service") });
+  assert.deepEqual([billing.title, billing.nodes.length, billing.edges], ["Billing service", 8, 8]);
+  assert.ok(lines(billing).includes('  n7 -.->|"reads"| n1'), billing.mermaid);
+  refused(() => diagram(s, { shape: "holds", id: S("Beacon cluster") }), "cannot_draw", { shape: "holds", reason: "empty", nodes: 0, limit: DIAGRAM_CAP });
+});
+
+test("the two shapes refuse what they cannot draw, and a name is never read as a mark", () => {
+  const crowd = land({}, Array.from({ length: DIAGRAM_CAP }, (_, i) => system(`01a0ffff-0000-7000-8000-0000000003${String(i).padStart(2, "0")}`, `Taker ${String(i).padStart(2, "0")}`, { kind: "SaaS" },
+    [{ heading: "Connects to", tables: [{ columns: CONNECTS, rows: [["Billing service", "", "", "", ""]] }] }])));
+  refused(() => diagram(crowd, { shape: "system", id: S("Billing service") }), "cannot_draw", { shape: "system", reason: "too_large", nodes: DIAGRAM_CAP + 10, limit: DIAGRAM_CAP });
+  const holders = land({}, Array.from({ length: DIAGRAM_CAP }, (_, i) => system(`01a0ffff-0000-7000-8000-0000000004${String(i).padStart(2, "0")}`, `Reader ${String(i).padStart(2, "0")}`, { kind: "SaaS" },
+    [{ heading: "Holds", tables: [{ columns: ["Concept", "Data object", "Access"], rows: [["Customer", "", "reads"]] }] }])));
+  refused(() => diagram(holders, { shape: "holds", id: S("Invoice mailer") }), "cannot_draw", { shape: "holds", reason: "too_large", nodes: DIAGRAM_CAP + 4, limit: DIAGRAM_CAP });
+  for (const shape of ["system", "holds"]) {
+    refused(() => diagram(s, { shape, id: I("concepts/invoice") }), "invalid_argument", { argument: "id", reason: "not a system" });
+    refused(() => diagram(s, { shape }), "invalid_argument", { argument: "id", reason: `needed by ${shape}` });
+    refused(() => diagram(instanceSnapshot(), { shape, id: "nothing/here" }), "unknown_type");
+  }
+  // The host is renamed, and the field that names it with it, since the shape resolves by name.
+  const odd = diagram(land({ "Beacon cluster": (e) => { e.name = "Node fas:fa-x"; }, "Billing service": (e) => { e.fields["part-of"] = "Node fas:fa-x"; } }), { shape: "system", id: S("Billing service") });
+  assert.ok(lines(odd).includes('  n1["fak:fa-node <b>Node fas:#8203;fa-x</b><br/><small>«Platform»</small>"]'), odd.mermaid);
+});
+
+// Hardening the review asked for: a cell a checked model never leaves blank or outside its enum
+// still arrives in a served snapshot, since the checker flags and does not block.
+test("a blank access, an element outside the six, and a data object beside a blank concept draw without empty labels or stray marks", () => {
+  const m = land({
+    "Invoice mailer": (e) => { const t = e.sections.find((x) => x.heading === "Holds").tables[0]; t.rows = [["Invoice", "Invoice record", ""], ["", "Invoice record", "reads"]]; },
+  });
+  for (const k of m.entities) if (k.type === "system-kind" && k.name === "SaaS") k.fields.element = "Node x";
+  const d = diagram(m, { shape: "system", id: S("Invoice mailer") });
+  assert.equal(lines(d)[1], '  n0["<b>Invoice mailer</b><br/><small>«SaaS»</small>"]:::middle', "an element outside the six draws no mark, and the kind still stands");
+  assert.ok(lines(d).includes("  n0 --> n2"), d.mermaid);
+  assert.ok(!d.mermaid.includes('|""|') && !d.mermaid.includes("<small></small>"), d.mermaid);
+  assert.ok(lines(d).includes('  n2[("Invoice record<br/><small>Invoice</small>")]'), "a blank concept cell falls back to the data object's own realizes");
+  assert.deepEqual(d.links.filter((l) => l.to === "n2").map((l) => l.label), ["", "reads"]);
+});
+
+test("a planned or retiring middle keeps its heavier border and takes its lifecycle's dash too", () => {
+  const d = diagram(land({ "Invoice mailer": (e) => { e.fields.lifecycle = "planned"; } }), { shape: "system", id: S("Invoice mailer") });
+  assert.ok(lines(d)[1].endsWith(":::middle"), d.mermaid);
+  assert.ok(lines(d).includes("  class n0 planned") && lines(d).includes("  classDef planned stroke-dasharray:5 4"), d.mermaid);
+  const h = diagram(land({ "Invoice mailer": (e) => { e.fields.lifecycle = "retiring"; } }), { shape: "holds", id: S("Invoice mailer") });
+  assert.ok(lines(h).includes("  class n0 retiring") && lines(h).includes("  classDef retiring stroke-dasharray:2 3"), h.mermaid);
+});
+
+test("holds reads a row's concept as system does: a blank concept cell beside a data object still joins the systems that hold it", () => {
+  // The Billing service masters the Invoice record under a blank concept cell; the mailer's picture
+  // still shows the master's heavy arrow, and a middle whose only row is such a row is drawn, not refused.
+  const m = land({
+    "Billing service": (e) => { const t = e.sections.find((x) => x.heading === "Holds").tables[0]; t.rows[0] = ["", "Invoice record", "master"]; },
+    "Invoice mailer": (e) => { const t = e.sections.find((x) => x.heading === "Holds").tables[0]; t.rows = [["", "Invoice record", "reads"]]; },
+  });
+  const d = diagram(m, { shape: "holds", id: S("Invoice mailer") });
+  assert.deepEqual(lines(d), [
+    "flowchart LR",
+    '  n0["fak:fa-application-component <b>Invoice mailer</b><br/><small>«SaaS»</small>"]:::middle',
+    '  n1[("Invoice record<br/><small>Invoice</small>")]',
+    '  n0 -.->|"reads"| n1',
+    '  n2["fak:fa-application-component <b>Billing service</b><br/><small>«Service»</small>"]',
+    '  n2 ==>|"master"| n1',
+    "  classDef middle stroke-width:2px",
+  ]);
 });

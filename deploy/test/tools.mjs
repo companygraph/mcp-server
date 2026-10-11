@@ -161,6 +161,26 @@ export function registerToolsTests() {
     await client.close();
   });
 
+  // A system's two pictures reach a deployment with a re-pin, so each draws its own. An instance
+  // without the landscape pack holds no system and skips; one that only hosts holds nothing.
+  test("every system draws its landscape, and what it holds or says it holds nothing", async (t) => {
+    const systems = s.entities.filter((e) => e.type === "system");
+    if (!systems.length) return t.skip("this instance holds no system");
+    const [a, b] = InMemoryTransport.createLinkedPair();
+    await createServer(s).connect(a);
+    const client = new Client({ name: "test", version: "0" });
+    await client.connect(b);
+    for (const sys of systems) {
+      const d = checkAnswer("diagram", await client.callTool({ name: "diagram", arguments: { shape: "system", id: sys.id } }));
+      if (d.error) assert.deepEqual([d.error.code, d.error.details.reason], ["cannot_draw", "too_large"], sys.name);
+      else assert.ok(d.nodes.every((/** @type {{ type: string }} */ n) => ["system", "service", "data-object", "concept"].includes(n.type)), d.mermaid);
+      const h = checkAnswer("diagram", await client.callTool({ name: "diagram", arguments: { shape: "holds", id: sys.id } }));
+      if (h.error) assert.ok(["empty", "too_large"].includes(h.error.details.reason), `${sys.name}: ${h.error.code}`);
+      else assert.ok(h.nodes.every((/** @type {{ type: string }} */ n) => ["system", "data-object", "concept"].includes(n.type)), h.mermaid);
+    }
+    await client.close();
+  });
+
   // A flow and a lifecycle read tables an instance may not yet write, so a context whose aggregates
   // hold none is refused as empty and every other answers in its shape.
   test("every bounded context answers its flow and its lifecycle, or says it has nothing to draw", async (t) => {

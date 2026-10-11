@@ -31,7 +31,7 @@ schema.name;
 const name: string | undefined = schema?.name;
 
 const drawn = diagram(s, { shape: "schema", type: "x" });
-const shape: "schema" | "process" | "concepts" | "neighborhood" | "context" | "aggregate" | "flow" | "lifecycle" | "organization" = drawn.shape;
+const shape: "schema" | "process" | "concepts" | "neighborhood" | "context" | "aggregate" | "flow" | "lifecycle" | "organization" | "system" | "holds" = drawn.shape;
 const everyType: { via: string; to: string; multiplicity: string }[] | undefined = drawn.everyType;
 // @ts-expect-error everyType is a list, and nothing wider
 const notEveryType: number = drawn.everyType;

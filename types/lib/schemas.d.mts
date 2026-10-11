@@ -1,5 +1,5 @@
 import { z } from "zod";
-export declare const SHAPES: readonly ["concepts", "process", "neighborhood", "schema", "context", "aggregate", "flow", "lifecycle", "organization"];
+export declare const SHAPES: readonly ["concepts", "process", "neighborhood", "schema", "context", "aggregate", "flow", "lifecycle", "organization", "system", "holds"];
 export declare const Model: z.ZodObject<{
     commit: z.ZodNullable<z.ZodString>;
     repo: z.ZodNullable<z.ZodString>;
@@ -505,11 +505,13 @@ export declare const OUTPUTS: {
             concepts: "concepts";
             context: "context";
             flow: "flow";
+            holds: "holds";
             lifecycle: "lifecycle";
             neighborhood: "neighborhood";
             organization: "organization";
             process: "process";
             schema: "schema";
+            system: "system";
         }>;
         title: z.ZodNullable<z.ZodString>;
         mermaid: z.ZodString;
@@ -586,11 +588,13 @@ export declare const DETAILS: {
             concepts: "concepts";
             context: "context";
             flow: "flow";
+            holds: "holds";
             lifecycle: "lifecycle";
             neighborhood: "neighborhood";
             organization: "organization";
             process: "process";
             schema: "schema";
+            system: "system";
         }>;
         reason: z.ZodEnum<{
             empty: "empty";
