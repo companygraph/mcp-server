@@ -687,17 +687,22 @@ test("the company is its units in the line, in rank order, a box per person and 
   assert.deepEqual(d.links, [["n0", "n1", "Staff"], ["n0", "n2", "staff"], ["n0", "n3", "part-of"], ["n0", "n5", "part-of"]].map(([from, to, label]) => ({ from, to, label })));
 });
 
-test("a team named by its id draws its people, its agents in a frame of their own below them", () => {
+test("a team named by its id draws its people, its agents in a frame of their own below them, and who directs an agent", () => {
   const d = diagram(s, { shape: "organization", id: G("Billing Run Team") });
-  assert.deepEqual([d.title, d.edges, d.omitted, d.links], ["Billing Run Team", 0, 0, []]);
+  assert.deepEqual([d.title, d.edges, d.omitted, d.links], ["Billing Run Team", 1, 0, [{ from: "n0", to: "n3", label: "directs" }]]);
   assert.deepEqual(lines(d), [
     "flowchart TB",
     '  subgraph g0 ["Billing Run Team"]',
     '    n0["fak:fa-human <b>Mira Halvorsen</b><br/><small>Backend Engineer</small>"]:::lead',
+    '    n1["fak:fa-human <b>Tomas Reyes</b><br/><small>Head of Product</small>"]',
     '    subgraph g0a [" "]',
-    '      n1["fak:fa-agent <b>AI Agent</b>"]',
+    "      direction LR",
+    '      n2["fak:fa-agent <b>AI Agent</b>"]',
+    '      n3["fak:fa-agent <b>Build Agent</b>"]',
     "    end",
-    "    n0 ~~~ g0a",
+    "    n0 -.-> n3",
+    "    n0 ~~~ n1",
+    "    n1 ~~~ g0a",
     "  end",
     "  class g0a agents",
     "  classDef lead stroke-width:2px",
@@ -755,6 +760,58 @@ test("people stand Lead, Deputy, Member, Staff; agents side by side; a unit with
   ]);
   // Operations has no one in it and nothing open: it draws no box, and the arrow ends at its frame.
   assert.ok(lines(diagram(m, { shape: "organization" })).includes("  n0 --> g4"));
+});
+
+// Who directs an agent is the group's Direction, one row per agent and human (meta-model #343):
+// a dotted arrow from each human a row names to the agent, a `directs` link beside it, and an
+// agent with no row keeps its frame alone, since every human in it directs it. One box per agent
+// whatever its rows, and a row naming someone outside the frame draws nothing.
+// The example's team carries one Direction row, Build Agent by Mira; a case sets its rows, or takes the section away.
+const DIRECTED = (rows) => (e) => setRows(e, "Direction", rows);
+const UNDIRECTED = (e) => { e.sections = e.sections.filter((x) => x.heading !== "Direction"); };
+
+// The row link is left out once an arrow enters the frame: Mermaid then takes the chart's
+// direction for the frame, and the link would stack the agents the arrows set side by side.
+test("a team's Direction draws a dotted arrow from each human to the agent its row names, a link for each, and no row link", () => {
+  const m = org({ "Billing Run Team": DIRECTED([["AI Agent", "Mira Halvorsen"], ["AI Agent", "Tomas Reyes"], ["Build Agent", "Mira Halvorsen"]]) });
+  const d = diagram(m, { shape: "organization", id: G("Billing Run Team") });
+  assert.deepEqual([d.title, d.edges, d.omitted], ["Billing Run Team", 3, 0]);
+  assert.deepEqual(lines(d), [
+    "flowchart TB",
+    '  subgraph g0 ["Billing Run Team"]',
+    '    n0["fak:fa-human <b>Mira Halvorsen</b><br/><small>Backend Engineer</small>"]:::lead',
+    '    n1["fak:fa-human <b>Tomas Reyes</b><br/><small>Head of Product</small>"]',
+    '    subgraph g0a [" "]',
+    "      direction LR",
+    '      n2["fak:fa-agent <b>AI Agent</b>"]',
+    '      n3["fak:fa-agent <b>Build Agent</b>"]',
+    "    end",
+    "    n0 -.-> n2",
+    "    n1 -.-> n2",
+    "    n0 -.-> n3",
+    "    n0 ~~~ n1",
+    "    n1 ~~~ g0a",
+    "  end",
+    "  class g0a agents",
+    "  classDef lead stroke-width:2px",
+    "  classDef agents stroke-dasharray:2 3",
+  ]);
+  assert.deepEqual(d.links, [["n0", "n2"], ["n1", "n2"], ["n0", "n3"]].map(([from, to]) => ({ from, to, label: "directs" })));
+});
+
+test("an agent with no Direction row gets no arrow, a row naming someone outside the frame draws nothing, and the arrows come in row order", () => {
+  const m = org({ "Billing Run Team": DIRECTED([["Build Agent", "Ines Marchetti"], ["Build Agent", "Tomas Reyes"], ["Build Agent", "Mira Halvorsen"]]) });
+  const d = diagram(m, { shape: "organization", id: G("Billing Run Team") });
+  assert.deepEqual(d.edges, 2);
+  const got = lines(d);
+  assert.deepEqual(got.filter((l) => l.includes("-.->")), ["    n1 -.-> n3", "    n0 -.-> n3"]);
+  assert.ok(!got.some((l) => l.includes("Ines")), d.mermaid);
+});
+
+test("a team without a Direction draws no arrow and keeps its agents in a row by the invisible link", () => {
+  const d = diagram(org({ "Billing Run Team": UNDIRECTED }), { shape: "organization", id: G("Billing Run Team") });
+  assert.deepEqual([d.edges, d.links], [0, []]);
+  assert.ok(!d.mermaid.includes("-.->") && d.mermaid.includes("      n2 ~~~ n3"), d.mermaid);
 });
 
 test("a model whose only groups are teams draws them for the company, and a group that has ended is left out", () => {

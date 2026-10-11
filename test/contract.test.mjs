@@ -229,7 +229,7 @@ test("an organization answers in the schema over the example, and is refused whe
   const whole = checkAnswer("diagram", await client.callTool({ name: "diagram", arguments: { shape: "organization" } }));
   assert.deepEqual([whole.shape, whole.title, whole.nodes.length, whole.links.length, whole.omitted], ["organization", null, 11, 4, 1]);
   const team = checkAnswer("diagram", await client.callTool({ name: "diagram", arguments: { shape: "organization", id: idAt(s, "groups/billing-run-team") } }));
-  assert.deepEqual([team.title, team.nodes.map((/** @type {{ type: string }} */ n) => n.type)], ["Billing Run Team", ["group", "profile", "profile"]]);
+  assert.deepEqual([team.title, team.nodes.map((/** @type {{ type: string }} */ n) => n.type), team.links], ["Billing Run Team", ["group", "profile", "profile", "profile", "profile"], [{ from: "n0", to: "n3", label: "directs" }]]);
   await client.close();
   const without = await connect(instanceSnapshot());
   const { error } = checkAnswer("diagram", await without.callTool({ name: "diagram", arguments: { shape: "organization" } }));
