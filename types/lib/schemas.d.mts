@@ -1,5 +1,5 @@
 import { z } from "zod";
-export declare const SHAPES: readonly ["concepts", "process", "neighborhood", "schema", "context", "aggregate", "flow", "lifecycle", "organization", "system", "holds"];
+export declare const SHAPES: readonly ["concepts", "process", "neighborhood", "schema", "context", "aggregate", "flow", "lifecycle", "organization", "system", "holds", "usecase", "scenario", "requirements"];
 export declare const Model: z.ZodObject<{
     commit: z.ZodNullable<z.ZodString>;
     repo: z.ZodNullable<z.ZodString>;
@@ -510,8 +510,11 @@ export declare const OUTPUTS: {
             neighborhood: "neighborhood";
             organization: "organization";
             process: "process";
+            requirements: "requirements";
+            scenario: "scenario";
             schema: "schema";
             system: "system";
+            usecase: "usecase";
         }>;
         title: z.ZodNullable<z.ZodString>;
         mermaid: z.ZodString;
@@ -537,6 +540,16 @@ export declare const OUTPUTS: {
             from: z.ZodNullable<z.ZodString>;
             to: z.ZodString;
             command: z.ZodNullable<z.ZodString>;
+        }, z.core.$strict>>>;
+        steps: z.ZodOptional<z.ZodArray<z.ZodObject<{
+            step: z.ZodString;
+            actor: z.ZodString;
+            action: z.ZodString;
+        }, z.core.$strict>>>;
+        extensions: z.ZodOptional<z.ZodArray<z.ZodObject<{
+            step: z.ZodString;
+            condition: z.ZodString;
+            handling: z.ZodString;
         }, z.core.$strict>>>;
         edges: z.ZodNumber;
         omitted: z.ZodNumber;
@@ -593,8 +606,11 @@ export declare const DETAILS: {
             neighborhood: "neighborhood";
             organization: "organization";
             process: "process";
+            requirements: "requirements";
+            scenario: "scenario";
             schema: "schema";
             system: "system";
+            usecase: "usecase";
         }>;
         reason: z.ZodEnum<{
             empty: "empty";
