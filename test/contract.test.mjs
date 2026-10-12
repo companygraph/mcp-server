@@ -256,6 +256,27 @@ test("a system and what it holds answer in the schema over the example, and are 
   await without.close();
 });
 
+test("a use case's three pictures answer in the schema over the example, and are refused where no use case is written", async () => {
+  const s = exampleSnapshot();
+  const client = await connect(s);
+  const id = idAt(s, "use-cases/download-an-invoice");
+  const uc = checkAnswer("diagram", await client.callTool({ name: "diagram", arguments: { shape: "usecase", id } }));
+  assert.deepEqual([uc.shape, uc.title, uc.nodes.length, uc.links.length], ["usecase", "Download an invoice", 4, 4]);
+  const sc = checkAnswer("diagram", await client.callTool({ name: "diagram", arguments: { shape: "scenario", id } }));
+  assert.deepEqual([sc.shape, sc.steps.length, sc.extensions.length, sc.nodes.length], ["scenario", 3, 2, 0]);
+  const rq = checkAnswer("diagram", await client.callTool({ name: "diagram", arguments: { shape: "requirements", id: idAt(s, "requirements/a-copy-is-the-invoice-as-issued") } }));
+  assert.deepEqual([rq.shape, rq.title, rq.links.map((/** @type {{ label: string }} */ l) => l.label)], ["requirements", "A copy is the invoice as issued", ["Applies to"]]);
+  const { error } = checkAnswer("diagram", await client.callTool({ name: "diagram", arguments: { shape: "requirements", id: idAt(s, "features/invoice-download") } }));
+  assert.deepEqual([error.code, error.details], ["cannot_draw", { shape: "requirements", reason: "empty", nodes: 0, limit: 50 }]);
+  await client.close();
+  const without = await connect(instanceSnapshot());
+  for (const shape of ["usecase", "scenario", "requirements"]) {
+    const r = checkAnswer("diagram", await without.callTool({ name: "diagram", arguments: { shape, id: "nothing/here" } }));
+    assert.deepEqual([r.error.code, r.error.details.type], ["unknown_type", "requirement"]);
+  }
+  await without.close();
+});
+
 test("a snapshot that predates what a tool reads is refused by code", async () => {
   const { checks, ...old } = exampleSnapshot();
   const client = await connect(old);

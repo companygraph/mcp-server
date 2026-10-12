@@ -181,6 +181,27 @@ export function registerToolsTests() {
     await client.close();
   });
 
+  // A use case's three pictures reach a deployment with a re-pin, so each draws its own. An
+  // instance without the requirements pack holds no use case and skips; one with no scenario
+  // written, or nothing applying to it, says so.
+  test("every use case draws its scope, its scenario and its requirements, or says it has nothing to draw", async (t) => {
+    const useCases = s.entities.filter((e) => e.type === "use-case");
+    if (!useCases.length) return t.skip("this instance holds no use case");
+    const [a, b] = InMemoryTransport.createLinkedPair();
+    await createServer(s).connect(a);
+    const client = new Client({ name: "test", version: "0" });
+    await client.connect(b);
+    const TYPES = ["use-case", "seat", "feature", "product", "requirement", "rule"];
+    for (const uc of useCases) {
+      for (const shape of ["usecase", "scenario", "requirements"]) {
+        const d = checkAnswer("diagram", await client.callTool({ name: "diagram", arguments: { shape, id: uc.id } }));
+        if (d.error) assert.ok(d.error.code === "cannot_draw" && (shape === "usecase" ? d.error.details.reason === "too_large" : ["empty", "too_large"].includes(d.error.details.reason)), `${uc.name} ${shape}: ${d.error.code}`);
+        else assert.ok(d.nodes.every((/** @type {{ type: string }} */ n) => TYPES.includes(n.type)), d.mermaid);
+      }
+    }
+    await client.close();
+  });
+
   // A flow and a lifecycle read tables an instance may not yet write, so a context whose aggregates
   // hold none is refused as empty and every other answers in its shape.
   test("every bounded context answers its flow and its lifecycle, or says it has nothing to draw", async (t) => {
