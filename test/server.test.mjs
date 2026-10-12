@@ -43,6 +43,7 @@ test("the tools, by their exact names", async () => {
   for (const t of tools) assert.ok(t.description.length > 20, t.name);
   const diagram = tools.find((t) => t.name === "diagram")?.description ?? "";
   assert.ok(diagram.includes("landscape"), "a client asked for a landscape finds the shape by that word");
+  for (const w of ["usecase", "scenario", "requirements"]) assert.ok(diagram.includes(w), `a client asked for a ${w} finds the shape by that word`);
 });
 
 test("every tool says it only reads a closed model", async () => {

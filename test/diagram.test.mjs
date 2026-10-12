@@ -252,7 +252,7 @@ test("every link's ends are drawn nodes, and the link count matches the arrow li
 });
 
 test("the arguments each shape does not take, needs or cannot use are refused by name", () => {
-  refused(() => diagram(s, { shape: "graph" }), "invalid_argument", { argument: "shape", reason: "one of concepts, process, neighborhood, schema, context, aggregate, flow, lifecycle, organization, system, holds" });
+  refused(() => diagram(s, { shape: "graph" }), "invalid_argument", { argument: "shape", reason: "one of concepts, process, neighborhood, schema, context, aggregate, flow, lifecycle, organization, system, holds, usecase, scenario, requirements" });
   refused(() => diagram(s, { shape: "schema", id: "core/phase" }), "invalid_argument", { argument: "id", reason: "not taken by schema" });
   refused(() => diagram(s, { shape: "concepts", type: "phase" }), "invalid_argument", { argument: "type", reason: "not taken by concepts" });
   refused(() => diagram(s, { shape: "schema", domain: I("domains/pricing") }), "invalid_argument", { argument: "domain", reason: "not taken by schema" });
@@ -1067,4 +1067,215 @@ test("holds reads a row's concept as system does: a blank concept cell beside a 
     '  n2 ==>|"master"| n1',
     "  classDef middle stroke-width:2px",
   ]);
+});
+
+// The requirements pack: the example's Download an invoice, a user goal in scope system whose
+// Payer is a string actor, includes Find an invoice, asks of Invoice download and is held to one
+// requirement. Fixtures edit the example's pages in place: the shapes read entities alone.
+const U = (name) => s.entities.find((e) => e.type === "use-case" && e.name === name).id;
+const R = (name) => s.entities.find((e) => e.type === "requirement" && e.name === name).id;
+const req = (edit = {}, add = []) => {
+  const m = structuredClone(s);
+  for (const e of m.entities) if (edit[e.type]?.[e.name]) edit[e.type][e.name](e);
+  m.entities.push(...add);
+  return m;
+};
+const unknownType = (fn) => assert.throws(fn, (e) => { assert.equal(e.code, "unknown_type"); assert.equal(e.details.type, "requirement"); return true; });
+const PAYER = 'a0["fak:fa-actor <b>Payer</b>"]';
+const DOWNLOAD = [
+  "flowchart LR",
+  `  ${PAYER}`,
+  '  subgraph scope ["system"]',
+  '    n0(["<b>Download an invoice</b><br/><small>«user goal»</small>"]):::middle',
+  '    n1(["Find an invoice<br/><small>«subfunction»</small>"])',
+  '    n0 -.->|"includes"| n1',
+  "  end",
+  "  a0 --> n0",
+  '  n2["Invoice download<br/><small>«feature»</small>"]',
+  '  n0 -->|"features"| n2',
+  '  n3{{"<b>A copy is the invoice as issued</b><br/><small>«functional · must»</small>"}}:::must',
+  "  n3 -.-> n0",
+  "  classDef middle stroke-width:2px",
+  "  classDef must stroke-width:2px",
+];
+
+test("a use case is drawn in its scope: the actor outside, what it includes and asks of, and what it is held to", () => {
+  const d = diagram(s, { shape: "usecase", id: U("Download an invoice") });
+  assert.deepEqual([d.shape, d.title, d.edges, d.omitted, d.actor, d.model.commit], ["usecase", "Download an invoice", 4, 0, "Payer", COMMIT]);
+  assert.deepEqual(lines(d), DOWNLOAD);
+  assert.deepEqual(d.nodes.map((n) => [n.node, n.title, n.type]), [["n0", "Download an invoice", "use-case"], ["n1", "Find an invoice", "use-case"], ["n2", "Invoice download", "feature"], ["n3", "A copy is the invoice as issued", "requirement"]]);
+  assert.deepEqual(d.links, [{ from: "n0", to: "n1", label: "includes" }, { from: "a0", to: "n0", label: "" }, { from: "n0", to: "n2", label: "features" }, { from: "n3", to: "n0", label: "Applies to" }], "links in the order the source draws them");
+  // A subfunction with no scope has no frame, and nothing applies to it.
+  assert.deepEqual(lines(diagram(s, { shape: "usecase", id: U("Find an invoice") })), ["flowchart LR", `  ${PAYER}`, '  n0(["<b>Find an invoice</b><br/><small>«subfunction»</small>"]):::middle', "  a0 --> n0", "  classDef middle stroke-width:2px"]);
+});
+
+test("an actor that is a seat takes the mark of who holds it: a human's, an agent's, or the actor's where nobody does", () => {
+  const seat = (id, name) => ({ id, type: "seat", name, fields: { id, source: "Local" }, sections: [] });
+  const profile = (id, name, nature, seats) => ({ id, type: "profile", name, fields: { id, source: "Local", nature, seats }, sections: [] });
+  const m = req({ "use-case": { "Download an invoice": (e) => { e.fields["primary-actor"] = "Billing Clerk"; } } }, [
+    seat("01a0ffff-0000-7000-8000-0000000000a1", "Billing Clerk"), profile("01a0ffff-0000-7000-8000-0000000000a2", "Ines", "human", ["Billing Clerk"]), profile("01a0ffff-0000-7000-8000-0000000000a3", "Clerk Agent", "agent", ["Billing Clerk"]),
+  ]);
+  const human = diagram(m, { shape: "usecase", id: U("Download an invoice") });
+  assert.equal(lines(human)[1], '  n0["fak:fa-human <b>Billing Clerk</b>"]');
+  assert.deepEqual(human.nodes[0], { node: "n0", id: "01a0ffff-0000-7000-8000-0000000000a1", title: "Billing Clerk", type: "seat" });
+  assert.equal(human.actor, "Billing Clerk");
+  const agents = diagram(req({ "use-case": { "Download an invoice": (e) => { e.fields["primary-actor"] = "Billing Clerk"; } } }, [seat("01a0ffff-0000-7000-8000-0000000000a1", "Billing Clerk"), profile("01a0ffff-0000-7000-8000-0000000000a3", "Clerk Agent", "agent", ["Billing Clerk"])]), { shape: "usecase", id: U("Download an invoice") });
+  assert.equal(lines(agents)[1], '  n0["fak:fa-agent <b>Billing Clerk</b>"]');
+  const nobody = diagram(req({ "use-case": { "Download an invoice": (e) => { e.fields["primary-actor"] = "Billing Clerk"; } } }, [seat("01a0ffff-0000-7000-8000-0000000000a1", "Billing Clerk")]), { shape: "usecase", id: U("Download an invoice") });
+  assert.equal(lines(nobody)[1], '  n0["fak:fa-actor <b>Billing Clerk</b>"]');
+});
+
+test("a scenario is the trigger, the steps in order with who acts, and each extension dashed from its step", () => {
+  const d = diagram(s, { shape: "scenario", id: U("Download an invoice") });
+  assert.deepEqual([d.shape, d.title, d.edges, d.omitted], ["scenario", "Download an invoice", 5, 0]);
+  assert.deepEqual(lines(d), [
+    "flowchart TB",
+    `  t0(["The payer's bookkeeping asks for the invoice of a closed billing period."])`,
+    '  s0["fak:fa-actor <b>Payer</b><br/><small>1</small> Finds the invoice on the Invoice Page, as Find an invoice says"]',
+    "  t0 --> s0",
+    '  s1["fak:fa-actor <b>Payer</b><br/><small>2</small> Asks for a copy"]',
+    "  s0 --> s1",
+    '  s2["fak:fa-actor <b>System</b><br/><small>3</small> Hands over the invoice as it was issued, every line and its explanation"]',
+    "  s1 --> s2",
+    '  x0["<small>1a</small> The billing period is still open, so no invoice is issued yet<br/><i>The page says when the period closes, and the payer comes back then, so the use case ends without a copy</i>"]:::ext',
+    "  s0 -.-> x0",
+    '  x1["<small>3a</small> A credit note has been issued against the invoice since<br/><i>The copy is still the invoice as issued, and the page names the credit note beside it</i>"]:::ext',
+    "  s2 -.-> x1",
+    "  classDef ext stroke-dasharray:5 4",
+  ]);
+  assert.deepEqual(d.nodes, [], "a string actor's step is no entity");
+  assert.deepEqual(d.steps, [{ step: "1", actor: "Payer", action: "Finds the invoice on the Invoice Page, as Find an invoice says" }, { step: "2", actor: "Payer", action: "Asks for a copy" }, { step: "3", actor: "System", action: "Hands over the invoice as it was issued, every line and its explanation" }]);
+  assert.deepEqual(d.extensions.map((x) => x.step), ["1a", "3a"]);
+  assert.deepEqual(d.links.map((l) => [l.from, l.to, l.label]), [["t0", "s0", "1"], ["s0", "s1", "2"], ["s1", "s2", "3"], ["s0", "x0", "1a"], ["s2", "x1", "3a"]]);
+});
+
+test("a step whose actor is a seat links to it, an extension naming no step is left out and counted, and a scenario with no step is refused", () => {
+  const m = req({ "use-case": { "Download an invoice": (e) => {
+    const t = e.sections.find((x) => x.heading === "Main success scenario").tables[0];
+    t.rows[1] = ["2", "Backend Engineer", "Asks for a copy"];
+    e.sections.find((x) => x.heading === "Extensions").tables[0].rows.push(["9a", "Nothing", "Nothing happens"]);
+  } } });
+  const d = diagram(m, { shape: "scenario", id: U("Download an invoice") });
+  assert.deepEqual(d.nodes.map((n) => [n.node, n.title, n.type]), [["s1", "Backend Engineer", "seat"]]);
+  assert.ok(lines(d).some((l) => l.startsWith('  s1["fak:fa-human <b>Backend Engineer</b>')), d.mermaid);
+  assert.equal(d.omitted, 1);
+  assert.ok(!d.mermaid.includes("9a"), d.mermaid);
+  const none = req({ "use-case": { "Find an invoice": (e) => { e.sections.find((x) => x.heading === "Main success scenario").tables[0].rows = []; } } });
+  refused(() => diagram(none, { shape: "scenario", id: U("Find an invoice") }), "cannot_draw", { shape: "scenario", reason: "empty", nodes: 0, limit: DIAGRAM_CAP });
+});
+
+test("the requirements of a use case, a feature and a requirement are drawn by the id's type", () => {
+  const uc = diagram(s, { shape: "requirements", id: U("Download an invoice") });
+  assert.deepEqual(lines(uc), [
+    "flowchart LR",
+    '  n0(["<b>Download an invoice</b><br/><small>«use-case»</small>"]):::middle',
+    '  subgraph functional ["functional"]',
+    '    n1{{"<b>A copy is the invoice as issued</b><br/><small>«must»</small>"}}:::must',
+    "  end",
+    "  n1 --> n0",
+    "  classDef middle stroke-width:2px",
+    "  classDef must stroke-width:2px",
+  ]);
+  assert.deepEqual(uc.links, [{ from: "n1", to: "n0", label: "Applies to" }]);
+  refused(() => diagram(s, { shape: "requirements", id: I("features/invoice-download") }), "cannot_draw", { shape: "requirements", reason: "empty", nodes: 0, limit: DIAGRAM_CAP });
+  const one = diagram(s, { shape: "requirements", id: R("A copy is the invoice as issued") });
+  assert.deepEqual(lines(one), [
+    "flowchart LR",
+    '  n0{{"<b>A copy is the invoice as issued</b><br/><small>«functional · must»</small>"}}:::middle',
+    "  class n0 must",
+    '  n1(["Download an invoice<br/><small>«use-case»</small>"])',
+    '  n0 -->|"Applies to"| n1',
+    "  classDef middle stroke-width:2px",
+    "  classDef must stroke-width:2px",
+  ]);
+  assert.equal(one.actor, undefined, "only a use case names its actor");
+});
+
+test("a should is plain, a may dashed, a rule followed is dotted, two rows to one thing are one arrow, and the kinds stand in their order", () => {
+  const rule = { id: "01a0ffff-0000-7000-8000-0000000000b1", type: "rule", name: "A copy is kept", fields: { id: "01a0ffff-0000-7000-8000-0000000000b1", source: "Local" }, sections: [] };
+  const requirement = (id, name, kind, modality, rows, follows = []) => ({ id, type: "requirement", name, fields: { id, source: "Local", kind, modality, ...(follows.length ? { follows } : {}) }, sections: [{ heading: "Applies to", tables: [{ columns: ["Type", "Entity"], rows }] }] });
+  const m = req({ requirement: { "A copy is the invoice as issued": (e) => { e.sections.find((x) => x.heading === "Applies to").tables[0].rows.push(["use-case", "Download an invoice"]); } } }, [
+    rule,
+    requirement("01a0ffff-0000-7000-8000-0000000000b2", "A copy arrives within a minute", "quality", "should", [["use-case", "Download an invoice"]]),
+    requirement("01a0ffff-0000-7000-8000-0000000000b3", "A copy may be a PDF", "constraint", "may", [["use-case", "Download an invoice"], ["feature", "Invoice download"]], ["A copy is kept"]),
+  ]);
+  const d = diagram(m, { shape: "requirements", id: U("Download an invoice") });
+  const got = lines(d);
+  assert.equal(got.filter((l) => l.includes("A copy is the invoice as issued")).length, 1, "two rows naming the middle are one hexagon");
+  assert.equal(d.links.filter((l) => l.to === "n0").length, 3);
+  assert.ok(got.indexOf('  subgraph functional ["functional"]') < got.indexOf('  subgraph quality ["quality"]') && got.indexOf('  subgraph quality ["quality"]') < got.indexOf('  subgraph constraint ["constraint"]'), d.mermaid);
+  assert.ok(got.some((l) => l.includes("A copy arrives within a minute") && !l.includes(":::")), "a should has no class");
+  assert.ok(got.some((l) => l.includes("A copy may be a PDF") && l.endsWith(":::may")), "a may is dashed");
+  assert.ok(got.includes('  n4["A copy is kept<br/><small>«rule»</small>"]') && got.some((l) => /n\d+ -\.->\|"follows"\| n4/.test(l)), d.mermaid);
+  assert.deepEqual(got.slice(-3), ["  classDef middle stroke-width:2px", "  classDef must stroke-width:2px", "  classDef may stroke-dasharray:5 4"]);
+  const feature = diagram(m, { shape: "requirements", id: I("features/invoice-download") });
+  assert.equal(feature.nodes.filter((n) => n.type === "requirement").length, 1);
+});
+
+test("the three shapes refuse what they cannot draw, and a name is never read as a mark", () => {
+  const crowd = req({}, Array.from({ length: DIAGRAM_CAP }, (_, i) => ({ id: `01a0ffff-0000-7000-8000-0000000005${String(i).padStart(2, "0")}`, type: "requirement", name: `Requirement ${i}`, fields: { id: `01a0ffff-0000-7000-8000-0000000005${String(i).padStart(2, "0")}`, source: "Local", kind: "functional", modality: "must" }, sections: [{ heading: "Applies to", tables: [{ columns: ["Type", "Entity"], rows: [["use-case", "Download an invoice"]] }] }] })));
+  refused(() => diagram(crowd, { shape: "requirements", id: U("Download an invoice") }), "cannot_draw", { shape: "requirements", reason: "too_large", nodes: DIAGRAM_CAP + 2, limit: DIAGRAM_CAP });
+  for (const shape of ["usecase", "scenario"]) {
+    refused(() => diagram(s, { shape, id: I("concepts/invoice") }), "invalid_argument", { argument: "id", reason: "not a use-case" });
+    refused(() => diagram(s, { shape }), "invalid_argument", { argument: "id", reason: `needed by ${shape}` });
+    unknownType(() => diagram(instanceSnapshot(), { shape, id: "nothing/here" }));
+  }
+  refused(() => diagram(s, { shape: "requirements", id: I("concepts/invoice") }), "invalid_argument", { argument: "id", reason: "not a feature, product, use-case or requirement" });
+  unknownType(() => diagram(instanceSnapshot(), { shape: "requirements", id: idAt(instanceSnapshot(), "surfaces/blust-ch-website") }));
+  const odd = diagram(req({ "use-case": { "Find an invoice": (e) => { e.name = "Find fas:fa-x"; } } }), { shape: "usecase", id: U("Find an invoice") });
+  assert.ok(lines(odd)[2].includes("Find fas:#8203;fa-x"), odd.mermaid);
+});
+
+test("a requirement in the middle keeps its modality beside the middle's class, so a may stays dashed", () => {
+  const m = req({ requirement: { "A copy is the invoice as issued": (e) => { e.fields.modality = "may"; } } });
+  const got = lines(diagram(m, { shape: "requirements", id: R("A copy is the invoice as issued") }));
+  assert.ok(got.includes("  class n0 may") && got.includes("  classDef may stroke-dasharray:5 4") && !got.some((l) => l.includes("classDef must")), got.join("\n"));
+  const should = req({ requirement: { "A copy is the invoice as issued": (e) => { e.fields.modality = "should"; } } });
+  assert.ok(!lines(diagram(should, { shape: "requirements", id: R("A copy is the invoice as issued") })).some((l) => l.startsWith("  class n0")), "a should has no class line");
+});
+
+test("a scenario counts its trigger, its steps and the extensions it draws against the cap", () => {
+  const big = req({ "use-case": { "Download an invoice": (e) => {
+    e.sections.find((x) => x.heading === "Main success scenario").tables[0].rows = Array.from({ length: 26 }, (_, i) => [String(i + 1), "Payer", `Does thing ${i + 1}`]);
+    e.sections.find((x) => x.heading === "Extensions").tables[0].rows = Array.from({ length: 26 }, (_, i) => [`${i + 1}a`, "Something", "Something else"]);
+  } } });
+  refused(() => diagram(big, { shape: "scenario", id: U("Download an invoice") }), "cannot_draw", { shape: "scenario", reason: "too_large", nodes: 53, limit: DIAGRAM_CAP });
+});
+
+test("a scenario table missing a column draws what it has and never throws", () => {
+  const m = req({ "use-case": { "Download an invoice": (e) => {
+    const s = e.sections.find((x) => x.heading === "Main success scenario").tables[0];
+    s.columns = ["Step", "Action"]; s.rows = s.rows.map((r) => [r[0], r[2]]);
+    const x = e.sections.find((x) => x.heading === "Extensions").tables[0];
+    x.columns = ["Condition", "Handling"]; x.rows = x.rows.map((r) => [r[1], r[2]]);
+  } } });
+  const d = diagram(m, { shape: "scenario", id: U("Download an invoice") });
+  assert.deepEqual([d.omitted, d.steps[0].actor, d.extensions.length], [2, "", 2]);
+  assert.ok(lines(d).some((l) => l.startsWith('  s0["fak:fa-actor <b></b><br/><small>1</small> Finds')), d.mermaid);
+});
+
+test("a requirement of a kind the pack does not name is left out of a thing's picture and counted", () => {
+  const m = req({}, [
+    { id: "01a0ffff-0000-7000-8000-0000000000b1", type: "rule", name: "A copy is kept", fields: { id: "01a0ffff-0000-7000-8000-0000000000b1", source: "Local" }, sections: [] },
+    { id: "01a0ffff-0000-7000-8000-0000000000b4", type: "requirement", name: "Oddly kinded", fields: { id: "01a0ffff-0000-7000-8000-0000000000b4", source: "Local", kind: "Functional", modality: "must", follows: ["A copy is kept"] }, sections: [{ heading: "Applies to", tables: [{ columns: ["Type", "Entity"], rows: [["use-case", "Download an invoice"]] }] }] },
+  ]);
+  const d = diagram(m, { shape: "requirements", id: U("Download an invoice") });
+  assert.equal(d.omitted, 1);
+  assert.ok(!d.nodes.some((n) => n.title === "Oddly kinded" || n.title === "A copy is kept"), JSON.stringify(d.nodes));
+  assert.ok(!d.mermaid.includes("Oddly") && !d.mermaid.includes("A copy is kept"), d.mermaid);
+});
+
+test("a use case with no level writes no stereotype, and one with no primary actor draws no actor", () => {
+  const m = req({ "use-case": { "Find an invoice": (e) => { delete e.fields.level; delete e.fields["primary-actor"]; } } });
+  const d = diagram(m, { shape: "usecase", id: U("Find an invoice") });
+  assert.deepEqual(lines(d), ["flowchart LR", '  n0(["<b>Find an invoice</b>"]):::middle', "  classDef middle stroke-width:2px"]);
+  assert.deepEqual([d.links, d.actor], [[], ""]);
+});
+
+test("sixty requirements on a feature are refused, and a requirement naming one thing twice draws it once", () => {
+  const sixty = req({}, Array.from({ length: 60 }, (_, i) => ({ id: `01a0ffff-0000-7000-8000-0000000006${String(i).padStart(2, "0")}`, type: "requirement", name: `Requirement ${i}`, fields: { id: `01a0ffff-0000-7000-8000-0000000006${String(i).padStart(2, "0")}`, source: "Local", kind: "quality", modality: "should" }, sections: [{ heading: "Applies to", tables: [{ columns: ["Type", "Entity"], rows: [["feature", "Invoice download"]] }] }] })));
+  refused(() => diagram(sixty, { shape: "requirements", id: I("features/invoice-download") }), "cannot_draw", { shape: "requirements", reason: "too_large", nodes: 61, limit: DIAGRAM_CAP });
+  const twice = req({ requirement: { "A copy is the invoice as issued": (e) => { e.sections.find((x) => x.heading === "Applies to").tables[0].rows.push(["use-case", "Download an invoice"]); } } });
+  const d = diagram(twice, { shape: "requirements", id: R("A copy is the invoice as issued") });
+  assert.deepEqual([d.nodes.length, d.links.length, d.edges], [2, 1, 1]);
 });
