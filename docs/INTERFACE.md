@@ -608,28 +608,32 @@ Every type, the entity that came into the model last first: the ten newest entit
     "type": null,
     "entities": [
       {
-        "id": "01a12659-d295-7969-b17f-fbae284c2391",
-        "type": "profile",
-        "name": "Build Agent",
-        "tagline": "Whichever agent writes the change at Beacon Systems today, in the Backend Engineer seat, and hands it to the Reviewer.",
+        "id": "01a12b01-3a22-74e6-b405-dd48a35f2da8",
+        "type": "requirement",
+        "name": "A copy is the invoice as issued",
+        "tagline": "A downloaded invoice holds every line and its explanation exactly as they were on the day the invoice was issued.",
         "owner": null,
-        "created": "2026-10-10T15:06:23.253Z",
+        "created": "2026-10-11T12:47:43.138Z",
         "fields": {
-          "nature": "agent"
+          "kind": "functional",
+          "modality": "must"
         }
       },
       {
-        "id": "01a1226b-c65b-7c27-a96f-dbfb10db9c15",
-        "type": "service",
-        "name": "Invoice feed",
-        "tagline": "The feed of finished invoices the Billing service exposes to whoever delivers or shows one.",
+        "id": "01a12b01-39eb-7a27-a513-10b8e399cbc1",
+        "type": "use-case",
+        "name": "Find an invoice",
+        "tagline": "A payer has the invoice of the billing period they pick in front of them.",
         "owner": null,
-        "created": "2026-10-09T20:47:30.907Z",
-        "fields": {}
+        "created": "2026-10-11T12:47:43.083Z",
+        "fields": {
+          "level": "subfunction",
+          "primary-actor": "Payer"
+        }
       }
     ],
     "page": {
-      "total": 112,
+      "total": 115,
       "returned": 2,
       "hasMore": true,
       "nextCursor": "eyJvIjoyLCJjIjoiMDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWYwMTIzNDU2NyJ9"
