@@ -22,10 +22,11 @@ export const EXAMPLE_CORE = JSON.parse(fs.readFileSync(path.join(fixtureRoot, "c
 export const INSTANCE_CORE = JSON.parse(fs.readFileSync(path.join(instanceRoot, "meta", "core", "manifest.json"), "utf8")).version;
 // The example has no manifest, so the packs it takes are named here, once (meta-model 0.86.0): the
 // organization pack, whose groups, group kinds and jobs the example holds, and (0.89.0) the
-// landscape pack, whose systems, system kinds, data objects and services it holds. Their schemas ride along
+// landscape pack, whose systems, system kinds, data objects and services it holds, and (0.94.0) the
+// requirements pack, whose use cases and requirements it holds. Their schemas ride along
 // with the core's the way readSchemas carries an instance's, under `<pack>/<file>`.
 // Mirrors meta-model's verify/example.mjs (not shipped in the package); extended when the example takes another pack.
-export const EXAMPLE_PACKS = ["organization", "landscape"];
+export const EXAMPLE_PACKS = ["organization", "landscape", "requirements"];
 const schemaCount = (dir) => fs.readdirSync(dir).filter((f) => f.endsWith("-schema.md")).length;
 export const EXAMPLE_TYPES = schemaCount(path.join(fixtureRoot, "core"))
   + EXAMPLE_PACKS.reduce((n, pack) => n + schemaCount(path.join(fixtureRoot, "packs", pack)), 0);

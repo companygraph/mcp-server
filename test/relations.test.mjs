@@ -171,11 +171,15 @@ test("a side with no type, an unknown side and an unknown type are refused by co
 test("a reference whose type is read from its row carries to: null, by and in named, and no other relation does", () => {
   const { relations } = describeRelations(s);
   // A question's Rests on and a decision's Bears on declare the form since core 0.43.0, and a
-  // rule's and a control's Applies to since core 0.53.0.
+  // rule's and a control's Applies to since core 0.53.0. The requirements pack's requirement
+  // (meta-model 0.94.0) declares the form without `in`, since a feature, a product and a use
+  // case are owned by nothing, so its relation names the type column and no owner column.
   const rowTyped = [["question", "Rests on.Entity"], ["decision", "Bears on.Entity"], ["rule", "Applies to.Entity"], ["control", "Applies to.Entity"]];
   for (const [from, via] of rowTyped)
     assert.deepEqual(find(relations, from, via), { from, via, to: null, form: "ref", by: "Type", in: "Owner", array: false, required: true, min: 0, max: null });
-  for (const x of relations) if (!rowTyped.some(([from, via]) => x.from === from && x.via === via)) assert.deepEqual([x.by, x.in], [null, null], `${x.from}.${x.via}`);
+  assert.deepEqual(find(relations, "requirement", "Applies to.Entity"), { from: "requirement", via: "Applies to.Entity", to: null, form: "ref", by: "Type", in: null, array: false, required: true, min: 0, max: null });
+  const typed = [...rowTyped, ["requirement", "Applies to.Entity"]];
+  for (const x of relations) if (!typed.some(([from, via]) => x.from === from && x.via === via)) assert.deepEqual([x.by, x.in], [null, null], `${x.from}.${x.via}`);
 });
 
 test("a relation that reads its type from its row stands among what may reference every type", () => {
