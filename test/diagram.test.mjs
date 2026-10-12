@@ -1101,7 +1101,7 @@ const DOWNLOAD = [
 
 test("a use case is drawn in its scope: the actor outside, what it includes and asks of, and what it is held to", () => {
   const d = diagram(s, { shape: "usecase", id: U("Download an invoice") });
-  assert.deepEqual([d.shape, d.title, d.edges, d.omitted, d.model.commit], ["usecase", "Download an invoice", 4, 0, COMMIT]);
+  assert.deepEqual([d.shape, d.title, d.edges, d.omitted, d.actor, d.model.commit], ["usecase", "Download an invoice", 4, 0, "Payer", COMMIT]);
   assert.deepEqual(lines(d), DOWNLOAD);
   assert.deepEqual(d.nodes.map((n) => [n.node, n.title, n.type]), [["n0", "Download an invoice", "use-case"], ["n1", "Find an invoice", "use-case"], ["n2", "Invoice download", "feature"], ["n3", "A copy is the invoice as issued", "requirement"]]);
   assert.deepEqual(d.links, [{ from: "n0", to: "n1", label: "includes" }, { from: "a0", to: "n0", label: "" }, { from: "n0", to: "n2", label: "features" }, { from: "n3", to: "n0", label: "Applies to" }], "links in the order the source draws them");
@@ -1118,6 +1118,7 @@ test("an actor that is a seat takes the mark of who holds it: a human's, an agen
   const human = diagram(m, { shape: "usecase", id: U("Download an invoice") });
   assert.equal(lines(human)[1], '  n0["fak:fa-human <b>Billing Clerk</b>"]');
   assert.deepEqual(human.nodes[0], { node: "n0", id: "01a0ffff-0000-7000-8000-0000000000a1", title: "Billing Clerk", type: "seat" });
+  assert.equal(human.actor, "Billing Clerk");
   const agents = diagram(req({ "use-case": { "Download an invoice": (e) => { e.fields["primary-actor"] = "Billing Clerk"; } } }, [seat("01a0ffff-0000-7000-8000-0000000000a1", "Billing Clerk"), profile("01a0ffff-0000-7000-8000-0000000000a3", "Clerk Agent", "agent", ["Billing Clerk"])]), { shape: "usecase", id: U("Download an invoice") });
   assert.equal(lines(agents)[1], '  n0["fak:fa-agent <b>Billing Clerk</b>"]');
   const nobody = diagram(req({ "use-case": { "Download an invoice": (e) => { e.fields["primary-actor"] = "Billing Clerk"; } } }, [seat("01a0ffff-0000-7000-8000-0000000000a1", "Billing Clerk")]), { shape: "usecase", id: U("Download an invoice") });
@@ -1181,10 +1182,13 @@ test("the requirements of a use case, a feature and a requirement are drawn by t
   assert.deepEqual(lines(one), [
     "flowchart LR",
     '  n0{{"<b>A copy is the invoice as issued</b><br/><small>«functional · must»</small>"}}:::middle',
+    "  class n0 must",
     '  n1(["Download an invoice<br/><small>«use-case»</small>"])',
     '  n0 -->|"Applies to"| n1',
     "  classDef middle stroke-width:2px",
+    "  classDef must stroke-width:2px",
   ]);
+  assert.equal(one.actor, undefined, "only a use case names its actor");
 });
 
 test("a should is plain, a may dashed, a rule followed is dotted, two rows to one thing are one arrow, and the kinds stand in their order", () => {
@@ -1220,4 +1224,58 @@ test("the three shapes refuse what they cannot draw, and a name is never read as
   unknownType(() => diagram(instanceSnapshot(), { shape: "requirements", id: idAt(instanceSnapshot(), "surfaces/blust-ch-website") }));
   const odd = diagram(req({ "use-case": { "Find an invoice": (e) => { e.name = "Find fas:fa-x"; } } }), { shape: "usecase", id: U("Find an invoice") });
   assert.ok(lines(odd)[2].includes("Find fas:#8203;fa-x"), odd.mermaid);
+});
+
+test("a requirement in the middle keeps its modality beside the middle's class, so a may stays dashed", () => {
+  const m = req({ requirement: { "A copy is the invoice as issued": (e) => { e.fields.modality = "may"; } } });
+  const got = lines(diagram(m, { shape: "requirements", id: R("A copy is the invoice as issued") }));
+  assert.ok(got.includes("  class n0 may") && got.includes("  classDef may stroke-dasharray:5 4") && !got.some((l) => l.includes("classDef must")), got.join("\n"));
+  const should = req({ requirement: { "A copy is the invoice as issued": (e) => { e.fields.modality = "should"; } } });
+  assert.ok(!lines(diagram(should, { shape: "requirements", id: R("A copy is the invoice as issued") })).some((l) => l.startsWith("  class n0")), "a should has no class line");
+});
+
+test("a scenario counts its trigger, its steps and the extensions it draws against the cap", () => {
+  const big = req({ "use-case": { "Download an invoice": (e) => {
+    e.sections.find((x) => x.heading === "Main success scenario").tables[0].rows = Array.from({ length: 26 }, (_, i) => [String(i + 1), "Payer", `Does thing ${i + 1}`]);
+    e.sections.find((x) => x.heading === "Extensions").tables[0].rows = Array.from({ length: 26 }, (_, i) => [`${i + 1}a`, "Something", "Something else"]);
+  } } });
+  refused(() => diagram(big, { shape: "scenario", id: U("Download an invoice") }), "cannot_draw", { shape: "scenario", reason: "too_large", nodes: 53, limit: DIAGRAM_CAP });
+});
+
+test("a scenario table missing a column draws what it has and never throws", () => {
+  const m = req({ "use-case": { "Download an invoice": (e) => {
+    const s = e.sections.find((x) => x.heading === "Main success scenario").tables[0];
+    s.columns = ["Step", "Action"]; s.rows = s.rows.map((r) => [r[0], r[2]]);
+    const x = e.sections.find((x) => x.heading === "Extensions").tables[0];
+    x.columns = ["Condition", "Handling"]; x.rows = x.rows.map((r) => [r[1], r[2]]);
+  } } });
+  const d = diagram(m, { shape: "scenario", id: U("Download an invoice") });
+  assert.deepEqual([d.omitted, d.steps[0].actor, d.extensions.length], [2, "", 2]);
+  assert.ok(lines(d).some((l) => l.startsWith('  s0["fak:fa-actor <b></b><br/><small>1</small> Finds')), d.mermaid);
+});
+
+test("a requirement of a kind the pack does not name is left out of a thing's picture and counted", () => {
+  const m = req({}, [
+    { id: "01a0ffff-0000-7000-8000-0000000000b1", type: "rule", name: "A copy is kept", fields: { id: "01a0ffff-0000-7000-8000-0000000000b1", source: "Local" }, sections: [] },
+    { id: "01a0ffff-0000-7000-8000-0000000000b4", type: "requirement", name: "Oddly kinded", fields: { id: "01a0ffff-0000-7000-8000-0000000000b4", source: "Local", kind: "Functional", modality: "must", follows: ["A copy is kept"] }, sections: [{ heading: "Applies to", tables: [{ columns: ["Type", "Entity"], rows: [["use-case", "Download an invoice"]] }] }] },
+  ]);
+  const d = diagram(m, { shape: "requirements", id: U("Download an invoice") });
+  assert.equal(d.omitted, 1);
+  assert.ok(!d.nodes.some((n) => n.title === "Oddly kinded" || n.title === "A copy is kept"), JSON.stringify(d.nodes));
+  assert.ok(!d.mermaid.includes("Oddly") && !d.mermaid.includes("A copy is kept"), d.mermaid);
+});
+
+test("a use case with no level writes no stereotype, and one with no primary actor draws no actor", () => {
+  const m = req({ "use-case": { "Find an invoice": (e) => { delete e.fields.level; delete e.fields["primary-actor"]; } } });
+  const d = diagram(m, { shape: "usecase", id: U("Find an invoice") });
+  assert.deepEqual(lines(d), ["flowchart LR", '  n0(["<b>Find an invoice</b>"]):::middle', "  classDef middle stroke-width:2px"]);
+  assert.deepEqual([d.links, d.actor], [[], ""]);
+});
+
+test("sixty requirements on a feature are refused, and a requirement naming one thing twice draws it once", () => {
+  const sixty = req({}, Array.from({ length: 60 }, (_, i) => ({ id: `01a0ffff-0000-7000-8000-0000000006${String(i).padStart(2, "0")}`, type: "requirement", name: `Requirement ${i}`, fields: { id: `01a0ffff-0000-7000-8000-0000000006${String(i).padStart(2, "0")}`, source: "Local", kind: "quality", modality: "should" }, sections: [{ heading: "Applies to", tables: [{ columns: ["Type", "Entity"], rows: [["feature", "Invoice download"]] }] }] })));
+  refused(() => diagram(sixty, { shape: "requirements", id: I("features/invoice-download") }), "cannot_draw", { shape: "requirements", reason: "too_large", nodes: 61, limit: DIAGRAM_CAP });
+  const twice = req({ requirement: { "A copy is the invoice as issued": (e) => { e.sections.find((x) => x.heading === "Applies to").tables[0].rows.push(["use-case", "Download an invoice"]); } } });
+  const d = diagram(twice, { shape: "requirements", id: R("A copy is the invoice as issued") });
+  assert.deepEqual([d.nodes.length, d.links.length, d.edges], [2, 1, 1]);
 });

@@ -551,6 +551,7 @@ export declare const OUTPUTS: {
             condition: z.ZodString;
             handling: z.ZodString;
         }, z.core.$strict>>>;
+        actor: z.ZodOptional<z.ZodString>;
         edges: z.ZodNumber;
         omitted: z.ZodNumber;
     } & {
