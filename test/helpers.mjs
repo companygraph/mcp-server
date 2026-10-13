@@ -48,6 +48,15 @@ export function exampleSnapshot() {
   return buildSnapshot({ files, schemas, sub: "example/model/", core: "core/", commit: COMMIT, repo: "companygraph/meta-model", parserTag: PARSER });
 }
 
+// The example read against core and every pack the fixture holds, the one it does not take among
+// them: a pack's schemas add types and change nothing the parser returns for the example, and
+// together they are more types than one picture holds.
+export function withEveryPack() {
+  const { files, schemas } = exampleFiles();
+  for (const pack of Object.keys(PACKS)) for (const [file, text] of readDir(path.join(fixtureRoot, "packs", pack))) schemas.set(`${pack}/${file}`, text);
+  return buildSnapshot({ files, schemas, sub: "example/model/", core: "core/", commit: COMMIT, repo: "companygraph/meta-model", parserTag: PARSER });
+}
+
 // The reference instance, read the way its own site reads it: model/ against the core it vendors.
 export function instanceSnapshot() {
   return buildSnapshot({ files: readDir(path.join(instanceRoot, "model")), schemas: readDir(path.join(instanceRoot, "meta", "core")),

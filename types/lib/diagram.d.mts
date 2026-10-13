@@ -85,12 +85,13 @@ export type DiagramRequest = {
 } | {
     shape: "schema";
     type?: string | undefined;
+    unit?: string | undefined;
 };
 /**
  * @typedef {{ shape: Exclude<DiagramKind, "concepts" | "schema" | "organization">; id: string }
  *   | { shape: "organization"; id?: string | undefined }
  *   | { shape: "concepts"; domain?: string | undefined }
- *   | { shape: "schema"; type?: string | undefined }} DiagramRequest
+ *   | { shape: "schema"; type?: string | undefined; unit?: string | undefined }} DiagramRequest
  */
 /**
  * @param {Snapshot} s

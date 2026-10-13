@@ -535,6 +535,11 @@ export declare const OUTPUTS: {
             to: z.ZodString;
             multiplicity: z.ZodString;
         }, z.core.$strict>>>;
+        unit: z.ZodOptional<z.ZodString>;
+        units: z.ZodOptional<z.ZodArray<z.ZodObject<{
+            unit: z.ZodString;
+            types: z.ZodNumber;
+        }, z.core.$strict>>>;
         transitions: z.ZodOptional<z.ZodArray<z.ZodObject<{
             aggregate: z.ZodString;
             from: z.ZodNullable<z.ZodString>;
