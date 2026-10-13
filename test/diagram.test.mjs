@@ -6,7 +6,7 @@ import assert from "node:assert/strict";
 import { typeOfAddress } from "companygraph-meta-model/instance";
 import { diagram, processDiagram, label, plain, cannot, DIAGRAM_CAP } from "../lib/diagram.mjs";
 import { ModelError } from "../lib/errors.mjs";
-import { exampleSnapshot, instanceSnapshot, withHub, withLoops, withPunctuation, withNothingToDraw, withBackFlows, withContexts, CONTEXT_ID, CONTEXT_IDS, ODD, COMMIT, idAt } from "./helpers.mjs";
+import { exampleSnapshot, instanceSnapshot, withEveryPack, withHub, withLoops, withPunctuation, withNothingToDraw, withBackFlows, withContexts, CONTEXT_ID, CONTEXT_IDS, ODD, COMMIT, idAt } from "./helpers.mjs";
 
 const s = exampleSnapshot();
 // The example's entities by where their pages sit, and the ids the snapshot gives them. A fixture
@@ -333,6 +333,62 @@ test("a type narrows the schemas to itself, what it declares, what declares it a
 test("the source type narrowed draws itself alone and counts every declaration to it as left out", () => {
   const d = diagram(s, { shape: "schema", type: "source" });
   assert.deepEqual([d.nodes.length, d.edges, d.omitted], [1, 0, s.schemas.length - 1]);
+});
+
+// The meta-model a unit at a time: core, or one pack. A unit's picture is its own types and what
+// they declare, so a pack reaches into core and core never into a pack.
+const unitOf = (snap) => Object.fromEntries(snap.schemas.map((x) => [typeOfAddress(x.address), x.address.slice(0, x.address.indexOf("/"))]));
+const unitsOf = (snap) => {
+  const count = {};
+  for (const u of Object.values(unitOf(snap))) count[u] = (count[u] || 0) + 1;
+  return Object.keys(count).sort((a, b) => (a === "core" ? -1 : b === "core" ? 1 : a < b ? -1 : 1)).map((unit) => ({ unit, types: count[unit] }));
+};
+
+test("a unit narrows the schemas to its own types and what they declare", () => {
+  const d = diagram(s, { shape: "schema", unit: "landscape" }), of = unitOf(s);
+  assert.deepEqual([d.title, d.unit], ["landscape", "landscape"]);
+  assert.deepEqual(d.nodes.filter((n) => of[n.title] === "landscape").map((n) => n.title), Object.keys(of).filter((t) => of[t] === "landscape").sort());
+  const titled = Object.fromEntries(d.nodes.map((n) => [n.node, n.title]));
+  assert.ok(d.links.length > 0);
+  assert.ok(d.links.every((l) => of[titled[l.from]] === "landscape"), "a line starts at a type of the unit");
+  assert.ok(d.nodes.some((n) => of[n.title] === "core"), "the pack reaches into core");
+  for (const n of d.nodes) if (of[n.title] !== "landscape") assert.ok(d.links.some((l) => l.to === n.node), `${n.title} is drawn and reached by nothing`);
+  assert.deepEqual(d.units, unitsOf(s));
+  assert.equal(d.edges, d.links.length);
+});
+
+test("core as a unit draws core alone", () => {
+  const d = diagram(s, { shape: "schema", unit: "core" }), of = unitOf(s);
+  assert.deepEqual([d.title, d.unit], ["core", "core"]);
+  assert.deepEqual(d.nodes.map((n) => n.title), Object.keys(of).filter((t) => of[t] === "core").sort());
+  assert.ok(lines(d).includes(`  ${d.nodes.find((n) => n.title === "experience").node} --* ${d.nodes.find((n) => n.title === "profile").node} : nested-in`), d.mermaid);
+});
+
+test("a meta-model within the limit is drawn whole, and says which units it is made of", () => {
+  const d = diagram(s, { shape: "schema" });
+  assert.equal(d.unit, undefined);
+  assert.deepEqual(d.units, unitsOf(s));
+  assert.equal(diagram(s, { shape: "schema", type: "phase" }).unit, undefined);
+  assert.equal(diagram(s, { shape: "concepts" }).units, undefined);
+});
+
+test("a meta-model past the limit draws core alone and names the units it left out", () => {
+  const big = withEveryPack(), of = unitOf(big);
+  assert.ok(Object.keys(of).length > DIAGRAM_CAP, "the fixture no longer holds more types than a picture");
+  const d = diagram(big, { shape: "schema" });
+  assert.deepEqual([d.title, d.unit], ["core", "core"]);
+  assert.ok(d.nodes.every((n) => of[n.title] === "core"));
+  assert.deepEqual(d.units, unitsOf(big));
+  assert.deepEqual(d.units.map((u) => u.unit), ["core", "landscape", "organization", "requirements", "software"]);
+  assert.equal(d.mermaid, diagram(big, { shape: "schema", unit: "core" }).mermaid);
+  assert.equal(diagram(big, { shape: "schema", unit: "software" }).unit, "software");
+  assert.equal(diagram(big, { shape: "schema", type: "phase" }).title, "phase");
+});
+
+test("a unit the model does not have, a unit beside a type and a unit for another shape are refused by name", () => {
+  refused(() => diagram(s, { shape: "schema", unit: "software" }), "invalid_argument", { argument: "unit", reason: "one of core, landscape, organization, requirements" });
+  refused(() => diagram(s, { shape: "schema", type: "phase", unit: "core" }), "invalid_argument", { argument: "unit", reason: "not taken with type" });
+  refused(() => diagram(s, { shape: "concepts", unit: "core" }), "invalid_argument", { argument: "unit", reason: "not taken by concepts" });
 });
 
 test("a schema node links nowhere where the repository or the commit is not known", () => {

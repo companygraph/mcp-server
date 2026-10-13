@@ -47,6 +47,7 @@ export const EXAMPLES = {
   "`diagram` of a use case": { name: "diagram", arguments: { shape: "usecase", id: idAt(example, "use-cases/download-an-invoice") } },
   "`diagram` of its scenario": { name: "diagram", arguments: { shape: "scenario", id: idAt(example, "use-cases/download-an-invoice") } },
   "`diagram` of its requirements": { name: "diagram", arguments: { shape: "requirements", id: idAt(example, "requirements/a-copy-is-the-invoice-as-issued") } },
+  "`diagram` of a unit of the meta-model": { name: "diagram", arguments: { shape: "schema", unit: "organization" } },
   "A refusal": { name: "get_entity", ambiguous: true },
 };
 
