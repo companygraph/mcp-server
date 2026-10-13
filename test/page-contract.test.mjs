@@ -71,5 +71,7 @@ test("the page names the release that serves it, from the package unless one is 
   assert.ok(html.includes(`served by ${pkg.name} v${pkg.version}.`), "the lede ends with the package's own name and version");
   const other = renderPage(exampleSnapshot(), { origin: "https://example.test", server: { name: "x", version: "9.9.9" } });
   assert.ok(other.includes("served by x v9.9.9."), "a server handed in is the one named");
-  assert.ok(!other.includes(pkg.version), "and the package's own version is then nowhere on the page");
+  // The package's own release, by name and version: a bare version number would also match the
+  // core the page names, which the two shared at 0.69.0.
+  assert.ok(!other.includes(`${pkg.name} v${pkg.version}`), "and the package's own release is then nowhere on the page");
 });
