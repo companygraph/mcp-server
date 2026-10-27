@@ -78,7 +78,7 @@
   "dependencies": {
     "@modelcontextprotocol/node": "^2.1.1",
     "@modelcontextprotocol/server": "^2.0.0",
-    "companygraph-meta-model": "github:companygraph/meta-model#v0.94.0",
+    "companygraph-meta-model": "github:companygraph/meta-model#v0.95.0",
     "zod": "^4.6.7"
   },
   "devDependencies": {
