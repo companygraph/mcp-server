@@ -608,32 +608,32 @@ Every type, the entity that came into the model last first: the ten newest entit
     "type": null,
     "entities": [
       {
-        "id": "01a12b01-3a22-74e6-b405-dd48a35f2da8",
-        "type": "requirement",
-        "name": "A copy is the invoice as issued",
-        "tagline": "A downloaded invoice holds every line and its explanation exactly as they were on the day the invoice was issued.",
+        "id": "01a17b8e-0a98-7c35-8952-3016e0a011a9",
+        "type": "use-case-realization",
+        "name": "Not started",
+        "tagline": "At least one step of the main success scenario is not built yet.",
         "owner": null,
-        "created": "2026-10-11T12:47:43.138Z",
+        "created": "2026-10-27T04:11:08.824Z",
         "fields": {
-          "kind": "functional",
-          "modality": "must"
+          "rank": "10",
+          "evidence": "none"
         }
       },
       {
-        "id": "01a12b01-39eb-7a27-a513-10b8e399cbc1",
-        "type": "use-case",
-        "name": "Find an invoice",
-        "tagline": "A payer has the invoice of the billing period they pick in front of them.",
+        "id": "01a17b8e-0a61-7da5-90bd-7b421db1b2cc",
+        "type": "use-case-realization",
+        "name": "Main scenario runs",
+        "tagline": "The main success scenario runs from the trigger to the goal, and the use case does not yet run end to end.",
         "owner": null,
-        "created": "2026-10-11T12:47:43.083Z",
+        "created": "2026-10-27T04:11:08.769Z",
         "fields": {
-          "level": "subfunction",
-          "primary-actor": "Payer"
+          "rank": "20",
+          "evidence": "satisfies"
         }
       }
     ],
     "page": {
-      "total": 115,
+      "total": 121,
       "returned": 2,
       "hasMore": true,
       "nextCursor": "eyJvIjoyLCJjIjoiMDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWYwMTIzNDU2NyJ9"
