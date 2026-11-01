@@ -53,6 +53,27 @@ test("other methods and paths", async () => {
   assert.deepEqual((await h.json()).model, { commit: COMMIT, repo: "companygraph/meta-model", core: EXAMPLE_CORE, parser: PARSER });
 });
 
+const EVERY_ANSWER = {
+  "strict-transport-security": "max-age=63072000; includeSubDomains",
+  "x-content-type-options": "nosniff",
+  "referrer-policy": "strict-origin-when-cross-origin",
+  "content-security-policy": "frame-ancestors 'self'",
+};
+
+// A browser that opens the page, or a page that reaches the protocol, is kept to HTTPS, never
+// guesses a type and is framed by nothing but the host, on the answer and on every refusal.
+test("every answer carries the headers that keep a browser on HTTPS and out of foreign frames", async () => {
+  const base = await listen({ allowedHosts: ["127.0.0.1"] });
+  const answers = [
+    await fetch(`${base}/`),
+    await fetch(`${base}/health`),
+    await fetch(`${base}/mcp`, { method: "POST", headers, body: JSON.stringify(INIT) }),
+    await fetch(`${base}/mcp`),
+    await fetch(`${base}/nothing`),
+  ];
+  for (const r of answers) for (const [name, value] of Object.entries(EVERY_ANSWER)) assert.equal(r.headers.get(name), value, `${r.url} ${name}`);
+});
+
 // A person with curl and no client can check a deployment's release against its pin in one
 // line. The field is additive: whoever read ok and model reads what they read.
 test("/health names the release that serves it, beside what it answered before", async () => {
