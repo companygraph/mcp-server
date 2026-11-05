@@ -47,11 +47,27 @@ resource "google_storage_bucket" "state" {
   depends_on = [google_project_service.bootstrap]
 }
 
+# Every deploy pushes a tagged image and Cloud Run runs the newest, so what came before serves a
+# rollback and nothing else, and without a policy it stayed for good. A version older than thirty
+# days goes, unless it is among the ten most recent of its package, which stay whatever their age.
+# The dry run writes what the policy would delete to the audit log and deletes nothing; a later
+# change turns it off once that log has been read.
 resource "google_artifact_registry_repository" "mcp" {
-  location      = var.region
-  repository_id = "mcp"
-  format        = "DOCKER"
-  depends_on    = [google_project_service.bootstrap]
+  location               = var.region
+  repository_id          = "mcp"
+  format                 = "DOCKER"
+  cleanup_policy_dry_run = true
+  cleanup_policies {
+    id     = "delete-older-than-thirty-days"
+    action = "DELETE"
+    condition { older_than = "2592000s" }
+  }
+  cleanup_policies {
+    id     = "keep-ten-most-recent"
+    action = "KEEP"
+    most_recent_versions { keep_count = 10 }
+  }
+  depends_on = [google_project_service.bootstrap]
 }
 
 resource "google_iam_workload_identity_pool" "github" {
