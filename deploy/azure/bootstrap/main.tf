@@ -94,6 +94,25 @@ resource "azurerm_role_assignment" "terraform_state" {
   principal_id         = azurerm_user_assigned_identity.terraform.principal_id
 }
 
+# Contributor carries no data action, and azurerm reads and writes a storage table's ACL over
+# the data plane when it refreshes or makes one, so the applying identity holds exactly those
+# two beside Contributor.
+resource "azurerm_role_definition" "terraform_tables" {
+  name              = "${var.resource_group_name} apply"
+  scope             = azurerm_resource_group.this.id
+  description       = "Reads and sets a storage table's ACL, which refreshing or making one asks"
+  assignable_scopes = [azurerm_resource_group.this.id]
+  permissions {
+    data_actions = ["Microsoft.Storage/storageAccounts/tableServices/tables/getAcl/action", "Microsoft.Storage/storageAccounts/tableServices/tables/setAcl/action"]
+  }
+}
+
+resource "azurerm_role_assignment" "terraform_tables" {
+  scope              = azurerm_resource_group.this.id
+  role_definition_id = azurerm_role_definition.terraform_tables.role_definition_resource_id
+  principal_id       = azurerm_user_assigned_identity.terraform.principal_id
+}
+
 # Plans a pull request: reads the resource group and the state, and can change neither.
 # -lock=false in the plan is what lets it do without write on the container. Reader alone is
 # not enough to read: azurerm refreshes a container app by listing its secrets, an action Reader
@@ -106,6 +125,9 @@ resource "azurerm_role_definition" "plan" {
   assignable_scopes = [azurerm_resource_group.this.id]
   permissions {
     actions = ["*/read", "Microsoft.App/containerApps/listSecrets/action"]
+    # azurerm reads a storage table's ACL over the data plane, and with shared keys off that is
+    # a data action no built-in table role carries; the chat's meter table met it (2026-11-07).
+    data_actions = ["Microsoft.Storage/storageAccounts/tableServices/tables/getAcl/action"]
   }
 }
 
