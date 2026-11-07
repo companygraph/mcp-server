@@ -95,10 +95,19 @@ jobs:
           IMAGE: ${{ needs.build.outputs.image }}
         run: terraform apply -input=false -auto-approve -var "image=$IMAGE"
       # Fails by design on a deployment's first apply: until deployment.json names the app's host
-      # as app_host, the service refuses a POST on that name.
+      # as app_host, the service refuses a POST on that name. Container Apps answers from the
+      # revision before this one for a while after the apply returns, so a reading of the old
+      # commit is asked again, up to twelve times ten seconds apart, before it is a failure: the
+      # first re-pin of mcp.azure.companygraph.io read the old commit thirty seconds after the
+      # apply and served the new one a minute later (2026-11-07).
       - if: github.event_name == 'push'
         run: |
           URL=$(terraform output -raw service_url)
           WANT=$(jq -r .commit ../source.json)
-          GOT=$(curl -fsS --retry 10 --retry-all-errors --retry-delay 5 --max-time 30 -X POST "$URL/mcp" -H 'content-type: application/json' -H 'accept: application/json, text/event-stream' -d '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"list_types","arguments":{}}}' | jq -r .result.structuredContent.model.commit)
-          echo "serving $GOT, pinned $WANT"; test "$GOT" = "$WANT"
+          for i in $(seq 1 12); do
+            GOT=$(curl -fsS --retry 10 --retry-all-errors --retry-delay 5 --max-time 30 -X POST "$URL/mcp" -H 'content-type: application/json' -H 'accept: application/json, text/event-stream' -d '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"list_types","arguments":{}}}' | jq -r .result.structuredContent.model.commit)
+            echo "serving $GOT, pinned $WANT"
+            test "$GOT" = "$WANT" && break
+            sleep 10
+          done
+          test "$GOT" = "$WANT"
