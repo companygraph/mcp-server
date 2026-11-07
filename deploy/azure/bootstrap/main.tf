@@ -95,7 +95,20 @@ resource "azurerm_role_assignment" "terraform_state" {
 }
 
 # Plans a pull request: reads the resource group and the state, and can change neither.
-# -lock=false in the plan is what lets it do without write on the container.
+# -lock=false in the plan is what lets it do without write on the container. Reader alone is
+# not enough to read: azurerm refreshes a container app by listing its secrets, an action Reader
+# lacks, so the first plan after the app exists failed on it (mcp.azure.companygraph.io,
+# 2026-11-07). The role is Reader's one action plus exactly that one, and nothing else.
+resource "azurerm_role_definition" "plan" {
+  name              = "${var.resource_group_name} plan"
+  scope             = azurerm_resource_group.this.id
+  description       = "Reads the resource group, and lists a container app's secrets, which refreshing one asks"
+  assignable_scopes = [azurerm_resource_group.this.id]
+  permissions {
+    actions = ["*/read", "Microsoft.App/containerApps/listSecrets/action"]
+  }
+}
+
 resource "azurerm_user_assigned_identity" "plan" {
   name                = "terraform-plan"
   location            = azurerm_resource_group.this.location
@@ -111,9 +124,9 @@ resource "azurerm_federated_identity_credential" "plan" {
 }
 
 resource "azurerm_role_assignment" "plan" {
-  scope                = azurerm_resource_group.this.id
-  role_definition_name = "Reader"
-  principal_id         = azurerm_user_assigned_identity.plan.principal_id
+  scope              = azurerm_resource_group.this.id
+  role_definition_id = azurerm_role_definition.plan.role_definition_resource_id
+  principal_id       = azurerm_user_assigned_identity.plan.principal_id
 }
 
 resource "azurerm_role_assignment" "plan_state" {
