@@ -4,7 +4,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { ModelError, listChecks } from "../lib/model.mjs";
-import { instanceChecks } from "companygraph-meta-model/checks";
+import { instanceChecks } from "@companygraph/meta-model/checks";
 import { exampleSnapshot, COMMIT, EXAMPLE_CORE, PARSER } from "./helpers.mjs";
 
 const s = exampleSnapshot();

@@ -33,7 +33,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 import { chromium } from "playwright";
-import { createHttpServer } from "companygraph-mcp-server/http";
+import { createHttpServer } from "../../lib/http.mjs";
 import { ROOT, DIST, deployment, snapshot } from "../build/config.mjs";
 import { jsonld } from "../build/index.mjs";
 

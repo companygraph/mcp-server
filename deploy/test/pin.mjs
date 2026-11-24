@@ -9,16 +9,20 @@ import { test, after } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
-import { createHttpServer } from "companygraph-mcp-server/http";
+import { createHttpServer } from "../../lib/http.mjs";
 import { ROOT, snapshot } from "../build/config.mjs";
+import { pinOf, installedPackage, SERVER, PARSER } from "../../lib/pin.mjs";
 
+// A deployment takes the server from git as companygraph-mcp-server or from npm as
+// @companygraph/mcp-server, and the server takes the parser either way too, so each pin is read
+// under whichever name and in whichever form it is written, and held by its tag.
 export function registerPinTests() {
   const pkg = JSON.parse(fs.readFileSync(path.join(ROOT, "package.json"), "utf8"));
-  const installed = JSON.parse(fs.readFileSync(path.join(ROOT, "node_modules/companygraph-mcp-server/package.json"), "utf8"));
+  const serverPin = pinOf(pkg, SERVER);
+  const installed = installedPackage(serverPin.name, ROOT);
 
   test("the installed server is the release package.json pins", () => {
-    const tag = pkg.dependencies["companygraph-mcp-server"].split("#")[1];
-    assert.equal("v" + installed.version, tag);
+    assert.equal("v" + installed.version, serverPin.tag);
   });
 
   // The parser is the server's dependency, not this repository's, and npm kept its old commit
@@ -26,9 +30,9 @@ export function registerPinTests() {
   // beside parser 0.25.2. So the installed parser is held to the tag the installed server
   // declares.
   test("the installed parser is the release the installed server pins", () => {
-    const parser = JSON.parse(fs.readFileSync(path.join(ROOT, "node_modules/companygraph-meta-model/package.json"), "utf8"));
-    const tag = installed.dependencies["companygraph-meta-model"].split("#")[1];
-    assert.equal("v" + parser.version, tag);
+    const pin = pinOf(installed, PARSER);
+    const parser = installedPackage(pin.name, path.join(ROOT, "node_modules", serverPin.name));
+    assert.equal("v" + parser.version, pin.tag);
   });
 
   // A pin split across package.json, a workflow and a Terraform module drifts the moment one of
@@ -38,7 +42,7 @@ export function registerPinTests() {
   // the shape a deployment that forgot to re-pin its `?ref=` takes, so each kind is required on
   // its own rather than folded into one total.
   test("the server's release is named once, in package.json, the workflows and the module", () => {
-    const tag = pkg.dependencies["companygraph-mcp-server"].split("#")[1];
+    const tag = serverPin.tag;
     const refs = [];
     for (const dir of [".github/workflows", "infra", "infra/bootstrap"]) {
       const d = path.join(ROOT, dir);
@@ -58,7 +62,7 @@ export function registerPinTests() {
   // deployment that built green from a stale lockfile is visible to anyone who opens its page,
   // and this holds both to the tag the deployment pins.
   test("the served page and the health body name the release package.json pins", async () => {
-    const tag = pkg.dependencies["companygraph-mcp-server"].split("#")[1];
+    const tag = serverPin.tag;
     const server = createHttpServer(snapshot());
     await /** @type {Promise<void>} */ (new Promise((r) => server.listen(0, "127.0.0.1", r)));
     after(() => server.close());

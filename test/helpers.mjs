@@ -1,4 +1,4 @@
-import { PACKS } from "companygraph-meta-model/checks";
+import { PACKS } from "@companygraph/meta-model/checks";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";

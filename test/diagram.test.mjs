@@ -3,7 +3,7 @@
 // is sent and a line out of place is a different picture.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { typeOfAddress } from "companygraph-meta-model/instance";
+import { typeOfAddress } from "@companygraph/meta-model/instance";
 import { diagram, processDiagram, label, plain, cannot, DIAGRAM_CAP } from "../lib/diagram.mjs";
 import { ModelError } from "../lib/errors.mjs";
 import { exampleSnapshot, instanceSnapshot, withEveryPack, withHub, withLoops, withPunctuation, withNothingToDraw, withBackFlows, withContexts, CONTEXT_ID, CONTEXT_IDS, ODD, COMMIT, idAt } from "./helpers.mjs";
