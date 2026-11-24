@@ -1,5 +1,6 @@
 import { McpServer } from "@modelcontextprotocol/server";
 import type { Snapshot } from "./snapshot.mjs";
+export declare const NAME = "companygraph-mcp-server";
 export declare const GLOSSARY: string;
 /** @param {Snapshot} s */
 export declare function instructionsFor(s: Snapshot): string;

@@ -1,7 +1,7 @@
 import { ModelError } from "./errors.mjs";
 import { SHAPES } from "./schemas.mjs";
 import { relationsOf } from "./model.mjs";
-import type { Entity, Edge } from "companygraph-meta-model/instance";
+import type { Entity, Edge } from "@companygraph/meta-model/instance";
 import type { Snapshot } from "./snapshot.mjs";
 import type { OUTPUTS } from "./schemas.mjs";
 import type { z } from "zod";
@@ -28,7 +28,7 @@ export type Drawing = {
     omitted: number;
 };
 /**
- * @import { Entity, Edge, Table } from "companygraph-meta-model/instance"
+ * @import { Entity, Edge, Table } from "@companygraph/meta-model/instance"
  * @import { Snapshot } from "./snapshot.mjs"
  * @import { Ref, ServedEdge } from "./model.mjs"
  * @import { OUTPUTS } from "./schemas.mjs"

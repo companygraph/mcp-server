@@ -3,10 +3,11 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 import { fixtureRoot, instanceRoot, INSTANCE_COMMIT } from "./helpers.mjs";
+import { pinOf, PARSER } from "../lib/pin.mjs";
 
 test("the fixtures hold the example and the core at the pinned tag", () => {
   const pkg = JSON.parse(fs.readFileSync(new URL("../package.json", import.meta.url), "utf8"));
-  const tag = pkg.dependencies["companygraph-meta-model"].split("#")[1];
+  const { tag } = pinOf(pkg, PARSER);
   assert.equal(fs.readFileSync(path.join(fixtureRoot, ".ref"), "utf8").trim(), tag);
   assert.ok(fs.existsSync(path.join(fixtureRoot, "example/model/identity.md")));
   assert.ok(fs.existsSync(path.join(fixtureRoot, "core/manifest.json")));
@@ -26,12 +27,17 @@ test("the fixtures hold the reference instance at the named commit", () => {
 // showing up as a schema mismatch three tests later.
 test("the parser installed, and the one package-lock.json records, are the release package.json pins", () => {
   const pkg = JSON.parse(fs.readFileSync(new URL("../package.json", import.meta.url), "utf8"));
-  const tag = pkg.dependencies["companygraph-meta-model"].split("#")[1];
-  const installed = JSON.parse(fs.readFileSync(new URL("../node_modules/companygraph-meta-model/package.json", import.meta.url), "utf8"));
+  const { name, spec, tag } = pinOf(pkg, PARSER);
+  // From npm, by an exact version and nothing a range could move, because a package a consumer
+  // outside the family installs refuses a dependency from git.
+  assert.equal(name, "@companygraph/meta-model");
+  assert.match(spec, /^\d+\.\d+\.\d+$/);
+  const installed = JSON.parse(fs.readFileSync(new URL(`../node_modules/${name}/package.json`, import.meta.url), "utf8"));
   assert.equal("v" + installed.version, tag);
   const lock = JSON.parse(fs.readFileSync(new URL("../package-lock.json", import.meta.url), "utf8"));
-  assert.equal(lock.packages[""].dependencies["companygraph-meta-model"], pkg.dependencies["companygraph-meta-model"]);
-  const entry = lock.packages["node_modules/companygraph-meta-model"];
+  assert.equal(lock.packages[""].dependencies[name], spec);
+  const entry = lock.packages[`node_modules/${name}`];
   assert.equal(entry.version, installed.version);
-  assert.match(entry.resolved, /^git\+(ssh:\/\/git@github\.com|https:\/\/github\.com)\/companygraph\/meta-model\.git#[0-9a-f]{40}$/);
+  assert.equal(entry.resolved, `https://registry.npmjs.org/${name}/-/meta-model-${installed.version}.tgz`);
+  assert.match(entry.integrity, /^sha512-/);
 });

@@ -6,10 +6,13 @@ import fs from "node:fs";
 import path from "node:path";
 import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
+import { pinOf, PARSER } from "../lib/pin.mjs";
 
 const root = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 const pkg = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8"));
-const [, metaRepo, tag] = pkg.dependencies["companygraph-meta-model"].match(/^github:([^#]+)#(.+)$/);
+// The parser is taken from npm by version, which names its tag; a git pin names its repository too.
+const { spec, tag } = pinOf(pkg, PARSER);
+const metaRepo = /^github:([^#]+)#/.exec(spec)?.[1] ?? "companygraph/meta-model";
 
 // The instance commit is test data and lives here, beside the one test helper that repeats it.
 const INSTANCE_COMMIT = "f4e8fd22aebcdb4fd92cce386043a3d8ddf7bde7";

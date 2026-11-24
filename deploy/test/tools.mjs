@@ -6,21 +6,20 @@
 // own test file.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import fs from "node:fs";
-import path from "node:path";
-import { isNewer } from "companygraph-meta-model/checks";
+import { isNewer } from "@companygraph/meta-model/checks";
 import { Client, InMemoryTransport } from "@modelcontextprotocol/client";
-import { createServer } from "companygraph-mcp-server";
-import { listTypes, describeSchema, listEntities, getEntityById } from "companygraph-mcp-server/model";
-import { sampleCalls, checkAnswer } from "companygraph-mcp-server/contract";
-import { ROOT, source, snapshot } from "../build/config.mjs";
+import { createServer } from "../../lib/server.mjs";
+import { listTypes, describeSchema, listEntities, getEntityById } from "../../lib/model.mjs";
+import { sampleCalls, checkAnswer } from "../../lib/contract.mjs";
+import { source, snapshot } from "../build/config.mjs";
+import { installedParser } from "../../lib/pin.mjs";
 
 /** @import { SnapshotEntity } from "../../lib/snapshot.mjs" */
 
 export function registerToolsTests() {
   const src = source();
   const s = snapshot();
-  const parser = JSON.parse(fs.readFileSync(path.join(ROOT, "node_modules/companygraph-meta-model/package.json"), "utf8"));
+  const parser = installedParser();
 
   // The core release and how many types it holds are facts of the pin and the model, not of
   // this file: a number typed here stops being true on the next release and fails nothing until

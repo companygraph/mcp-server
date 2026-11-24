@@ -17,9 +17,9 @@ async function connect(snapshot = s) {
   return client;
 }
 
-test("the server names itself from the package and the model", async () => {
+test("the server names itself by its own name, its package's version and the model", async () => {
   const client = await connect();
-  assert.deepEqual(client.getServerVersion(), { name: pkg.name, version: pkg.version, title: "Beacon Systems" });
+  assert.deepEqual(client.getServerVersion(), { name: "companygraph-mcp-server", version: pkg.version, title: "Beacon Systems" });
   const identity = s.entities.find((e) => e.id === s.rootId);
   const vision = s.entities.find((e) => e.type === "vision");
   assert.equal(client.getInstructions(), `${vision.tagline}\n\n${identity.tagline}\n\n${GLOSSARY}\n\nThis server reports what the model says at one commit, which every answer names under \`model\`, and adds nothing.`);

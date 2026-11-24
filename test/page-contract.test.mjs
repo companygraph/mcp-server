@@ -66,9 +66,9 @@ test("the README names every class the page emits", () => {
 // handshake names it from package.json, and the page names it from the same file, so a
 // deployment's pin, the handshake and the page agree by construction. A test hands its own
 // pair in to show the option is the seam and the package is only the default.
-test("the page names the release that serves it, from the package unless one is handed in", () => {
+test("the page names the server and the release that serves it, unless one is handed in", () => {
   const pkg = JSON.parse(fs.readFileSync(new URL("../package.json", import.meta.url), "utf8"));
-  assert.ok(html.includes(`served by ${pkg.name} v${pkg.version}.`), "the lede ends with the package's own name and version");
+  assert.ok(html.includes(`served by companygraph-mcp-server v${pkg.version}.`), "the lede ends with the server's name and the package's version");
   const other = renderPage(exampleSnapshot(), { origin: "https://example.test", server: { name: "x", version: "9.9.9" } });
   assert.ok(other.includes("served by x v9.9.9."), "a server handed in is the one named");
   // The package's own release, by name and version: a bare version number would also match the

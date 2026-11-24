@@ -82,7 +82,7 @@ test("/health names the release that serves it, beside what it answered before",
   const pkg = JSON.parse(fs.readFileSync(new URL("../package.json", import.meta.url), "utf8"));
   assert.deepEqual(Object.keys(body).sort(), ["model", "ok", "server"]);
   assert.equal(body.ok, true);
-  assert.deepEqual(body.server, { name: pkg.name, version: pkg.version });
+  assert.deepEqual(body.server, { name: "companygraph-mcp-server", version: pkg.version });
 });
 
 test("GET / is a page naming the model, the endpoint it was reached by and every tool", async () => {

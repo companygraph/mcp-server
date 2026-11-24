@@ -1,5 +1,5 @@
 import { ModelError } from "./errors.mjs";
-import type { Entity, Edge } from "companygraph-meta-model/instance";
+import type { Entity, Edge } from "@companygraph/meta-model/instance";
 import type { Snapshot, SnapshotEntity } from "./snapshot.mjs";
 export type Ref = {
     id: string;
@@ -17,7 +17,7 @@ export type Paging = {
     cursor?: string | undefined;
 };
 /**
- * @import { Entity, Edge, Section, Constraints } from "companygraph-meta-model/instance"
+ * @import { Entity, Edge, Section, Constraints } from "@companygraph/meta-model/instance"
  * @import { Snapshot, SnapshotEntity } from "./snapshot.mjs"
  */
 /**
@@ -251,7 +251,7 @@ export declare function describeSchema(s: Snapshot, type: string): {
     sections: {
         heading: string;
         text: string;
-        tables: import("companygraph-meta-model/instance").Table[];
+        tables: import("@companygraph/meta-model/instance").Table[];
     }[];
     relations: {
         owner: string | null;
@@ -397,15 +397,15 @@ export declare function getEntity(s: Snapshot, type: string, name: string): {
         type: string;
         name: string;
         tagline: string;
-        fields: import("companygraph-meta-model/instance").Fields;
+        fields: import("@companygraph/meta-model/instance").Fields;
         path: string;
-        stamp?: import("companygraph-meta-model/instance").Stamp;
+        stamp?: import("@companygraph/meta-model/instance").Stamp;
         created: string;
         owner: string | null;
         sections: {
             heading: string;
             text: string;
-            tables: import("companygraph-meta-model/instance").Table[];
+            tables: import("@companygraph/meta-model/instance").Table[];
         }[];
         url: string | null;
         image_url?: string;
@@ -420,15 +420,15 @@ export declare function getEntity(s: Snapshot, type: string, name: string): {
         type: string;
         name: string;
         tagline: string;
-        fields: import("companygraph-meta-model/instance").Fields;
+        fields: import("@companygraph/meta-model/instance").Fields;
         path: string;
-        stamp?: import("companygraph-meta-model/instance").Stamp;
+        stamp?: import("@companygraph/meta-model/instance").Stamp;
         created?: never;
         owner: string | null;
         sections: {
             heading: string;
             text: string;
-            tables: import("companygraph-meta-model/instance").Table[];
+            tables: import("@companygraph/meta-model/instance").Table[];
         }[];
         url: string | null;
         image_url?: string;
@@ -456,15 +456,15 @@ export declare function getEntityById(s: Snapshot, id: string): {
         type: string;
         name: string;
         tagline: string;
-        fields: import("companygraph-meta-model/instance").Fields;
+        fields: import("@companygraph/meta-model/instance").Fields;
         path: string;
-        stamp?: import("companygraph-meta-model/instance").Stamp;
+        stamp?: import("@companygraph/meta-model/instance").Stamp;
         created: string;
         owner: string | null;
         sections: {
             heading: string;
             text: string;
-            tables: import("companygraph-meta-model/instance").Table[];
+            tables: import("@companygraph/meta-model/instance").Table[];
         }[];
         url: string | null;
         image_url?: string;
@@ -479,15 +479,15 @@ export declare function getEntityById(s: Snapshot, id: string): {
         type: string;
         name: string;
         tagline: string;
-        fields: import("companygraph-meta-model/instance").Fields;
+        fields: import("@companygraph/meta-model/instance").Fields;
         path: string;
-        stamp?: import("companygraph-meta-model/instance").Stamp;
+        stamp?: import("@companygraph/meta-model/instance").Stamp;
         created?: never;
         owner: string | null;
         sections: {
             heading: string;
             text: string;
-            tables: import("companygraph-meta-model/instance").Table[];
+            tables: import("@companygraph/meta-model/instance").Table[];
         }[];
         url: string | null;
         image_url?: string;
@@ -519,15 +519,15 @@ export declare function entityBy(s: Snapshot, { id, type, name }?: {
         type: string;
         name: string;
         tagline: string;
-        fields: import("companygraph-meta-model/instance").Fields;
+        fields: import("@companygraph/meta-model/instance").Fields;
         path: string;
-        stamp?: import("companygraph-meta-model/instance").Stamp;
+        stamp?: import("@companygraph/meta-model/instance").Stamp;
         created: string;
         owner: string | null;
         sections: {
             heading: string;
             text: string;
-            tables: import("companygraph-meta-model/instance").Table[];
+            tables: import("@companygraph/meta-model/instance").Table[];
         }[];
         url: string | null;
         image_url?: string;
@@ -542,15 +542,15 @@ export declare function entityBy(s: Snapshot, { id, type, name }?: {
         type: string;
         name: string;
         tagline: string;
-        fields: import("companygraph-meta-model/instance").Fields;
+        fields: import("@companygraph/meta-model/instance").Fields;
         path: string;
-        stamp?: import("companygraph-meta-model/instance").Stamp;
+        stamp?: import("@companygraph/meta-model/instance").Stamp;
         created?: never;
         owner: string | null;
         sections: {
             heading: string;
             text: string;
-            tables: import("companygraph-meta-model/instance").Table[];
+            tables: import("@companygraph/meta-model/instance").Table[];
         }[];
         url: string | null;
         image_url?: string;

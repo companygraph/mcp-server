@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
-import { parseInstance } from "companygraph-meta-model/instance";
+import { parseInstance } from "@companygraph/meta-model/instance";
 import { buildSnapshot, parserTag } from "../lib/snapshot.mjs";
 import { exampleFiles, exampleSnapshot, COMMIT, EXAMPLE_CORE, EXAMPLE_PACKS, PARSER, EXAMPLE_TYPES } from "./helpers.mjs";
 
@@ -46,5 +46,5 @@ test("a core without a manifest is refused", () => {
 
 test("parserTag is the tag package.json pins", () => {
   const pkg = JSON.parse(fs.readFileSync(new URL("../package.json", import.meta.url), "utf8"));
-  assert.equal(parserTag(), pkg.dependencies["companygraph-meta-model"].split("#")[1]);
+  assert.equal(parserTag(), `v${pkg.dependencies["@companygraph/meta-model"]}`);
 });

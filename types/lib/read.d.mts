@@ -1,11 +1,11 @@
-import type { Files } from "companygraph-meta-model/instance";
+import type { Files } from "@companygraph/meta-model/instance";
 export type Source = {
     repo: string;
     commit: string;
     token?: string | undefined;
     fetch?: typeof globalThis.fetch;
 };
-/** @import { Files } from "companygraph-meta-model/instance" */
+/** @import { Files } from "@companygraph/meta-model/instance" */
 /**
  * Where a commit is read from: the repository, the commit, a token where one is given, and the
  * `fetch` to read through.

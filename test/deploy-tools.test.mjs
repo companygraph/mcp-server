@@ -18,10 +18,14 @@ const pkg = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8"))
 // its own name. The package is linked to this checkout rather than fetched, so what runs is the
 // code on this branch; every other package is linked one by one, because a single link to this
 // checkout's node_modules would hold no entry for this package itself.
-function deployment({ commit, tag, register }) {
+// `from` is how the deployment takes the server: from git under its old name, or from npm under
+// its scope at the version the tag names.
+function deployment({ commit, tag, register, from = "git" }) {
+  const name = from === "npm" ? "@companygraph/mcp-server" : "companygraph-mcp-server";
+  const spec = from === "npm" ? tag.replace(/^v/, "") : `github:companygraph/mcp-server#${tag}`;
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "deployment-"));
   fs.writeFileSync(path.join(dir, "source.json"), JSON.stringify({ repo: "companygraph/meta-model", commit }));
-  fs.writeFileSync(path.join(dir, "package.json"), JSON.stringify({ dependencies: { "companygraph-mcp-server": `github:companygraph/mcp-server#${tag}` } }));
+  fs.writeFileSync(path.join(dir, "package.json"), JSON.stringify({ dependencies: { [name]: spec } }));
   fs.mkdirSync(path.join(dir, ".github", "workflows"), { recursive: true });
   fs.writeFileSync(path.join(dir, ".github", "workflows", "deploy.yml"), `jobs:\n  deploy:\n    uses: companygraph/mcp-server/.github/workflows/deploy-google.yml@${tag}\n`);
   fs.mkdirSync(path.join(dir, "infra"));
@@ -29,11 +33,19 @@ function deployment({ commit, tag, register }) {
   fs.mkdirSync(path.join(dir, "dist"));
   fs.writeFileSync(path.join(dir, "dist", "snapshot.json"), JSON.stringify(exampleSnapshot()));
   fs.mkdirSync(path.join(dir, "node_modules"));
-  for (const name of fs.readdirSync(path.join(root, "node_modules"))) {
-    if (name.startsWith(".")) continue;
-    fs.symlinkSync(path.join(root, "node_modules", name), path.join(dir, "node_modules", name), "dir");
+  for (const entry of fs.readdirSync(path.join(root, "node_modules"))) {
+    if (entry.startsWith(".")) continue;
+    fs.symlinkSync(path.join(root, "node_modules", entry), path.join(dir, "node_modules", entry), "dir");
   }
-  fs.symlinkSync(root, path.join(dir, "node_modules", "companygraph-mcp-server"), "dir");
+  // The scope's folder is this checkout's own, linked whole above, so the server is linked inside
+  // a copy of it.
+  if (from === "npm") {
+    fs.rmSync(path.join(dir, "node_modules", "@companygraph"));
+    fs.mkdirSync(path.join(dir, "node_modules", "@companygraph"));
+    for (const scoped of fs.readdirSync(path.join(root, "node_modules", "@companygraph")))
+      fs.symlinkSync(path.join(root, "node_modules", "@companygraph", scoped), path.join(dir, "node_modules", "@companygraph", scoped), "dir");
+  }
+  fs.symlinkSync(root, path.join(dir, "node_modules", name), "dir");
   const shared = pathToFileURL(path.join(root, "deploy", "test", register.file)).href;
   fs.writeFileSync(path.join(dir, "shared.test.mjs"), `import { ${register.fn} } from ${JSON.stringify(shared)};\n${register.fn}();\n`);
   // This file already runs under `node --test`, which marks its own environment so a nested
@@ -77,6 +89,12 @@ test("the shared pin tests pass over a deployment that pins this release everywh
   const r = deployment({ commit: COMMIT, tag: OWN, register: PIN });
   assert.equal(r.status, 0, r.stdout + r.stderr);
   assert.match(r.stdout, /^ok \d+ - the served page and the health body name the release package\.json pins/m);
+});
+
+test("they pass the same over a deployment that takes the server from npm", () => {
+  const r = deployment({ commit: COMMIT, tag: OWN, register: PIN, from: "npm" });
+  assert.equal(r.status, 0, r.stdout + r.stderr);
+  assert.match(r.stdout, /^ok \d+ - the installed parser is the release the installed server pins/m);
 });
 
 test("and fail over one that pins another release, so the served page is held to the pin", () => {

@@ -4,7 +4,7 @@
 // them, against the example's core and the reference instance's.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { typeOfAddress } from "companygraph-meta-model/instance";
+import { typeOfAddress } from "@companygraph/meta-model/instance";
 import { ModelError, describeSchema, describeRelations } from "../lib/model.mjs";
 import { OUTPUTS } from "../lib/schemas.mjs";
 import { exampleSnapshot, instanceSnapshot, COMMIT, EXAMPLE_CORE, PARSER } from "./helpers.mjs";
