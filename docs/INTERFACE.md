@@ -1,6 +1,6 @@
 # The interface
 
-What a client of this server may rely on: the tools, their arguments, the fields of every answer, the codes of every refusal, how a list is paged, and what counts as a break. It holds for every deployment of the package, since a deployment adds a model and no tool. The schemas it describes are the ones the server registers; a client reads them from the tool listing, or imports them from `companygraph-mcp-server/schemas`.
+What a client of this server may rely on: the tools, their arguments, the fields of every answer, the codes of every refusal, how a list is paged, and what counts as a break. It holds for every deployment of the package, since a deployment adds a model and no tool. The schemas it describes are the ones the server registers; a client reads them from the tool listing, or imports them from `@companygraph/mcp-server/schemas`.
 
 ## Terms
 
